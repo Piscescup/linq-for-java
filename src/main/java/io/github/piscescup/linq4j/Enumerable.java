@@ -4,15 +4,15 @@ import io.github.piscescup.interfaces.Equalable;
 import io.github.piscescup.interfaces.Equalator;
 import io.github.piscescup.interfaces.Pair;
 import io.github.piscescup.interfaces.exfunction.BinFunction;
-import io.github.piscescup.interfaces.exfunction.TriFunction;
+import io.github.piscescup.interfaces.exfunction.BinPredicate;
 import io.github.piscescup.linq4j.base.Groupable;
 import io.github.piscescup.linq4j.exceptions.OverflowEnumerableException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.awt.image.RasterFormatException;
 import java.math.BigDecimal;
-import java.util.Comparator;
-import java.util.NoSuchElementException;
+import java.util.*;
 import java.util.function.*;
 
 /**
@@ -4067,4 +4067,1594 @@ public interface Enumerable<T>
         @NotNull Enumerable<? extends T> other,
         @NotNull Equalator<? super T> equalator
     );
+
+    /**
+     * <p>Returns an enumerable that iterates over the elements of the source sequence in a randomized order.</p>
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<Integer> numbers = Linq.of(1, 2, 3, 4, 5);
+     *
+     * // Shuffle the elements.
+     * Enumerable<Integer> shuffled = numbers.shuffle();
+     *
+     * shuffled.forEach(n -> System.out.print(n + " "));
+     *
+     * // This code produces output similar to the following (results will vary):
+     * //
+     * // 4 1 5 2 3
+     * }</pre>
+     *
+     * @return A sequence whose elements correspond to those of the input sequence in a randomized order.
+     */
+    @NotNull
+    Enumerable<T> shuffle();
+
+    /**
+     * <p>Returns the only element of a sequence, and throws an exception
+     * if there is not exactly one element in the sequence.</p>
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<String> fruits1 = Linq.of("orange");
+     *
+     * String fruit = fruits1.single();
+     *
+     * System.out.println(fruit);
+     *
+     * // This code produces the following output:
+     * //
+     * // orange
+     * }</pre>
+     *
+     * @return The single element of the input sequence.
+     * @throws java.util.NoSuchElementException If the sequence contains no elements.
+     * @throws IllegalStateException If the sequence contains more than one element.
+     * @see #single(Predicate)
+     */
+    T single();
+
+    /**
+     * <p>Returns the only element of a sequence that satisfies a specified condition,
+     * and throws an exception if more than one such element exists.</p>
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<String> fruits = Linq.of("apple", "banana", "mango");
+     *
+     * // Get the only fruit with a name longer than 5 characters.
+     * String fruit = fruits.single(f -> f.length() > 5);
+     *
+     * System.out.println(fruit);
+     *
+     * // This code produces the following output:
+     * //
+     * // banana
+     * }</pre>
+     *
+     * @param predicate A function to test an element for a condition.
+     * @return The single element of the input sequence that satisfies a condition.
+     * @throws java.util.NoSuchElementException If no element satisfies the condition.
+     * @throws IllegalStateException If more than one element satisfies the condition.
+     * @see #single()
+     */
+    T single(@NotNull Predicate<? super T> predicate);
+
+    /**
+     * <p>Returns the only element of a sequence, or {@code null} if the sequence is empty;
+     * this method throws an exception if there is more than one element in the sequence.</p>
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<String> emptyFruits = Linq.empty();
+     *
+     * String fruit = emptyFruits.singleOrNull();
+     *
+     * System.out.println(fruit == null ? "No fruit found" : fruit);
+     *
+     * // This code produces the following output:
+     * //
+     * // No fruit found
+     * }</pre>
+     *
+     * @return The single element of the input sequence, or {@code null} if the sequence contains no elements.
+     * @throws IllegalStateException If the sequence contains more than one element.
+     * @see #singleOrNull(Predicate)
+     */
+    @Nullable
+    T singleOrNull();
+
+    /**
+     * <p>Returns the only element of a sequence that satisfies a specified condition or {@code null}
+     * if no such element exists; this method throws an exception if more than one element satisfies the condition.</p>
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<String> fruits = Linq.of("apple", "banana", "mango");
+     *
+     * // Try to get the only fruit with a name longer than 10 characters.
+     * String longFruit = fruits.singleOrNull(f -> f.length() > 10);
+     *
+     * System.out.println(longFruit == null ? "Not found" : longFruit);
+     *
+     * // This code produces the following output:
+     * //
+     * // Not found
+     * }</pre>
+     *
+     * @param predicate A function to test an element for a condition.
+     * @return The single element of the input sequence that satisfies the condition, or {@code null} if no such element is found.
+     * @throws IllegalStateException If more than one element satisfies the condition.
+     * @see #singleOrNull()
+     */
+    @Nullable
+    T singleOrNull(@NotNull Predicate<? super T> predicate);
+
+    /**
+     * <p>Returns the only element of a sequence, or a specified default value if the sequence is empty;
+     * this method throws an exception if there is more than one element in the sequence.</p>
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<String> emptyFruits = Linq.empty();
+     *
+     * String fruit = emptyFruits.singleOrDefault("unknown");
+     *
+     * System.out.println(fruit);
+     *
+     * // This code produces the following output:
+     * //
+     * // unknown
+     * }</pre>
+     *
+     * @param defaultValue The value to return if the sequence is empty.
+     * @return The single element of the input sequence, or {@code defaultValue} if the sequence contains no elements.
+     * @throws IllegalStateException If the sequence contains more than one element.
+     * @see #singleOrDefault(Predicate, T)
+     */
+    T singleOrDefault(T defaultValue);
+
+    /**
+     * <p>Returns the only element of a sequence that satisfies a specified condition, or a specified default value
+     * if no such element exists; this method throws an exception if more than one element satisfies the condition.</p>
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<String> fruits = Linq.of("apple", "banana", "mango");
+     *
+     * // Try to get the only fruit with a name longer than 10 characters, or return "defaultFruit".
+     * String fruit = fruits.singleOrDefault(f -> f.length() > 10, "defaultFruit");
+     *
+     * System.out.println(fruit);
+     *
+     * // This code produces the following output:
+     * //
+     * // defaultFruit
+     * }</pre>
+     *
+     * @param predicate A function to test an element for a condition.
+     * @param defaultValue The value to return if no element satisfies the condition.
+     * @return The single element of the input sequence that satisfies the condition, or {@code defaultValue} if no such element is found.
+     * @throws IllegalStateException If more than one element satisfies the condition.
+     * @see #singleOrDefault(T)
+     */
+    T singleOrDefault(@NotNull Predicate<? super T> predicate, T defaultValue);
+
+    /**
+     * <p>Bypasses a specified number of elements in a sequence and then returns the remaining elements.</p>
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<Integer> grades = Linq.of(59, 82, 70, 56, 92, 98, 85);
+     *
+     * // Sort descending and skip the first three elements.
+     * Enumerable<Integer> lowerGrades = grades.orderByDescending(g -> g).skip(3);
+     *
+     * System.out.println("All grades except the top three are:");
+     * lowerGrades.forEach(System.out::println);
+     *
+     * // This code produces the following output:
+     * //
+     * // All grades except the top three are:
+     * // 82
+     * // 70
+     * // 59
+     * // 56
+     * }</pre>
+     *
+     * @param count The number of elements to skip before returning the remaining elements.
+     * @return An enumerable that contains the elements that occur after the specified index in the input sequence.
+     * @see #skipLast(int)
+     * @see #skipWhile(Predicate)
+     */
+    @NotNull
+    Enumerable<T> skip(int count);
+
+    /**
+     * <p>Returns a new enumerable collection that contains the elements from source with the last {@code count}
+     * elements of the source collection omitted.</p>
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<Integer> grades = Linq.of(59, 82, 70, 56, 92, 98, 85);
+     *
+     * // Skip the last three elements in the sequence.
+     * Enumerable<Integer> result = grades.skipLast(3);
+     *
+     * result.forEach(System.out::println);
+     *
+     * // This code produces the following output:
+     * //
+     * // 59
+     * // 82
+     * // 70
+     * // 56
+     * }</pre>
+     *
+     * @param count The number of elements to omit from the end of the collection.
+     * @return A new enumerable collection that contains the elements from source minus {@code count} elements from the end of the collection.
+     * @see #skip(int)
+     */
+    @NotNull
+    Enumerable<T> skipLast(int count);
+
+    /**
+     * <p>Bypasses elements in a sequence as long as a specified condition is true and then returns the remaining elements.</p>
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<Integer> grades = Linq.of(59, 82, 70, 56, 92, 98, 85);
+     *
+     * // Sort descending and skip elements as long as they are greater than or equal to 80.
+     * Enumerable<Integer> lowerGrades = grades.orderByDescending(g -> g)
+     *                                         .skipWhile(g -> g >= 80);
+     *
+     * System.out.println("All grades below 80:");
+     * lowerGrades.forEach(System.out::println);
+     *
+     * // This code produces the following output:
+     * //
+     * // All grades below 80:
+     * // 70
+     * // 59
+     * // 56
+     * }</pre>
+     *
+     * @param predicate A function to test each element for a condition.
+     * @return An enumerable that contains the elements from the input sequence starting at the first element in the linear series that does not pass the test specified by {@code predicate}.
+     * @see #skipWhile(BinPredicate)
+     * @see #skip(int)
+     */
+    @NotNull
+    Enumerable<T> skipWhile(@NotNull Predicate<? super T> predicate);
+
+    /**
+     * <p>Bypasses elements in a sequence as long as a specified condition is true and then returns the remaining elements.
+     * The element's index is used in the logic of the predicate function.</p>
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<Integer> amounts = Linq.of(5000, 2500, 9000, 8000, 6500, 4000, 1500, 5500);
+     *
+     * // Skip elements as long as the element's index multiplied by 1000
+     * // is less than or equal to the element itself.
+     * Enumerable<Integer> result = amounts.skipWhile((amount, index) -> amount > index * 1000);
+     *
+     * result.forEach(System.out::println);
+     *
+     * // This code produces the following output:
+     * //
+     * // 4000
+     * // 1500
+     * // 5500
+     * }</pre>
+     *
+     * @param predicate A function to test each source element for a condition; the second parameter of the function represents the index of the source element.
+     * @return An enumerable that contains the elements from the input sequence starting at the first element in the linear series that does not pass the test specified by {@code predicate}.
+     * @see #skipWhile(Predicate)
+     */
+    @NotNull
+    Enumerable<T> skipWhile(@NotNull BinPredicate<? super T, Integer> predicate);
+
+    /**
+     * <p>Computes the sum of a sequence of {@code int} values that are obtained by
+     * applying the specified selector to each element of the sequence.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<String> fruits =
+     *     Linq.of("apple", "mango", "orange");
+     *
+     * // 5 + 5 + 6 = 16
+     * int totalLength = fruits.sumToInt(String::length);
+     *
+     * System.out.println(totalLength);
+     *
+     * // This code produces the following output:
+     * //
+     * // 16
+     * }</pre>
+     *
+     * @param selector A function that transforms an element into an
+     *                 {@code int} value.
+     * @return The sum of the projected values. Returns {@code 0} if the sequence contains no elements.
+     * @throws NullPointerException If {@code selector} is {@code null}.
+     */
+    long sumToInt(
+        @NotNull ToIntFunction<? super T> selector
+    );
+
+    /**
+     * <p>Computes the sum of a sequence of {@code long} values that are obtained by
+     * applying the specified selector to each element of the sequence.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * record File(String name, long bytes) {}
+     *
+     * Enumerable<File> files = Linq.of(
+     *     new File("doc1.txt", 1500L),
+     *     new File("doc2.txt", 3200L),
+     *     new File("image.png", 5300L)
+     * );
+     *
+     * long totalBytes = files.sumToLong(File::bytes);
+     *
+     * System.out.println(totalBytes);
+     *
+     * // This code produces the following output:
+     * //
+     * // 10000
+     * }</pre>
+     *
+     * @param selector A function that transforms an element into a
+     *                 {@code long} value.
+     * @return The sum of the projected values. Returns {@code 0L} if the sequence contains no elements.
+     * @throws NullPointerException If {@code selector} is {@code null}.
+     */
+    long sumToLong(
+        @NotNull ToLongFunction<? super T> selector
+    );
+
+    /**
+     * <p>Computes the sum of a sequence of {@code double} values that are obtained by
+     * applying the specified selector to each element of the sequence.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * record Package(String name, double weight) {}
+     *
+     * Enumerable<Package> packages = Linq.of(
+     *     new Package("Box 1", 2.5),
+     *     new Package("Box 2", 3.2),
+     *     new Package("Box 3", 1.1)
+     * );
+     *
+     * double totalWeight = packages.sumToDouble(Package::weight);
+     *
+     * System.out.println(totalWeight);
+     *
+     * // This code produces the following output:
+     * //
+     * // 6.8
+     * }</pre>
+     *
+     * @param selector A function that transforms an element into a
+     *                 {@code double} value.
+     * @return The sum of the projected values. Returns {@code 0.0} if the sequence contains no elements.
+     * @throws NullPointerException If {@code selector} is {@code null}.
+     */
+    double sumToDouble(
+        @NotNull ToDoubleFunction<? super T> selector
+    );
+
+    /**
+     * <p>Computes the sum of a sequence of {@link BigDecimal} values that are obtained by
+     * applying the specified selector to each element of the sequence.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * record Product(String name, BigDecimal price) {}
+     *
+     * Enumerable<Product> products = Linq.of(
+     *     new Product("Apple", new BigDecimal("1.50")),
+     *     new Product("Mango", new BigDecimal("2.80")),
+     *     new Product("Orange", new BigDecimal("2.10"))
+     * );
+     *
+     * BigDecimal totalPrice =
+     *     products.sumToDecimal(Product::price);
+     *
+     * System.out.println(totalPrice);
+     *
+     * // This code produces the following output:
+     * //
+     * // 6.40
+     * }</pre>
+     *
+     * @param selector A function that transforms an element into a
+     *                 {@link BigDecimal} value.
+     * @return The sum of the projected values. Returns {@link BigDecimal#ZERO} if the sequence contains no elements.
+     * @throws NullPointerException If {@code selector} is {@code null}.
+     */
+    @NotNull
+    BigDecimal sumToDecimal(
+        @NotNull Function<? super T, ? extends BigDecimal> selector
+    );
+
+    /**
+     * <p>Returns a specified number of contiguous elements from the start of a sequence.</p>
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<Integer> grades = Linq.of(59, 82, 70, 56, 92, 98, 85);
+     *
+     * // Sort descending and take the first three elements.
+     * Enumerable<Integer> topThreeGrades = grades.orderByDescending(g -> g).take(3);
+     *
+     * System.out.println("The top three grades are:");
+     * topThreeGrades.forEach(System.out::println);
+     *
+     * // This code produces the following output:
+     * //
+     * // The top three grades are:
+     * // 98
+     * // 92
+     * // 85
+     * }</pre>
+     *
+     * @param count The number of elements to return.
+     * @return An enumerable that contains the specified number of elements from the start of the input sequence.
+     * @see #takeLast(int)
+     * @see #takeWhile(Predicate)
+     */
+    @NotNull
+    Enumerable<T> take(int count);
+
+    /**
+     * <p>Returns a new enumerable collection that contains the last {@code count} elements from source.</p>
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<Integer> grades = Linq.of(59, 82, 70, 56, 92, 98, 85);
+     *
+     * // Take the last three elements in the sequence.
+     * Enumerable<Integer> result = grades.takeLast(3);
+     *
+     * result.forEach(System.out::println);
+     *
+     * // This code produces the following output:
+     * //
+     * // 92
+     * // 98
+     * // 85
+     * }</pre>
+     *
+     * @param count The number of elements to take from the end of the collection.
+     * @return A new enumerable collection that contains the last {@code count} elements from source.
+     * @see #take(int)
+     */
+    @NotNull
+    Enumerable<T> takeLast(int count);
+
+    /**
+     * <p>Returns elements from a sequence as long as a specified condition is true,
+     * and then skips the remaining elements.</p>
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<String> fruits = Linq.of("apple", "banana", "mango", "orange", "passionfruit", "grape");
+     *
+     * // Take fruits until a fruit's name length is greater than or equal to 8.
+     * Enumerable<String> result = fruits.takeWhile(fruit -> fruit.length() < 8);
+     *
+     * result.forEach(System.out::println);
+     *
+     * // This code produces the following output:
+     * //
+     * // apple
+     * // banana
+     * // mango
+     * // orange
+     * }</pre>
+     *
+     * @param predicate A function to test each element for a condition.
+     * @return An enumerable that contains the elements from the input sequence that occur before the element at which the test no longer passes.
+     * @see #takeWhile(BinPredicate)
+     * @see #take(int)
+     */
+    @NotNull
+    Enumerable<T> takeWhile(@NotNull Predicate<? super T> predicate);
+
+    /**
+     * <p>Returns elements from a sequence as long as a specified condition is true.
+     * The element's index is used in the logic of the predicate function.</p>
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<Integer> amounts = Linq.of(5000, 2500, 9000, 8000, 6500, 4000, 1500, 5500);
+     *
+     * // Take elements as long as the element's index multiplied by 1000
+     * // is strictly less than the element itself.
+     * Enumerable<Integer> result = amounts.takeWhile((amount, index) -> amount > index * 1000);
+     *
+     * result.forEach(System.out::println);
+     *
+     * // This code produces the following output:
+     * //
+     * // 5000
+     * // 2500
+     * // 9000
+     * // 8000
+     * // 6500
+     * }</pre>
+     *
+     * @param predicate A function to test each source element for a condition; the second parameter of the function represents the index of the source element.
+     * @return An enumerable that contains elements from the input sequence that occur before the element at which the test no longer passes.
+     * @see #takeWhile(Predicate)
+     */
+    @NotNull
+    Enumerable<T> takeWhile(@NotNull BinPredicate<? super T, Integer> predicate);
+
+    /**
+     * <p>Produces the set union of two sequences by using the default equality comparer.</p>
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<Integer> ints1 = Linq.of(5, 3, 9, 7, 5, 9, 3, 7);
+     * Enumerable<Integer> ints2 = Linq.of(8, 3, 6, 4, 4, 9, 1, 0);
+     *
+     * Enumerable<Integer> union = ints1.union(ints2);
+     *
+     * union.forEach(n -> System.out.print(n + " "));
+     *
+     * // This code produces the following output:
+     * //
+     * // 5 3 9 7 8 6 4 1 0
+     * }</pre>
+     *
+     * @param other An {@link Enumerable} whose distinct elements form the other set for the union.
+     * @return An enumerable that contains the elements from both input sequences, excluding duplicates.
+     * @see #union(Enumerable, Equalator)
+     * @see #unionBy(Enumerable, Function)
+     */
+    @NotNull
+    Enumerable<T> union(@NotNull Enumerable<? extends T> other);
+
+    /**
+     * <p>Produces the set union of two sequences by using a specified {@link Equalator}.</p>
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<String> store1 = Linq.of("apple", "orange");
+     * Enumerable<String> store2 = Linq.of("APPLE", "lemon");
+     *
+     * // Create an Equalator for case-insensitive string comparison.
+     * Equalator<String> ignoreCaseEqualator = Equalator.of(
+     *     String::equalsIgnoreCase,
+     *     String::toLowerCase
+     * );
+     *
+     * Enumerable<String> union = store1.union(store2, ignoreCaseEqualator);
+     *
+     * union.forEach(System.out::println);
+     *
+     * // This code produces the following output:
+     * //
+     * // apple
+     * // orange
+     * // lemon
+     * }</pre>
+     *
+     * @param other An {@link Enumerable} whose distinct elements form the other set for the union.
+     * @param comparer The {@link Equalator} to compare values.
+     * @return An enumerable that contains the elements from both input sequences, excluding duplicates.
+     * @see #union(Enumerable)
+     */
+    @NotNull
+    Enumerable<T> union(
+        @NotNull Enumerable<? extends T> other,
+        @NotNull Equalator<? super T> comparer
+    );
+
+    /**
+     * <p>Produces the set union of two sequences according to a specified key selector function.</p>
+     * <b>Usage:</b>
+     * <pre>{@code
+     * record Planet(String name, int type) {}
+     *
+     * Enumerable<Planet> planets1 = Linq.of(
+     *     new Planet("Mercury", 1),
+     *     new Planet("Venus", 2)
+     * );
+     * Enumerable<Planet> planets2 = Linq.of(
+     *     new Planet("Earth", 1), // Same type as Mercury
+     *     new Planet("Mars", 3)
+     * );
+     *
+     * // Union the planets by their type.
+     * Enumerable<Planet> result = planets1.unionBy(planets2, Planet::type);
+     *
+     * result.forEach(p -> System.out.println(p.name()));
+     *
+     * // This code produces the following output:
+     * //
+     * // Mercury
+     * // Venus
+     * // Mars
+     * }</pre>
+     *
+     * @param second An {@link Enumerable} whose distinct elements form the second set for the union.
+     * @param keySelector A function to extract the key for each element.
+     * @param <K> The type of the key returned by {@code keySelector}.
+     * @return An enumerable that contains the elements from both input sequences, excluding duplicates based on the extracted key.
+     * @see #unionBy(Enumerable, Function, Equalator)
+     */
+    @NotNull
+    <K> Enumerable<T> unionBy(
+        @NotNull Enumerable<? extends T> second,
+        @NotNull Function<? super T, ? extends K> keySelector
+    );
+
+    /**
+     * <p>Produces the set union of two sequences according to a specified key selector function
+     * and using a specified comparer.</p>
+     * <b>Usage:</b>
+     * <pre>{@code
+     * record Employee(String name, String department) {}
+     *
+     * Enumerable<Employee> team1 = Linq.of(
+     *     new Employee("Alice", "SALES"),
+     *     new Employee("Bob", "IT")
+     * );
+     * Enumerable<Employee> team2 = Linq.of(
+     *     new Employee("Charlie", "sales"), // Same department, different case
+     *     new Employee("Dave", "HR")
+     * );
+     *
+     * Equalator<String> ignoreCaseEqualator = Equalator.of(
+     *     String::equalsIgnoreCase,
+     *     String::toLowerCase
+     * );
+     *
+     * // Union the teams by their department name, ignoring case.
+     * Enumerable<Employee> result = team1.unionBy(
+     *     team2,
+     *     Employee::department,
+     *     ignoreCaseEqualator
+     * );
+     *
+     * result.forEach(e -> System.out.println(e.name()));
+     *
+     * // This code produces the following output:
+     * //
+     * // Alice
+     * // Bob
+     * // Dave
+     * }</pre>
+     *
+     * @param second An {@link Enumerable} whose distinct elements form the second set for the union.
+     * @param keySelector A function to extract the key for each element.
+     * @param comparer The {@link Equalator} to compare keys.
+     * @param <K> The type of the key returned by {@code keySelector}.
+     * @return An enumerable that contains the elements from both input sequences, excluding duplicates based on the extracted key.
+     * @see #unionBy(Enumerable, Function)
+     */
+    @NotNull
+    <K> Enumerable<T> unionBy(
+        @NotNull Enumerable<? extends T> second,
+        @NotNull Function<? super T, ? extends K> keySelector,
+        @NotNull Equalator<? super K> comparer
+    );
+
+    /**
+     * <p>Filters a sequence of values based on a predicate.</p>
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<String> fruits = Linq.of("apple", "passionfruit", "banana", "mango",
+     *                                     "orange", "blueberry", "grape", "strawberry");
+     *
+     * // Filter the sequence to include only those elements that have a length of less than 6.
+     * Enumerable<String> query = fruits.where(fruit -> fruit.length() < 6);
+     *
+     * query.forEach(System.out::println);
+     *
+     * // This code produces the following output:
+     * //
+     * // apple
+     * // mango
+     * // grape
+     * }</pre>
+     *
+     * @param predicate A function to test each element for a condition.
+     * @return An enumerable that contains elements from the input sequence that satisfy the condition.
+     * @see #where(BinPredicate)
+     */
+    @NotNull
+    Enumerable<T> where(@NotNull Predicate<? super T> predicate);
+
+    /**
+     * <p>Filters a sequence of values based on a predicate.
+     * Each element's index is used in the logic of the predicate function.</p>
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<Integer> numbers = Linq.of(0, 30, 20, 15, 90, 85, 40, 75);
+     *
+     * // Filter the sequence to include only those elements whose value is
+     * // less than or equal to their index multiplied by 10.
+     * Enumerable<Integer> query = numbers.where((number, index) -> number <= index * 10);
+     *
+     * query.forEach(System.out::println);
+     *
+     * // This code produces the following output:
+     * //
+     * // 0
+     * // 20
+     * // 15
+     * // 40
+     * }</pre>
+     *
+     * @param predicate A function to test each source element for a condition;
+     *                  the second parameter of the function represents the index of the source element.
+     * @return An enumerable that contains elements from the input sequence that satisfy the condition.
+     * @see #where(Predicate)
+     */
+    @NotNull
+    Enumerable<T> where(@NotNull BinPredicate<? super T, Integer> predicate);
+
+    /**
+     * <p>Produces a sequence of tuples ({@link Pair}) with elements from the two specified sequences.</p>
+     * <p>The method merges each element of the first sequence with an element that
+     * has the same index in the second sequence. If the sequences do not have the same
+     * number of elements, the method merges elements until it reaches the end of one of them.</p>
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<Integer> numbers = Linq.of(1, 2, 3, 4);
+     * Enumerable<String> letters = Linq.of("A", "B", "C");
+     *
+     * // Zip the two sequences into a sequence of Pair objects.
+     * Enumerable<Pair<Integer, String>> zipped = numbers.zip(letters);
+     *
+     * zipped.forEach(pair ->
+     *     System.out.printf("Number: %d, Letter: %s\n", pair.getLeft(), pair.getRight())
+     * );
+     *
+     * // This code produces the following output:
+     * //
+     * // Number: 1, Letter: A
+     * // Number: 2, Letter: B
+     * // Number: 3, Letter: C
+     * }</pre>
+     *
+     * @param second The second sequence to merge.
+     * @param <U> The type of the elements of the second input sequence.
+     * @return An enumerable that contains pairs of elements from the two input sequences.
+     * @see #zip(Enumerable, BinFunction)
+     */
+    @NotNull
+    <U> Enumerable<Pair<T, U>> zip(@NotNull Enumerable<? extends U> second);
+
+    /**
+     * <p>Applies a specified function to the corresponding elements of two sequences,
+     * producing a sequence of the results.</p>
+     * <p>The method merges each element of the first sequence with an element that
+     * has the same index in the second sequence. If the sequences do not have the same
+     * number of elements, the method merges elements until it reaches the end of one of them.</p>
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<Integer> numbers = Linq.of(1, 2, 3, 4);
+     * Enumerable<String> words = Linq.of("one", "two", "three");
+     *
+     * // Merge corresponding elements into a single string.
+     * Enumerable<String> numbersAndWords = numbers.zip(
+     *     words,
+     *     (first, second) -> first + " " + second
+     * );
+     *
+     * numbersAndWords.forEach(System.out::println);
+     *
+     * // This code produces the following output (notice that "4" is ignored
+     * // because the 'words' array has only three elements):
+     * //
+     * // 1 one
+     * // 2 two
+     * // 3 three
+     * }</pre>
+     *
+     * @param second The second sequence to merge.
+     * @param resultSelector A function that specifies how to merge the elements from the two sequences.
+     * @param <U> The type of the elements of the second input sequence.
+     * @param <R> The type of the elements of the result sequence.
+     * @return An enumerable that contains merged elements of two input sequences.
+     * @see #zip(Enumerable)
+     */
+    @NotNull
+    <U, R> Enumerable<R> zip(
+        @NotNull Enumerable<? extends U> second,
+        @NotNull BinFunction<? super T, ? super U, ? extends R> resultSelector
+    );
+
+    /**
+     * <p>Creates an array from an enumerable sequence using the specified array generator function.</p>
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<String> packages = Linq.of("Coho Vineyard", "Wingtip Toys", "Adventure Works");
+     *
+     * // Create a string array from the enumerable sequence.
+     * String[] array = packages.toArray(String[]::new);
+     *
+     * for (String pkg : array) {
+     *     System.out.println(pkg);
+     * }
+     *
+     * // This code produces the following output:
+     * //
+     * // Coho Vineyard
+     * // Wingtip Toys
+     * // Adventure Works
+     * }</pre>
+     *
+     * @param generator A function which produces a new array of the desired type and the provided length.
+     * @param <A> The element type of the resulting array.
+     * @return An array that contains the elements from the input sequence.
+     * @see #toArray()
+     */
+    @NotNull
+    <A> A[] toArray(@NotNull IntFunction<A[]> generator);
+
+    /**
+     * <p>Creates an array of {@link Object} from an enumerable sequence.</p>
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<String> fruits = Linq.of("apple", "banana", "mango");
+     *
+     * // Create an Object array from the enumerable sequence.
+     * Object[] array = fruits.toArray();
+     *
+     * for (Object obj : array) {
+     *     System.out.println(obj);
+     * }
+     *
+     * // This code produces the following output:
+     * //
+     * // apple
+     * // banana
+     * // mango
+     * }</pre>
+     *
+     * @return An array of {@link Object} that contains the elements from the input sequence.
+     * @see #toArray(IntFunction)
+     */
+    @NotNull
+    Object[] toArray();
+
+    /**
+     * <p>Creates a {@link java.util.Map} from an enumerable sequence according to a specified key selector function.</p>
+     * <b>Usage:</b>
+     * <pre>{@code
+     * record Package(String trackingNumber, double weight) {}
+     *
+     * Enumerable<Package> packages = Linq.of(
+     *     new Package("1V0001", 1.5),
+     *     new Package("1V0002", 2.2)
+     * );
+     *
+     * // Create a map using TrackingNumber as the key and the Package object as the value.
+     * Map<String, Package> dictionary = packages.toDictionary(Package::trackingNumber);
+     *
+     * for (Map.Entry<String, Package> entry : dictionary.entrySet()) {
+     *     System.out.printf("Key: %s, Weight: %.1f\n", entry.getKey(), entry.getValue().weight());
+     * }
+     *
+     * // This code produces the following output:
+     * //
+     * // Key: 1V0001, Weight: 1.5
+     * // Key: 1V0002, Weight: 2.2
+     * }</pre>
+     *
+     * @param keySelector A function to extract a key from each element.
+     * @param <K> The type of the key returned by {@code keySelector}.
+     * @return A {@link java.util.Map} that contains keys and values. The values are the original elements from the input sequence.
+     * @throws NullPointerException If {@code keySelector} is {@code null}, or if it produces a {@code null} key.
+     * @throws IllegalStateException If {@code keySelector} produces duplicate keys for two elements.
+     * @see #toMap(Function, Function)
+     */
+    @NotNull
+    <K> Map<K, T> toMap(
+        @NotNull Function<? super T, ? extends K> keySelector
+    );
+
+    /**
+     * <p>Creates a {@link Map} from an enumerable sequence according to specified key selector and element selector functions.</p>
+     * <b>Usage:</b>
+     * <pre>{@code
+     * record Employee(int id, String name) {}
+     *
+     * Enumerable<Employee> employees = Linq.of(
+     *     new Employee(1001, "Alice"),
+     *     new Employee(1002, "Bob")
+     * );
+     *
+     * // Create a map using ID as the key and Name as the value.
+     * Map<Integer, String> map = employees.toMap(
+     *     Employee::id,
+     *     Employee::name
+     * );
+     *
+     * for (Map.Entry<Integer, String> entry : map.entrySet()) {
+     *     System.out.printf("ID: %d, Name: %s\n", entry.getKey(), entry.getValue());
+     * }
+     *
+     * // This code produces the following output:
+     * //
+     * // ID: 1001, Name: Alice
+     * // ID: 1002, Name: Bob
+     * }</pre>
+     *
+     * @param keySelector A function to extract a key from each element.
+     * @param elementSelector A transform function to produce a result element value from each element.
+     * @param <K> The type of the key returned by {@code keySelector}.
+     * @param <V> The type of the value returned by {@code elementSelector}.
+     * @return A {@link Map} that contains values of type {@code V} selected from the input sequence.
+     * @throws NullPointerException If {@code keySelector} or {@code elementSelector} is {@code null}, or if a key is {@code null}.
+     * @throws IllegalStateException If {@code keySelector} produces duplicate keys for two elements.
+     * @see #toMap(Function, Function, Equalator)
+     */
+    @NotNull
+    <K, V> Map<K, V> toMap(
+        @NotNull Function<? super T, ? extends K> keySelector,
+        @NotNull Function<? super T, ? extends V> elementSelector
+    );
+
+    /**
+     * <p>Creates a {@link Map} from an enumerable sequence according to a specified key selector function and key comparer.</p>
+     * <b>Usage:</b>
+     * <pre>{@code
+     * record Package(String trackingNumber, double weight) {}
+     *
+     * Enumerable<Package> packages = Linq.of(
+     *     new Package("1v0001", 1.5),
+     *     new Package("1V0002", 2.2)
+     * );
+     *
+     * Equalator<String> ignoreCaseEqualator = Equalator.of(
+     *     String::equalsIgnoreCase,
+     *     String::toLowerCase
+     * );
+     *
+     * // Create a map using case-insensitive TrackingNumber as the key.
+     * Map<String, Package> map = packages.toMap(
+     *     Package::trackingNumber,
+     *     ignoreCaseEqualator
+     * );
+     *
+     * // Looking up "1V0001" will succeed even though the key is "1v0001".
+     * System.out.println(map.containsKey("1V0001"));
+     *
+     * // This code produces the following output:
+     * //
+     * // true
+     * }</pre>
+     *
+     * @param keySelector A function to extract a key from each element.
+     * @param comparer An {@link Equalator} to compare keys.
+     * @param <K> The type of the key returned by {@code keySelector}.
+     * @return A {@link Map} that contains keys and values.
+     * @throws NullPointerException If {@code keySelector} or {@code comparer} is {@code null}, or if a key is {@code null}.
+     * @throws IllegalStateException If {@code keySelector} produces duplicate keys.
+     * @see #toMap(Function)
+     */
+    @NotNull
+    <K> Map<K, T> toMap(
+        @NotNull Function<? super T, ? extends K> keySelector,
+        @NotNull Equalator<? super K> comparer
+    );
+
+    /**
+     * <p>Creates a {@link Map} from an enumerable sequence according to a specified key selector function, a comparer, and an element selector function.</p>
+     * <b>Usage:</b>
+     * <pre>{@code
+     * record Employee(int id, String department) {}
+     *
+     * Enumerable<Employee> employees = Linq.of(
+     *     new Employee(1001, "Sales"),
+     *     new Employee(1002, "IT")
+     * );
+     *
+     * Equalator<String> ignoreCaseEqualator = Equalator.of(
+     *     String::equalsIgnoreCase,
+     *     String::toLowerCase
+     * );
+     *
+     * // Create a map with Department as the key (case-insensitive) and ID as the value.
+     * Map<String, Integer> map = employees.toMap(
+     *     Employee::department,
+     *     Employee::id,
+     *     ignoreCaseEqualator
+     * );
+     *
+     * System.out.println("Sales ID: " + map.get("sales"));
+     *
+     * // This code produces the following output:
+     * //
+     * // Sales ID: 1001
+     * }</pre>
+     *
+     * @param keySelector A function to extract a key from each element.
+     * @param elementSelector A transform function to produce a result element value from each element.
+     * @param comparer An {@link Equalator} to compare keys.
+     * @param <K> The type of the key returned by {@code keySelector}.
+     * @param <V> The type of the value returned by {@code elementSelector}.
+     * @return A {@link Map} that contains values of type {@code V} selected from the input sequence.
+     * @throws NullPointerException If {@code keySelector}, {@code elementSelector}, or {@code comparer} is {@code null}, or if a key is {@code null}.
+     * @throws IllegalStateException If {@code keySelector} produces duplicate keys.
+     * @see #toMap(Function, Function)
+     */
+    @NotNull
+    <K, V> Map<K, V> toMap(
+        @NotNull Function<? super T, ? extends K> keySelector,
+        @NotNull Function<? super T, ? extends V> elementSelector,
+        @NotNull Equalator<? super K> comparer
+    );
+
+    /**
+     * <p>Creates an unmodifiable {@link Map} from an enumerable sequence according to a specified key selector function.</p>
+     * <b>Usage:</b>
+     * <pre>{@code
+     * record Package(String trackingNumber, double weight) {}
+     *
+     * Enumerable<Package> packages = Linq.of(
+     *     new Package("1V0001", 1.5),
+     *     new Package("1V0002", 2.2)
+     * );
+     *
+     * Map<String, Package> map = packages.toUnmodifiableMap(Package::trackingNumber);
+     * // map.put("1V0003", new Package("1V0003", 1.0)); // Throws UnsupportedOperationException
+     * }</pre>
+     *
+     * @param keySelector A function to extract a key from each element.
+     * @param <K> The type of the key returned by {@code keySelector}.
+     * @return An unmodifiable {@link Map} that contains keys and values.
+     * @throws NullPointerException If {@code keySelector} is {@code null}, or if it produces a {@code null} key.
+     * @throws IllegalStateException If {@code keySelector} produces duplicate keys.
+     */
+    @NotNull
+    default <K> Map<K, T> toUnmodifiableMap(@NotNull Function<? super T, ? extends K> keySelector) {
+        return Collections.unmodifiableMap(toMap(keySelector));
+    }
+
+    /**
+     * <p>Creates an unmodifiable {@link Map} from an enumerable sequence according to specified key selector and element selector functions.</p>
+     *
+     * @param keySelector A function to extract a key from each element.
+     * @param elementSelector A transform function to produce a result element value from each element.
+     * @param <K> The type of the key returned by {@code keySelector}.
+     * @param <V> The type of the value returned by {@code elementSelector}.
+     * @return An unmodifiable {@link Map} that contains values of type {@code V} selected from the input sequence.
+     * @throws NullPointerException If {@code keySelector} or {@code elementSelector} is {@code null}.
+     * @throws IllegalStateException If {@code keySelector} produces duplicate keys.
+     */
+    @NotNull
+    default <K, V> Map<K, V> toUnmodifiableMap(
+        @NotNull Function<? super T, ? extends K> keySelector,
+        @NotNull Function<? super T, ? extends V> elementSelector
+    ) {
+        return Collections.unmodifiableMap(toMap(keySelector, elementSelector));
+    }
+
+    /**
+     * <p>Creates an unmodifiable {@link Map} from an enumerable sequence according to a specified key selector function and key comparer.</p>
+     *
+     * @param keySelector A function to extract a key from each element.
+     * @param comparer An {@link Equalator} to compare keys.
+     * @param <K> The type of the key returned by {@code keySelector}.
+     * @return An unmodifiable {@link Map} that contains keys and values.
+     * @throws NullPointerException If parameters are {@code null}, or if it produces a {@code null} key.
+     * @throws IllegalStateException If {@code keySelector} produces duplicate keys.
+     */
+    @NotNull
+    default <K> Map<K, T> toUnmodifiableMap(
+        @NotNull Function<? super T, ? extends K> keySelector,
+        @NotNull Equalator<? super K> comparer
+    ) {
+        return Collections.unmodifiableMap(toMap(keySelector, comparer));
+    }
+
+    /**
+     * <p>Creates an unmodifiable {@link Map} from an enumerable sequence according to a specified key selector function, a comparer, and an element selector function.</p>
+     *
+     * @param keySelector A function to extract a key from each element.
+     * @param elementSelector A transform function to produce a result element value from each element.
+     * @param comparer An {@link Equalator} to compare keys.
+     * @param <K> The type of the key returned by {@code keySelector}.
+     * @param <V> The type of the value returned by {@code elementSelector}.
+     * @return An unmodifiable {@link Map} that contains values of type {@code V} selected from the input sequence.
+     * @throws NullPointerException If parameters are {@code null}, or if it produces a {@code null} key.
+     * @throws IllegalStateException If {@code keySelector} produces duplicate keys.
+     */
+    @NotNull
+    default <K, V> Map<K, V> toUnmodifiableMap(
+        @NotNull Function<? super T, ? extends K> keySelector,
+        @NotNull Function<? super T, ? extends V> elementSelector,
+        @NotNull Equalator<? super K> comparer
+    ) {
+        return Collections.unmodifiableMap(toMap(keySelector, elementSelector, comparer));
+    }
+
+    /**
+     * <p>Creates an unmodifiable {@link SortedMap} from an enumerable sequence according to a specified key selector function.
+     * The keys are sorted according to their {@linkplain Comparable natural ordering}.</p>
+     * <b>Usage:</b>
+     * <pre>{@code
+     * record Employee(int id, String name) {}
+     *
+     * Enumerable<Employee> employees = Linq.of(
+     *     new Employee(1002, "Bob"),
+     *     new Employee(1001, "Alice")
+     * );
+     *
+     * // The map will be sorted by the employee ID (1001, then 1002)
+     * SortedMap<Integer, String> map = employees.toUnmodifiableSortedMap(Employee::id, Employee::name);
+     * }</pre>
+     *
+     * @param keySelector A function to extract a key from each element.
+     * @param <K> The type of the key returned by {@code keySelector}.
+     * @return An unmodifiable {@link SortedMap} that contains keys and values.
+     * @throws NullPointerException If {@code keySelector} is {@code null}, or if it produces a {@code null} key.
+     * @throws IllegalStateException If {@code keySelector} produces duplicate keys.
+     * @throws ClassCastException If the keys cannot be cast to {@link Comparable}.
+     */
+    @NotNull
+    @SuppressWarnings("unchecked")
+    default <K> SortedMap<K, T> toUnmodifiableSortedMap(@NotNull Function<? super T, ? extends K> keySelector) {
+        SortedMap<K, T> sortedMap = new TreeMap<>((Comparator<? super K>) Comparator.naturalOrder());
+        this.forEach(element -> {
+            K key = keySelector.apply(element);
+            if (sortedMap.containsKey(key)) throw new IllegalStateException("Duplicate key: " + key);
+            sortedMap.put(key, element);
+        });
+        return Collections.unmodifiableSortedMap(sortedMap);
+    }
+
+    /**
+     * <p>Creates an unmodifiable {@link SortedMap} from an enumerable sequence according to specified key selector and element selector functions.
+     * The keys are sorted according to their {@linkplain Comparable natural ordering}.</p>
+     *
+     * @param keySelector A function to extract a key from each element.
+     * @param elementSelector A transform function to produce a result element value from each element.
+     * @param <K> The type of the key returned by {@code keySelector}.
+     * @param <V> The type of the value returned by {@code elementSelector}.
+     * @return An unmodifiable {@link SortedMap} that contains values of type {@code V}.
+     * @throws NullPointerException If selectors are {@code null}.
+     * @throws IllegalStateException If {@code keySelector} produces duplicate keys.
+     * @throws ClassCastException If the keys cannot be cast to {@link Comparable}.
+     */
+    @NotNull
+    @SuppressWarnings("unchecked")
+    default <K, V> SortedMap<K, V> toUnmodifiableSortedMap(
+        @NotNull Function<? super T, ? extends K> keySelector,
+        @NotNull Function<? super T, ? extends V> elementSelector
+    ) {
+        SortedMap<K, V> sortedMap = new TreeMap<>((Comparator<? super K>) Comparator.naturalOrder());
+        this.forEach(element -> {
+            K key = keySelector.apply(element);
+            if (sortedMap.containsKey(key)) throw new IllegalStateException("Duplicate key: " + key);
+            sortedMap.put(key, elementSelector.apply(element));
+        });
+        return Collections.unmodifiableSortedMap(sortedMap);
+    }
+
+    /**
+     * <p>Creates an unmodifiable {@link SortedMap} from an enumerable sequence according to a specified key selector function and key comparer.</p>
+     *
+     * @param keySelector A function to extract a key from each element.
+     * @param keyComparator A {@link Comparator} to sort the keys.
+     * @param <K> The type of the key returned by {@code keySelector}.
+     * @return An unmodifiable {@link SortedMap} that contains keys and values.
+     * @throws NullPointerException If parameters are {@code null}, or if it produces a {@code null} key.
+     * @throws IllegalStateException If {@code keySelector} produces duplicate keys.
+     */
+    @NotNull
+    default <K> SortedMap<K, T> toUnmodifiableSortedMap(
+        @NotNull Function<? super T, ? extends K> keySelector,
+        @NotNull Comparator<? super K> keyComparator
+    ) {
+        SortedMap<K, T> sortedMap = new TreeMap<>(keyComparator);
+        this.forEach(element -> {
+            K key = keySelector.apply(element);
+            if (sortedMap.containsKey(key)) throw new IllegalStateException("Duplicate key: " + key);
+            sortedMap.put(key, element);
+        });
+        return Collections.unmodifiableSortedMap(sortedMap);
+    }
+
+    /**
+     * <p>Creates an unmodifiable {@link SortedMap} from an enumerable sequence according to a specified key selector function, a key comparer, and an element selector function.</p>
+     *
+     * @param keySelector A function to extract a key from each element.
+     * @param elementSelector A transform function to produce a result element value from each element.
+     * @param keyComparator A {@link Comparator} to sort the keys.
+     * @param <K> The type of the key returned by {@code keySelector}.
+     * @param <V> The type of the value returned by {@code elementSelector}.
+     * @return An unmodifiable {@link SortedMap} that contains values of type {@code V}.
+     * @throws NullPointerException If parameters are {@code null}, or if it produces a {@code null} key.
+     * @throws IllegalStateException If {@code keySelector} produces duplicate keys.
+     */
+    @NotNull
+    default <K, V> SortedMap<K, V> toUnmodifiableSortedMap(
+        @NotNull Function<? super T, ? extends K> keySelector,
+        @NotNull Function<? super T, ? extends V> elementSelector,
+        @NotNull Comparator<? super K> keyComparator
+    ) {
+        SortedMap<K, V> sortedMap = new TreeMap<>(keyComparator);
+        this.forEach(element -> {
+            K key = keySelector.apply(element);
+            if (sortedMap.containsKey(key)) throw new IllegalStateException("Duplicate key: " + key);
+            sortedMap.put(key, elementSelector.apply(element));
+        });
+        return Collections.unmodifiableSortedMap(sortedMap);
+    }
+
+
+    /**
+     * <p>Creates a {@link List} from an enumerable sequence.</p>
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<String> fruits = Linq.of("apple", "passionfruit", "banana", "mango");
+     *
+     * // Create a list from the enumerable sequence.
+     * List<String> list = fruits.toList();
+     *
+     * for (String fruit : list) {
+     *     System.out.println(fruit);
+     * }
+     *
+     * // This code produces the following output:
+     * //
+     * // apple
+     * // passionfruit
+     * // banana
+     * // mango
+     * }</pre>
+     *
+     * @return A {@link List} that contains elements from the input sequence.
+     * @see #toUnmodifiableList()
+     */
+    @NotNull
+    default List<T> toList() {
+        final List<T> list = new ArrayList<>();
+        this.forEach(list::add);
+        return list;
+    }
+
+    /**
+     * <p>Creates a {@link List} from an enumerable sequence and sorts the elements
+     * according to their {@linkplain Comparable natural ordering}.</p>
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<Integer> numbers = Linq.of(5, 1, 3, 2, 5, 4);
+     *
+     * // Create a sorted list from the enumerable sequence.
+     * // Unlike a Set, a List retains duplicate elements.
+     * List<Integer> sortedList = numbers.toSortedList();
+     *
+     * for (Integer number : sortedList) {
+     *     System.out.print(number + " ");
+     * }
+     *
+     * // This code produces the following output:
+     * //
+     * // 1 2 3 4 5 5
+     * }</pre>
+     *
+     * @return A sorted {@link List} that contains elements from the input sequence.
+     * @throws ClassCastException If the elements cannot be cast to {@link Comparable}, or if they are not mutually comparable.
+     * @see #toSortedList(Comparator)
+     * @see #toUnmodifiableSortedList()
+     */
+    @NotNull
+    @SuppressWarnings("unchecked")
+    default List<T> toSortedList() {
+        List<T> list = toList();
+        list.sort((Comparator<? super T>) Comparator.naturalOrder());
+        return list;
+    }
+
+    /**
+     * <p>Creates a {@link List} from an enumerable sequence and sorts the elements
+     * using the specified {@link Comparator}.</p>
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<String> fruits = Linq.of("passionfruit", "apple", "banana", "mango");
+     *
+     * // Create a sorted list using a custom comparator (e.g., sort by string length).
+     * List<String> sortedList = fruits.toSortedList(
+     *     Comparator.comparingInt(String::length)
+     * );
+     *
+     * for (String fruit : sortedList) {
+     *     System.out.println(fruit);
+     * }
+     *
+     * // This code produces the following output:
+     * //
+     * // apple
+     * // mango
+     * // banana
+     * // passionfruit
+     * }</pre>
+     *
+     * @param comparator A {@link Comparator} to sort the elements.
+     * @return A sorted {@link List} that contains elements from the input sequence.
+     * @throws NullPointerException If {@code comparator} is {@code null}.
+     * @see #toSortedList()
+     * @see #toUnmodifiableSortedList(Comparator)
+     */
+    @NotNull
+    default List<T> toSortedList(@NotNull Comparator<? super T> comparator) {
+        List<T> list = toList();
+        list.sort(comparator);
+        return list;
+    }
+
+    /**
+     * <p>Creates an unmodifiable {@link List} from an enumerable sequence.</p>
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<String> fruits = Linq.of("apple", "banana", "mango");
+     *
+     * // Create an unmodifiable list from the enumerable sequence.
+     * List<String> unmodifiableList = fruits.toUnmodifiableList();
+     *
+     * // unmodifiableList.add("orange"); // This will throw UnsupportedOperationException
+     *
+     * for (String fruit : unmodifiableList) {
+     *     System.out.println(fruit);
+     * }
+     *
+     * // This code produces the following output:
+     * //
+     * // apple
+     * // banana
+     * // mango
+     * }</pre>
+     *
+     * @return An unmodifiable {@link List} that contains elements from the input sequence.
+     * @see #toList()
+     */
+    @NotNull
+    default List<T> toUnmodifiableList() {
+        return Collections.unmodifiableList(toList());
+    }
+
+    /**
+     * <p>Creates an unmodifiable {@link List} from an enumerable sequence, with elements
+     * sorted according to their {@linkplain Comparable natural ordering}.</p>
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<Integer> numbers = Linq.of(5, 1, 3, 2, 5, 4);
+     *
+     * // Create an unmodifiable sorted list.
+     * List<Integer> unmodifiableSortedList = numbers.toUnmodifiableSortedList();
+     *
+     * // unmodifiableSortedList.add(6); // Throws UnsupportedOperationException
+     * }</pre>
+     *
+     * @return An unmodifiable sorted {@link List} that contains elements from the input sequence.
+     * @throws ClassCastException If the elements cannot be cast to {@link Comparable}, or if they are not mutually comparable.
+     * @see #toSortedList()
+     */
+    @NotNull
+    default List<T> toUnmodifiableSortedList() {
+        return Collections.unmodifiableList(toSortedList());
+    }
+
+    /**
+     * <p>Creates an unmodifiable {@link List} from an enumerable sequence, with elements
+     * sorted using the specified {@link Comparator}.</p>
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<String> fruits = Linq.of("passionfruit", "apple", "banana", "mango");
+     *
+     * // Create an unmodifiable sorted list using a custom comparator.
+     * List<String> unmodifiableSortedList = fruits.toUnmodifiableSortedList(
+     *     Comparator.comparingInt(String::length)
+     * );
+     *
+     * // unmodifiableSortedList.sort(...); // Throws UnsupportedOperationException
+     * }</pre>
+     *
+     * @param comparator A {@link Comparator} to sort the elements.
+     * @return An unmodifiable sorted {@link List} that contains elements from the input sequence.
+     * @throws NullPointerException If {@code comparator} is {@code null}.
+     * @see #toSortedList(Comparator)
+     */
+    @NotNull
+    default List<T> toUnmodifiableSortedList(@NotNull Comparator<? super T> comparator) {
+        return Collections.unmodifiableList(toSortedList(comparator));
+    }
+
+
+    /**
+     * <p>Creates a {@link Set} from an enumerable sequence.</p>
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<Integer> numbers = Linq.of(1, 2, 2, 3, 3, 3, 4);
+     *
+     * // Create a hash set from the enumerable sequence to remove duplicates.
+     * Set<Integer> set = numbers.toHashSet();
+     *
+     * for (Integer number : set) {
+     *     System.out.println(number);
+     * }
+     *
+     * // This code produces output similar to the following (order is not guaranteed):
+     * //
+     * // 1
+     * // 2
+     * // 3
+     * // 4
+     * }</pre>
+     *
+     * @return A {@link Set} that contains elements from the input sequence.
+     * @see #toHashSet(Equalator)
+     * @see #toUnmodifiableHashSet()
+     */
+    @NotNull
+    default Set<T> toHashSet() {
+        final HashSet<T> set = new HashSet<>();
+        this.forEach(set::add);
+        return set;
+    }
+
+    /**
+     * <p>Creates an unmodifiable {@link Set} from an enumerable sequence.</p>
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<Integer> numbers = Linq.of(1, 2, 2, 3);
+     *
+     * // Create an unmodifiable set from the enumerable sequence.
+     * Set<Integer> unmodifiableSet = numbers.toUnmodifiableHashSet();
+     *
+     * // unmodifiableSet.add(4); // This will throw UnsupportedOperationException
+     *
+     * for (Integer number : unmodifiableSet) {
+     *     System.out.println(number);
+     * }
+     *
+     * // This code produces output similar to the following:
+     * //
+     * // 1
+     * // 2
+     * // 3
+     * }</pre>
+     *
+     * @return An unmodifiable {@link Set} that contains elements from the input sequence.
+     * @see #toHashSet()
+     */
+    @NotNull
+    default Set<T> toUnmodifiableHashSet() {
+        return Collections.unmodifiableSet(toHashSet());
+    }
+
+    /**
+     * <p>Creates a {@link SortedSet} from an enumerable sequence.
+     * The elements are sorted according to their {@linkplain Comparable natural ordering}.</p>
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<Integer> numbers = Linq.of(5, 1, 3, 2, 5, 4);
+     *
+     * // Create a sorted set from the enumerable sequence to remove duplicates and sort.
+     * SortedSet<Integer> sortedSet = numbers.toSortedSet();
+     *
+     * for (Integer number : sortedSet) {
+     *     System.out.print(number + " ");
+     * }
+     *
+     * // This code produces the following output:
+     * //
+     * // 1 2 3 4 5
+     * }</pre>
+     *
+     * @return A {@link SortedSet} that contains elements from the input sequence.
+     * @throws ClassCastException If the elements cannot be cast to {@link Comparable}, or if they are not mutually comparable.
+     * @see #toSortedSet(Comparator)
+     * @see #toUnmodifiableSortedSet()
+     */
+    @NotNull
+    @SuppressWarnings("unchecked")
+    default SortedSet<T> toSortedSet() {
+        SortedSet<T> sortedSet = new TreeSet<>((Comparator<? super T>) Comparator.naturalOrder());
+        for (T element : this) {
+            sortedSet.add(element);
+        }
+        return sortedSet;
+    }
+
+    /**
+     * <p>Creates a {@link SortedSet} from an enumerable sequence using the specified {@link Comparator}.</p>
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<String> fruits = Linq.of("passionfruit", "apple", "banana", "mango");
+     *
+     * // Create a sorted set using a custom comparator (e.g., sort by string length).
+     * SortedSet<String> sortedSet = fruits.toSortedSet(
+     *     Comparator.comparingInt(String::length)
+     * );
+     *
+     * for (String fruit : sortedSet) {
+     *     System.out.println(fruit);
+     * }
+     *
+     * // This code produces the following output:
+     * //
+     * // apple
+     * // mango
+     * // banana
+     * // passionfruit
+     * }</pre>
+     *
+     * @param comparator A {@link Comparator} to sort the elements.
+     * @return A {@link SortedSet} that contains elements from the input sequence.
+     * @throws NullPointerException If {@code comparator} is {@code null}.
+     * @see #toSortedSet()
+     * @see #toUnmodifiableSortedSet(Comparator)
+     */
+    @NotNull
+    default SortedSet<T> toSortedSet(@NotNull Comparator<? super T> comparator) {
+        SortedSet<T> sortedSet = new TreeSet<>(comparator);
+        for (T element : this) {
+            sortedSet.add(element);
+        }
+        return sortedSet;
+    }
+
+
+    /**
+     * <p>Creates an unmodifiable {@link SortedSet} from an enumerable sequence.
+     * The elements are sorted according to their {@linkplain Comparable natural ordering}.</p>
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<Integer> numbers = Linq.of(5, 1, 3, 2, 5, 4);
+     *
+     * // Create an unmodifiable sorted set from the enumerable sequence.
+     * SortedSet<Integer> unmodifiableSortedSet = numbers.toUnmodifiableSortedSet();
+     *
+     * // unmodifiableSortedSet.add(6); // This will throw UnsupportedOperationException
+     *
+     * for (Integer number : unmodifiableSortedSet) {
+     *     System.out.print(number + " ");
+     * }
+     *
+     * // This code produces the following output:
+     * //
+     * // 1 2 3 4 5
+     * }</pre>
+     *
+     * @return An unmodifiable {@link SortedSet} that contains elements from the input sequence.
+     * @throws ClassCastException If the elements cannot be cast to {@link Comparable}, or if they are not mutually comparable.
+     * @see #toSortedSet()
+     * @see #toUnmodifiableSortedSet(Comparator)
+     */
+    @NotNull
+    default SortedSet<T> toUnmodifiableSortedSet() {
+        return Collections.unmodifiableSortedSet(toSortedSet());
+    }
+
+    /**
+     * <p>Creates an unmodifiable {@link SortedSet} from an enumerable sequence using the specified {@link Comparator}.</p>
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<String> fruits = Linq.of("passionfruit", "apple", "banana", "mango");
+     *
+     * // Create an unmodifiable sorted set using a custom comparator.
+     * SortedSet<String> unmodifiableSortedSet = fruits.toUnmodifiableSortedSet(
+     *     Comparator.comparingInt(String::length)
+     * );
+     *
+     * for (String fruit : unmodifiableSortedSet) {
+     *     System.out.println(fruit);
+     * }
+     *
+     * // This code produces the following output:
+     * //
+     * // apple
+     * // mango
+     * // banana
+     * // passionfruit
+     * }</pre>
+     *
+     * @param comparator A {@link Comparator} to sort the elements.
+     * @return An unmodifiable {@link SortedSet} that contains elements from the input sequence.
+     * @throws NullPointerException If {@code comparator} is {@code null}.
+     * @see #toUnmodifiableSortedSet()
+     * @see #toSortedSet(Comparator)
+     */
+    @NotNull
+    default SortedSet<T> toUnmodifiableSortedSet(@NotNull Comparator<? super T> comparator) {
+        return Collections.unmodifiableSortedSet(toSortedSet(comparator));
+    }
 }
