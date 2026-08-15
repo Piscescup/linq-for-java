@@ -1,5 +1,20 @@
 package io.github.piscescup.linq4j;
 
+import io.github.piscescup.interfaces.Equalable;
+import io.github.piscescup.interfaces.Equalator;
+import io.github.piscescup.interfaces.Pair;
+import io.github.piscescup.interfaces.exfunction.BinFunction;
+import io.github.piscescup.interfaces.exfunction.TriFunction;
+import io.github.piscescup.linq4j.base.Groupable;
+import io.github.piscescup.linq4j.exceptions.OverflowEnumerableException;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
+import java.math.BigDecimal;
+import java.util.Comparator;
+import java.util.NoSuchElementException;
+import java.util.function.*;
+
 /**
  * A sequence of elements that supports aggregate operations in a declarative
  * style, analogous to the .NET {@code IEnumerable<T>} interface and its
@@ -91,5 +106,3965 @@ package io.github.piscescup.linq4j;
 public interface Enumerable<T>
     extends BaseEnumerable<T, Enumerable<T>>
 {
+    /**
+     * <p>Applies an accumulator function over a sequence.
+     * The specified seed value is used as the initial accumulator value,
+     * and the specified function is used to select the result value.</p>
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<String> fruits = Linq.of("apple", "mango", "orange", "passionfruit", "grape");
+     *
+     * // Determine whether any string in the array is longer than "banana".
+     * string longestName =
+     *     fruits.aggregate("banana",
+     *                     (longest, next) ->
+     *                         next.Length > longest.Length ? next : longest,
+     *                     // Return the final result as an upper case string.
+     *                     fruit -> fruit.ToUpper());
+     *
+     * System.out.printf("The fruit with the longest name is %s.\n ", longestName)
+     *
+     * // This code produces the following output:
+     * //
+     * // The fruit with the longest name is PASSIONFRUIT.
+     *
+     * }</pre>
+     *
+     * @param seed The initial accumulator value.
+     * @param aggregator An accumulator function to be invoked on each element.
+     * @param resultSelector A function to transform the final accumulator value into the result value.
+     * @return The transformed final accumulator value.
+     * @param <A> The type of the accumulator value.
+     * @param <R> The type of the resulting value.
+     */
+    <A, R> R aggregateToResult(
+        A seed,
+        @NotNull BinFunction<? super A, ? super T, ? extends A> aggregator,
+        @NotNull Function<? super A, ? extends R> resultSelector
+    );
 
+    /**
+     * <p>Applies an accumulator function over a sequence.
+     * The specified seed value is used as the initial accumulator value.</p>
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<Integer> ints = Linq.of(4, 8, 8, 3, 9, 0, 7, 8, 2);
+     *
+     * // Count the even numbers in the array, using a seed value of 0.
+     * int numEven = ints.aggregate(0, (total, next) ->
+     *                                     next % 2 == 0 ? total + 1 : total);
+     *
+     * System.out.printf("The number of even integers is: %s", numEven);
+     *
+     * // This code produces the following output:
+     * //
+     * // The number of even integers is: 6
+     * }</pre>
+     *
+     * @param seed The initial accumulator value.
+     * @param aggregator An accumulator function to be invoked on each element.
+     * @return The transformed final accumulator value.
+     * @param <A> The type of the accumulator value.
+     * @param <R> The type of the resulting value.
+     */
+    <A> A aggregateToResult(
+        @NotNull A seed, @NotNull BinFunction<? super A, ? super T, ? extends A> aggregator
+    );
+
+    /**
+     * <p>Applies an accumulator function over a sequence and get the accumulation result.</p>
+     * <b>Usage:</b>
+     * <pre>{@code
+     * String sentence = "the quick brown fox jumps over the lazy dog";
+     *
+     * // Split the string into individual words.
+     * String[] words = sentence.Split(' ');
+     *
+     * // Prepend each word to the beginning of the
+     * // new sentence to reverse the word order.
+     * string reversed = Linq.fromArray(words)
+     *     .Aggregate(
+     *         (workingSentence, next) -> next + " " + workingSentence
+     *     );
+     *
+     * System.out.println(reversed);
+     *
+     * // This code produces the following output:
+     * //
+     * // dog lazy the over jumps fox brown quick the
+     * }</pre>
+     *
+     * @param aggregator An accumulator function to be invoked on each element.
+     * @return The transformed final accumulator value.
+     */
+    T aggregateToResult(@NotNull BinFunction<? super T, ? super T, ? extends T> aggregator);
+
+    /**
+     * <p>
+     * Applies an accumulator function over a sequence, grouping the results by key.
+     * The specified seed value is used as the initial accumulator value for each key.
+     * </p>
+     *
+     * <p>
+     * Each resulting {@link Pair} contains the grouping key as its left element
+     * and the accumulated value as its right element.
+     * </p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<Employee> employees = Linq.of(
+     *     new Employee("Alice", "HR", 45000),
+     *     new Employee("Bob", "Technology", 50000),
+     *     new Employee("Charlie", "Sales", 75000),
+     *     new Employee("David", "Technology", 65000),
+     *     new Employee("Eve", "HR", 40000)
+     * );
+     *
+     * Enumerable<Pair<String, Integer>> result =
+     *     employees.aggregateBy(
+     *         Employee::department,
+     *         0,
+     *         (total, employee) -> total + employee.salary()
+     *     );
+     * }</pre>
+     *
+     * @param keySelector A function to extract the key for each element.
+     * @param seed The initial accumulator value for each key.
+     * @param aggregator An accumulator function to be invoked on each element.
+     * @return An enumerable containing the aggregates corresponding to each key
+     *         derived from the sequence.
+     * @param <K> The type of the key returned by {@code keySelector}.
+     * @param <A> The type of the accumulator value.
+     */
+    <K, A> Enumerable<Pair<K, A>> aggregateBy(
+        @NotNull Function<? super T, ? extends K> keySelector,
+        @NotNull A seed,
+        @NotNull BinFunction<? super A, ? super T, ? extends A> aggregator
+    );
+
+    /**
+     * <p>
+     * Applies an accumulator function over a sequence, grouping the results by key.
+     * The specified seed value is used as the initial accumulator value for each key.
+     * </p>
+     *
+     * <p>
+     * The specified {@link Equalator} is used to determine whether two keys
+     * are considered equal.
+     * </p>
+     *
+     * <p>
+     * Each resulting {@link Pair} contains the grouping key as its left element
+     * and the accumulated value as its right element.
+     * </p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<String> words = Linq.of(
+     *     "apple", "APPLE", "banana", "BANANA", "apple"
+     * );
+     *
+     * Enumerable<Pair<String, Integer>> result =
+     *     words.aggregateBy(
+     *         String::toLowerCase,
+     *         0,
+     *         (count, word) -> count + 1,
+     *         Equalator.defaultEqualator()
+     *     );
+     * }</pre>
+     *
+     * @param keySelector A function to extract the key for each element.
+     * @param seed The initial accumulator value for each key.
+     * @param aggregator An accumulator function to be invoked on each element.
+     * @param keyEqualator An equalator used to compare keys for equality.
+     * @return An enumerable containing the aggregates corresponding to each key
+     *         derived from the sequence.
+     * @param <K> The type of the key returned by {@code keySelector}.
+     * @param <A> The type of the accumulator value.
+     */
+    <K, A> Enumerable<Pair<K, A>> aggregateBy(
+        @NotNull Function<? super T, ? extends K> keySelector,
+        @NotNull A seed,
+        @NotNull BinFunction<? super A, ? super T, ? extends A> aggregator,
+        Equalator<? super K> keyEqualator
+    );
+
+    /**
+     * <p>
+     * Applies an accumulator function over a sequence, grouping the results by key.
+     * A seed selector is used to create the initial accumulator value for each key.
+     * </p>
+     *
+     * <p>
+     * Each resulting {@link Pair} contains the grouping key as its left element
+     * and the accumulated value as its right element.
+     * </p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<Employee> employees = Linq.of(
+     *     new Employee("Alice", "HR", 45000),
+     *     new Employee("Bob", "Technology", 50000),
+     *     new Employee("Charlie", "Sales", 75000)
+     * );
+     *
+     * Enumerable<Pair<String, Integer>> result =
+     *     employees.aggregateBy(
+     *         Employee::department,
+     *         department -> 0,
+     *         (total, employee) -> total + employee.salary()
+     *     );
+     * }</pre>
+     *
+     * @param keySelector A function to extract the key for each element.
+     * @param seedSelector A function used to create the initial accumulator value
+     *                     for each key.
+     * @param aggregator An accumulator function to be invoked on each element.
+     * @return An enumerable containing the aggregates corresponding to each key
+     *         derived from the sequence.
+     * @param <K> The type of the key returned by {@code keySelector}.
+     * @param <A> The type of the accumulator value.
+     */
+    <K, A> Enumerable<Pair<K, A>> aggregateBy(
+        @NotNull Function<? super T, ? extends K> keySelector,
+        @NotNull Function<? super K, ? extends A> seedSelector,
+        @NotNull BinFunction<? super A, ? super T, ? extends A> aggregator
+    );
+
+    /**
+     * <p>
+     * Applies an accumulator function over a sequence, grouping the results by key.
+     * A seed selector is used to create the initial accumulator value for each key.
+     * </p>
+     *
+     * <p>
+     * The specified {@link Equalator} is used to determine whether two keys
+     * are considered equal.
+     * </p>
+     *
+     * <p>
+     * Each resulting {@link Pair} contains the grouping key as its left element
+     * and the accumulated value as its right element.
+     * </p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<Employee> employees = Linq.of(
+     *     new Employee("Alice", "HR", 45000),
+     *     new Employee("Bob", "Technology", 50000),
+     *     new Employee("Charlie", "Sales", 75000)
+     * );
+     *
+     * Enumerable<Pair<String, Integer>> result =
+     *     employees.aggregateBy(
+     *         Employee::department,
+     *         department -> 0,
+     *         (total, employee) -> total + employee.salary(),
+     *         Equalator.defaultEqualator()
+     *     );
+     * }</pre>
+     *
+     * @param keySelector A function to extract the key for each element.
+     * @param seedSelector A function used to create the initial accumulator value
+     *                     for each key.
+     * @param aggregator An accumulator function to be invoked on each element.
+     * @param keyEqualator An equalator used to compare keys for equality.
+     * @return An enumerable containing the aggregates corresponding to each key
+     *         derived from the sequence.
+     * @param <K> The type of the key returned by {@code keySelector}.
+     * @param <A> The type of the accumulator value.
+     */
+    <K, A> Enumerable<Pair<K, A>> aggregateBy(
+        @NotNull Function<? super T, ? extends K> keySelector,
+        @NotNull Function<? super K, ? extends A> seedSelector,
+        @NotNull BinFunction<? super A, ? super T, ? extends A> aggregator,
+        @Nullable Equalator<? super K> keyEqualator
+    );
+
+    /**
+     * <p>
+     * Determines whether all elements of a sequence satisfy a specified condition.
+     * </p>
+     *
+     * <p>
+     * Enumeration stops as soon as the result can be determined.
+     * If the sequence is empty, {@code true} is returned.
+     * </p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<String> fruits = Linq.of(
+     *     "apple",
+     *     "banana",
+     *     "orange"
+     * );
+     *
+     * boolean allLongEnough =
+     *     fruits.all(fruit -> fruit.length() >= 5);
+     *
+     * // This code produces:
+     * //
+     * // true
+     * }</pre>
+     *
+     * @param predicate A function to test each element for a condition.
+     * @return {@code true} if every element of the sequence satisfies the
+     *         specified condition, or if the sequence is empty;
+     *         otherwise, {@code false}.
+     */
+    boolean all(Predicate<? super T> predicate);
+
+    /**
+     * <p>
+     * Determines whether a sequence contains any elements.
+     * </p>
+     *
+     * <p>
+     * Enumeration stops as soon as the result can be determined.
+     * </p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<String> fruits = Linq.of(
+     *     "apple",
+     *     "banana",
+     *     "orange"
+     * );
+     *
+     * boolean hasElements = fruits.any();
+     *
+     * // This code produces:
+     * //
+     * // true
+     * }</pre>
+     *
+     * @return {@code true} if the sequence contains at least one element;
+     *         otherwise, {@code false}.
+     */
+    boolean any();
+
+    /**
+     * <p>
+     * Determines whether any element of a sequence satisfies a specified condition.
+     * </p>
+     *
+     * <p>
+     * Enumeration stops as soon as an element satisfies the specified condition.
+     * If no element satisfies the condition, the entire sequence is enumerated.
+     * </p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<String> fruits = Linq.of(
+     *     "apple",
+     *     "banana",
+     *     "orange"
+     * );
+     *
+     * boolean containsLongName =
+     *     fruits.any(fruit -> fruit.length() > 6);
+     *
+     * // This code produces:
+     * //
+     * // true
+     * }</pre>
+     *
+     * @param predicate A function to test each element for a condition.
+     * @return {@code true} if the sequence is not empty and at least one element
+     *         satisfies the specified condition; otherwise, {@code false}.
+     */
+    boolean any(@Nullable Predicate<? super T> predicate);
+
+    /**
+     * <p>
+     * Appends a specified element to the end of the sequence.
+     * </p>
+     *
+     * <p>
+     * This method does not modify the current sequence. Instead, it returns
+     * a new sequence that contains all elements of this sequence followed
+     * by the specified element.
+     * </p>
+     *
+     * <p>
+     * This method uses deferred execution.
+     * </p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<Integer> numbers = Linq.of(1, 2, 3, 4);
+     *
+     * Enumerable<Integer> result = numbers.append(5);
+     *
+     * // numbers: 1, 2, 3, 4
+     * // result:  1, 2, 3, 4, 5
+     * }</pre>
+     *
+     * @param element The element to append to the sequence.
+     * @return A new enumerable that contains all elements of this sequence
+     *         followed by {@code element}.
+     */
+    Enumerable<T> append(T element);
+
+    /**
+     * <p>
+     * Computes the average of a sequence of {@code double} values that are
+     * obtained by invoking a transform function on each element of the input
+     * sequence.
+     * </p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<String> fruits = Linq.of(
+     *     "apple",
+     *     "banana",
+     *     "mango",
+     *     "orange",
+     *     "passionfruit",
+     *     "grape"
+     * );
+     *
+     * double average = fruits.averageToDouble(String::length);
+     *
+     * System.out.printf("The average string length is %s.%n", average);
+     *
+     * // This code produces the following output:
+     * //
+     * // The average string length is 6.5.
+     * }</pre>
+     *
+     * @param selector A transform function to apply to each element.
+     * @return The average of the sequence of values.
+     * @throws NullPointerException if {@code selector} is {@code null}.
+     * @throws ArithmeticException if the sequence contains no elements.
+     * @param <R> The type of the result produced by the selector.
+     */
+    double averageToDouble(@NotNull ToDoubleFunction<? super T> selector);
+
+    /**
+     * <p>
+     * Computes the average of a sequence of {@link BigDecimal} values that are
+     * obtained by invoking a transform function on each element of the input
+     * sequence.
+     * </p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<Product> products = Linq.of(
+     *     new Product("Apple", new BigDecimal("1.20")),
+     *     new Product("Mango", new BigDecimal("2.50")),
+     *     new Product("Orange", new BigDecimal("1.80"))
+     * );
+     *
+     * BigDecimal average = products.averageToDecimal(Product::price);
+     *
+     * System.out.printf("The average price is %s.%n", average);
+     *
+     * // This code produces the following output:
+     * //
+     * // The average price is 1.833333333333333333333333333333333333.
+     * }</pre>
+     *
+     * @param selector A transform function to apply to each element.
+     * @return The average of the sequence of values.
+     * @throws NullPointerException if {@code selector} is {@code null}.
+     * @throws ArithmeticException if the sequence contains no elements.
+     */
+    BigDecimal averageToDecimal(@NotNull Function<? super T, ? extends BigDecimal> selector);
+
+    /**
+     * <p>
+     * Casts the elements of this sequence to the specified type.
+     * </p>
+     *
+     * <p>
+     * If an element cannot be cast to the specified type, a
+     * {@link ClassCastException} is thrown when the element is accessed.
+     * This operation uses deferred execution.
+     * </p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<Object> fruits = Linq.of(
+     *     "mango",
+     *     "apple",
+     *     "lemon"
+     * );
+     *
+     * Enumerable<String> strings = fruits.cast(String.class);
+     *
+     * strings.forEach(System.out::println);
+     *
+     * // This code produces the following output:
+     * //
+     * // mango
+     * // apple
+     * // lemon
+     * }</pre>
+     *
+     * @param targetType The type to cast the elements of this sequence to.
+     * @param <R> The target type of the elements.
+     * @return An {@code Enumerable<R>} that contains each element of this
+     *     sequence cast to the specified type.
+     * @throws NullPointerException if {@code targetType} is {@code null}.
+     * @throws ClassCastException if an element cannot be cast to {@code R}.
+     */
+    <R> Enumerable<R> cast(@NotNull Class<R> targetType);
+
+    /**
+     * <p>
+     * Splits the elements of this sequence into chunks of the specified size.
+     * </p>
+     *
+     * <p>
+     * Each chunk, except the last one, contains exactly {@code size} elements.
+     * The last chunk contains the remaining elements and may contain fewer than
+     * {@code size} elements.
+     * </p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<Integer> numbers = Linq.of(
+     *     1, 2, 3, 4, 5, 6, 7, 8, 9, 10
+     * );
+     *
+     * Enumerable<Enumerable<Integer>> chunks = numbers.chunk(3);
+     *
+     * chunks.forEach(chunk -> {
+     *     System.out.println(chunk.toList());
+     * });
+     *
+     * // This code produces the following output:
+     * //
+     * // [1, 2, 3]
+     * // [4, 5, 6]
+     * // [7, 8, 9]
+     * // [10]
+     * }</pre>
+     *
+     * @param size The maximum number of elements in each chunk.
+     * @return An {@code Enumerable} containing the elements of this sequence
+     *     split into chunks of at most {@code size} elements.
+     * @throws IllegalArgumentException if {@code size} is less than {@code 1}.
+     */
+    Enumerable<Enumerable<T>> chunk(int size);
+
+    /**
+     * <p>
+     * Concatenates this sequence with another sequence.
+     * </p>
+     *
+     * <p>
+     * The resulting sequence contains all the elements of this sequence,
+     * followed by all the elements of the specified sequence. The original
+     * order of the elements in both sequences is preserved.
+     * </p>
+     *
+     * <p>
+     * This operation uses deferred execution.
+     * </p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<String> cats = Linq.of(
+     *     "Barley",
+     *     "Boots",
+     *     "Whiskers"
+     * );
+     *
+     * Enumerable<String> dogs = Linq.of(
+     *     "Bounder",
+     *     "Snoopy",
+     *     "Fido"
+     * );
+     *
+     * Enumerable<String> animals = cats.concat(dogs);
+     *
+     * animals.forEach(System.out::println);
+     *
+     * // This code produces the following output:
+     * //
+     * // Barley
+     * // Boots
+     * // Whiskers
+     * // Bounder
+     * // Snoopy
+     * // Fido
+     * }</pre>
+     *
+     * @param after The sequence to concatenate to this sequence.
+     * @return An {@code Enumerable<T>} that contains the elements of this
+     *     sequence followed by the elements of {@code after}.
+     * @throws NullPointerException if {@code after} is {@code null}.
+     */
+    Enumerable<T> concat(@NotNull Enumerable<? extends T> after);
+
+    /**
+     * <p>
+     * Determines whether this sequence contains a specified element by using
+     * the default equality semantics.
+     * </p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<String> fruits = Linq.of(
+     *     "apple",
+     *     "banana",
+     *     "mango",
+     *     "orange",
+     *     "passionfruit",
+     *     "grape"
+     * );
+     *
+     * boolean contains = fruits.contains("mango");
+     *
+     * System.out.printf("The sequence %s contain 'mango'.%n",
+     *     contains ? "does" : "does not");
+     *
+     * // This code produces the following output:
+     * //
+     * // The sequence does contain 'mango'.
+     * }</pre>
+     *
+     * @param value The value to locate in the sequence.
+     * @return {@code true} if the sequence contains an element that is equal to
+     *     the specified value; otherwise, {@code false}.
+     */
+    boolean contains(T value);
+
+    /**
+     * <p>
+     * Determines whether this sequence contains a specified element by using
+     * the specified equality function.
+     * </p>
+     *
+     * <p>
+     * If {@code equalator} is {@code null}, the default equality semantics are
+     * used.
+     * </p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * record Person(String name, int age) {}
+     *
+     * Enumerable<Person> people = Linq.of(
+     *     new Person("Alice", 20),
+     *     new Person("Bob", 25),
+     *     new Person("Charlie", 30)
+     * );
+     *
+     * Person person = new Person("Alice", 20);
+     *
+     * boolean contains = people.contains(
+     *     person,
+     *     Equalator.comparing(Person::name)
+     * );
+     *
+     * System.out.println("Contains Alice? " + contains);
+     *
+     * // This code produces the following output:
+     * //
+     * // Contains Alice? true
+     * }</pre>
+     *
+     * @param value The value to locate in the sequence.
+     * @param equalator The equality function used to compare elements with
+     *     the specified value.
+     * @return {@code true} if the sequence contains an element that is
+     *     considered equal to the specified value by {@code equalator};
+     *     otherwise, {@code false}.
+     * @see Equalator
+     * @see Equalable
+     */
+    boolean contains(T value, @Nullable Equalator<? super T> equalator);
+
+    /**
+     * <p>
+     * Returns the number of elements in this sequence.
+     * </p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<String> fruits = Linq.of(
+     *     "apple",
+     *     "banana",
+     *     "mango",
+     *     "orange",
+     *     "passionfruit",
+     *     "grape"
+     * );
+     *
+     * int count = fruits.count();
+     *
+     * System.out.printf("The sequence contains %d elements.%n", count);
+     *
+     * // This code produces the following output:
+     * //
+     * // The sequence contains 6 elements.
+     * }</pre>
+     *
+     * @return The number of elements in the sequence.
+     * @throws OverflowEnumerableException if the number of elements exceeds
+     *     {@link Integer#MAX_VALUE}.
+     */
+    int count();
+
+    /**
+     * <p>
+     * Returns the number of elements in this sequence that satisfy the
+     * specified condition.
+     * </p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<String> fruits = Linq.of(
+     *     "apple",
+     *     "banana",
+     *     "mango",
+     *     "orange",
+     *     "passionfruit",
+     *     "grape"
+     * );
+     *
+     * int count = fruits.count(fruit -> fruit.length() > 5);
+     *
+     * System.out.printf(
+     *     "There are %d fruits whose names contain more than five characters.%n",
+     *     count
+     * );
+     *
+     * // This code produces the following output:
+     * //
+     * // There are 3 fruits whose names contain more than five characters.
+     * }</pre>
+     *
+     * @param predicate A function to test each element for a condition.
+     * @return The number of elements in the sequence that satisfy the condition
+     *     specified by {@code predicate}.
+     * @throws NullPointerException if {@code predicate} is {@code null}.
+     * @throws OverflowEnumerableException if the number of matching elements
+     *     exceeds {@link Integer#MAX_VALUE}.
+     */
+    int count(@Nullable Predicate<? super T> predicate);
+
+    /**
+     * <p>
+     * Returns the number of elements in this sequence grouped by the key
+     * returned by the specified key selector.
+     * </p>
+     *
+     * <p>
+     * Each element in the resulting sequence contains a key and the number
+     * of times that key occurs in this sequence. The keys are returned in
+     * the order in which they are first encountered in the source sequence.
+     * </p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * record Employee(String name, String department) {}
+     *
+     * Enumerable<Employee> employees = Linq.of(
+     *     new Employee("Saly", "IT"),
+     *     new Employee("David", "Sales"),
+     *     new Employee("Mahmoud", "IT"),
+     *     new Employee("Qamar", "HR"),
+     *     new Employee("Sara", "IT"),
+     *     new Employee("John", "HR"),
+     *     new Employee("Jaffar", "Sales")
+     * );
+     *
+     * Enumerable<Map.Entry<String, Integer>> countPerDepartment =
+     *     employees.countBy(Employee::department);
+     *
+     * countPerDepartment.forEach(item ->
+     *     System.out.printf(
+     *         "Department: %s - Employees Count: %d%n",
+     *         item.getKey(),
+     *         item.getValue()
+     *     )
+     * );
+     *
+     * // This code produces the following output:
+     * //
+     * // Department: IT - Employees Count: 3
+     * // Department: Sales - Employees Count: 2
+     * // Department: HR - Employees Count: 2
+     * }</pre>
+     *
+     * @param keySelector A function to extract the key for each element.
+     * @param <K> The type of the key returned by {@code keySelector}.
+     * @return An {@code Enumerable} containing the frequency of each key
+     *     occurrence in this sequence.
+     * @throws NullPointerException if {@code keySelector} is {@code null}.
+     * @see Pair
+     */
+    <K> Enumerable<Pair<K, Integer>> countBy(@NotNull Function<? super T, ? extends K> keySelector);
+
+    /**
+     * <p>
+     * Returns the number of elements in this sequence grouped by the key
+     * returned by the specified key selector, using the specified equality
+     * function to compare keys.
+     * </p>
+     *
+     * <p>
+     * Each element in the resulting sequence contains a key and the number
+     * of times that key occurs in this sequence. The keys are returned in
+     * the order in which they are first encountered in the source sequence.
+     * </p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * record Person(String name, String department) {}
+     *
+     * Enumerable<Person> people = Linq.of(
+     *     new Person("Alice", "IT"),
+     *     new Person("Bob", "it"),
+     *     new Person("Charlie", "HR"),
+     *     new Person("David", "IT")
+     * );
+     *
+     * Enumerable<Map.Entry<String, Integer>> counts =
+     *     people.countBy(
+     *         Person::department,
+     *         Equalator.comparing(String::toUpperCase)
+     *     );
+     *
+     * // The departments "IT" and "it" are considered equal.
+     * }</pre>
+     *
+     * @param keySelector A function to extract the key for each element.
+     * @param keyEqualator An equality function used to compare keys.
+     * @param <K> The type of the key returned by {@code keySelector}.
+     * @return An {@code Enumerable} containing the frequency of each key
+     *     occurrence in this sequence.
+     * @throws NullPointerException if {@code keySelector} is {@code null}.
+     * @throws NullPointerException if {@code keyEqualator} is {@code null}.
+     * @see Pair
+     */
+    <K> Enumerable<Pair<K, Integer>> countBy(
+        @NotNull Function<? super T, ? extends K> keySelector,
+        @Nullable Equalator<? super K> keyEqualator
+    );
+
+    /**
+     * <p>
+     * Returns the elements of this sequence, or a singleton sequence containing
+     * the specified default value if the sequence is empty.
+     * </p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<String> fruits = Linq.of();
+     *
+     * Enumerable<String> result = fruits.defaultIfEmpty("unknown");
+     *
+     * result.forEach(System.out::println);
+     *
+     * // This code produces the following output:
+     * //
+     * // unknown
+     * }</pre>
+     *
+     * @param defaultValue The value to return if this sequence is empty.
+     * @return An {@code Enumerable<T>} containing the elements of this sequence,
+     *     or a singleton sequence containing {@code defaultValue} if this
+     *     sequence is empty.
+     */
+    Enumerable<T> defaultIfEmpty(T defaultValue);
+
+    /**
+     * <p>
+     * Returns distinct elements from this sequence by using the default
+     * equality function to compare values.
+     * </p>
+     *
+     * <p>
+     * The resulting sequence contains no duplicate elements. This operation
+     * uses deferred execution.
+     * </p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<Integer> numbers = Linq.of(
+     *     21, 46, 46, 55, 17, 21, 55, 55
+     * );
+     *
+     * Enumerable<Integer> distinctNumbers = numbers.distinct();
+     *
+     * distinctNumbers.forEach(System.out::println);
+     *
+     * // This code produces the following output:
+     * //
+     * // 21
+     * // 46
+     * // 55
+     * // 17
+     * }</pre>
+     *
+     * @return An {@code Enumerable<T>} that contains the distinct elements
+     *     from this sequence.
+     */
+    Enumerable<T> distinct();
+
+    /**
+     * <p>
+     * Returns distinct elements from this sequence by using the specified
+     * equality function (if {@code null}, use default) to compare values.
+     * </p>
+     *
+     * <p>
+     * The resulting sequence contains no duplicate elements. This operation
+     * uses deferred execution.
+     * </p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * record Product(String name, int code) {}
+     *
+     * Enumerable<Product> products = Linq.of(
+     *     new Product("apple", 9),
+     *     new Product("orange", 4),
+     *     new Product("apple", 9),
+     *     new Product("lemon", 12)
+     * );
+     *
+     * Enumerable<Product> distinctProducts = products.distinct(
+     *     Equalator.comparing(Product::name)
+     * );
+     *
+     * distinctProducts.forEach(System.out::println);
+     *
+     * // Products with the same name are considered equal.
+     * }</pre>
+     *
+     * @param equalator The equality function used to compare elements.
+     * @return An {@code Enumerable<T>} that contains the distinct elements
+     *     from this sequence.
+     */
+    Enumerable<T> distinct(@Nullable Equalator<? super T> equalator);
+
+    /**
+     * <p>
+     * Returns distinct elements from this sequence according to the specified
+     * key selector function.
+     * </p>
+     *
+     * <p>
+     * The key selector is applied to each element, and elements that produce
+     * equal keys are considered duplicates. Only one element is returned for
+     * each distinct key.
+     * </p>
+     *
+     * <p>
+     * This operation uses deferred execution.
+     * </p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * record Person(String name, String department) {}
+     *
+     * Enumerable<Person> people = Linq.of(
+     *     new Person("Alice", "IT"),
+     *     new Person("Bob", "Sales"),
+     *     new Person("Charlie", "IT"),
+     *     new Person("David", "HR")
+     * );
+     *
+     * Enumerable<Person> distinct =
+     *     people.distinctBy(Person::department);
+     *
+     * distinct.forEach(System.out::println);
+     *
+     * // Each department occurs only once in the resulting sequence.
+     * }</pre>
+     *
+     * @param keySelector A function to extract the key for each element.
+     * @param <K> The type of the key returned by {@code keySelector}.
+     * @return An {@code Enumerable<T>} that contains distinct elements from
+     *     this sequence according to their selected keys.
+     * @throws NullPointerException if {@code keySelector} is {@code null}.
+     */
+    <K> Enumerable<T> distinctBy(@NotNull Function<? super T, ? extends K> keySelector);
+
+    /**
+     * <p>
+     * Returns distinct elements from this sequence according to the specified
+     * key selector function and equality function.
+     * </p>
+     *
+     * <p>
+     * The key selector is applied to each element, and elements that produce
+     * equal keys according to {@code keyEqualator} are considered duplicates.
+     * Only one element is returned for each distinct key.
+     * </p>
+     *
+     * <p>
+     * If {@code keyEqualator} is {@code null}, the default equality function
+     * is used to compare keys.
+     * </p>
+     *
+     * <p>
+     * This operation uses deferred execution.
+     * </p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * record Person(String name, String department) {}
+     *
+     * Enumerable<Person> people = Linq.of(
+     *     new Person("Alice", "IT"),
+     *     new Person("Bob", "it"),
+     *     new Person("Charlie", "HR"),
+     *     new Person("David", "IT")
+     * );
+     *
+     * Enumerable<Person> distinct =
+     *     people.distinctBy(
+     *         Person::department,
+     *         Equalator.comparing(String::toUpperCase)
+     *     );
+     *
+     * // "IT" and "it" are considered equal by the specified equalator.
+     * }</pre>
+     *
+     * @param keySelector A function to extract the key for each element.
+     * @param keyEqualator An equality function used to compare the selected keys.
+     * @param <K> The type of the key returned by {@code keySelector}.
+     * @return An {@code Enumerable<T>} that contains distinct elements from
+     *     this sequence according to their selected keys.
+     * @throws NullPointerException if {@code keySelector} is {@code null}.
+     */
+    <K> Enumerable<T> distinctBy(
+        @NotNull Function<? super T, ? extends K> keySelector,
+        @Nullable Equalator<? super K> keyEqualator
+    );
+
+
+    /**
+     * <p>
+     * Returns the element at the specified zero-based index in this sequence.
+     * </p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<String> fruits = Linq.of(
+     *     "apple",
+     *     "banana",
+     *     "mango",
+     *     "orange",
+     *     "grape"
+     * );
+     *
+     * String fruit = fruits.elementAt(2);
+     *
+     * System.out.printf("The element at index 2 is %s.%n", fruit);
+     *
+     * // This code produces the following output:
+     * //
+     * // The element at index 2 is mango.
+     * }</pre>
+     *
+     * @param index The zero-based index of the element to retrieve.
+     * @return The element at the specified position in the sequence.
+     * @throws IndexOutOfBoundsException if {@code index} is less than zero or
+     *     greater than or equal to the number of elements in the sequence.
+     */
+    T elementAt(int index);
+
+    /**
+     * <p>
+     * Returns the element at the specified zero-based index in this sequence,
+     * or {@code null} if the index is outside the bounds of the sequence.
+     * </p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<String> fruits = Linq.of(
+     *     "apple",
+     *     "banana",
+     *     "mango",
+     *     "orange",
+     *     "grape"
+     * );
+     *
+     * String fruit = fruits.elementAtOrNull(10);
+     *
+     * System.out.printf("The element at index 10 is %s.%n", fruit);
+     *
+     * // This code produces the following output:
+     * //
+     * // The element at index 10 is null.
+     * }</pre>
+     *
+     * @param index The zero-based index of the element to retrieve.
+     * @return The element at the specified position in the sequence, or
+     *     {@code null} if the index is outside the bounds of the sequence.
+     */
+    @Nullable
+    T elementAtOrNull(int index);
+
+    /**
+     * <p>
+     * Returns the element at the specified zero-based index in this sequence,
+     * or {@code null} if the index is outside the bounds of the sequence.
+     * </p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<String> fruits = Linq.of(
+     *     "apple",
+     *     "banana",
+     *     "mango",
+     *     "orange",
+     *     "grape"
+     * );
+     *
+     * String fruit = fruits.elementAtOrDefault(10, "watermelon");
+     *
+     * System.out.printf("The element at index 10 is %s.%n", fruit);
+     *
+     * // This code produces the following output:
+     * //
+     * // The element at index 10 is watermelon.
+     * }</pre>
+     *
+     * @param index The zero-based index of the element to retrieve.
+     * @param defaultElement The default element will to be returned if the index is out of bounds.
+     * @return The element at the specified position in the sequence, or
+     *     {@code null} if the index is outside the bounds of the sequence.
+     */
+    @Nullable
+    T elementAtOrDefault(int index, T defaultElement);
+
+    /**
+     * <p>
+     * Produces the set difference of two sequences by using the default
+     * equality semantics to compare values.
+     * </p>
+     *
+     * <p>
+     * The returned sequence contains the unique elements from this sequence
+     * that do not occur in the specified sequence.
+     * </p>
+     *
+     * <p>
+     * This method uses deferred execution. The query represented by the
+     * returned sequence is not executed until the sequence is enumerated.
+     * </p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<Double> numbers1 = Linq.of(
+     *     2.0, 2.0, 2.1, 2.2, 2.3, 2.3, 2.4, 2.5
+     * );
+     *
+     * Enumerable<Double> numbers2 = Linq.of(2.2);
+     *
+     * Enumerable<Double> onlyInFirstSet = numbers1.except(numbers2);
+     *
+     * onlyInFirstSet.forEach(System.out::println);
+     *
+     * // This code produces the following output:
+     * //
+     * // 2.0
+     * // 2.1
+     * // 2.3
+     * // 2.4
+     * // 2.5
+     * }</pre>
+     *
+     * @param other The sequence whose elements will be excluded from this sequence.
+     * @return A sequence that contains the set difference of the elements
+     *         of this sequence and {@code other}.
+     */
+    Enumerable<T> except(@NotNull Enumerable<? extends T> other);
+
+    /**
+     * <p>
+     * Produces the set difference of two sequences by using the specified
+     * {@link Equalator} to compare values.
+     * </p>
+     *
+     * <p>
+     * The returned sequence contains the unique elements from this sequence
+     * that do not occur in the specified sequence according to the supplied
+     * equality semantics.
+     * </p>
+     *
+     * <p>
+     * If {@code equalator} is {@code null}, the default equality semantics
+     * are used.
+     * </p>
+     *
+     * <p>
+     * This method uses deferred execution. The query represented by the
+     * returned sequence is not executed until the sequence is enumerated.
+     * </p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * record Product(String name, int code) {}
+     *
+     * Enumerable<Product> products1 = Linq.of(
+     *     new Product("apple", 9),
+     *     new Product("orange", 4),
+     *     new Product("lemon", 12)
+     * );
+     *
+     * Enumerable<Product> products2 = Linq.of(
+     *     new Product("apple", 9)
+     * );
+     *
+     * Equalator<Product> productEqualator =
+     *     Equalator.comparing(
+     *         Product::code,
+     *         Equalator.defaultEqualator()
+     *     );
+     *
+     * Enumerable<Product> except =
+     *     products1.except(products2, productEqualator);
+     *
+     * except.forEach(System.out::println);
+     *
+     * // This code produces the following output:
+     * //
+     * // Product[name=orange, code=4]
+     * // Product[name=lemon, code=12]
+     * }</pre>
+     *
+     * @param other The sequence whose elements will be excluded from this sequence.
+     * @param equalator The equality function used to compare elements.
+     * @return A sequence that contains the set difference of the elements
+     *         of this sequence and {@code other}.
+     */
+    Enumerable<T> except(
+        @NotNull Enumerable<? extends T> other,
+        @Nullable Equalator<? super T> equalator
+    );
+
+    /**
+     * <p>
+     * Produces the set difference of two sequences according to a specified
+     * key selector function.
+     * </p>
+     *
+     * <p>
+     * The key selector is used to extract a key from each element of this
+     * sequence. Elements whose keys occur in the specified sequence of keys
+     * are excluded from the result.
+     * </p>
+     *
+     * <p>
+     * Only unique elements are returned.
+     * </p>
+     *
+     * <p>
+     * This method uses deferred execution. The query represented by the
+     * returned sequence is not executed until the sequence is enumerated.
+     * </p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * record Product(String name, int code) {}
+     *
+     * Enumerable<Product> products = Linq.of(
+     *     new Product("apple", 9),
+     *     new Product("orange", 4),
+     *     new Product("lemon", 12)
+     * );
+     *
+     * Enumerable<Integer> excludedCodes = Linq.of(9);
+     *
+     * Enumerable<Product> result =
+     *     products.exceptBy(excludedCodes, Product::code);
+     *
+     * result.forEach(System.out::println);
+     *
+     * // This code produces the following output:
+     * //
+     * // Product[name=orange, code=4]
+     * // Product[name=lemon, code=12]
+     * }</pre>
+     *
+     * @param <K> The type of the key.
+     * @param other The sequence of keys whose corresponding elements
+     *               will be excluded from this sequence.
+     * @param keySelector A function used to extract the key from each element.
+     * @return A sequence that contains the set difference of the elements
+     *         of this sequence and the elements identified by the keys in
+     *         {@code other}.
+     */
+    <K> Enumerable<T> exceptBy(
+        @NotNull Enumerable<? extends K> other,
+        @NotNull Function<? super T, ? extends K> keySelector
+    );
+
+    /**
+     * <p>
+     * Produces the set difference of two sequences according to a specified
+     * key selector function and equality function.
+     * </p>
+     *
+     * <p>
+     * The key selector is used to extract a key from each element of this
+     * sequence. The supplied {@link Equalator} is then used to determine
+     * whether the extracted key occurs in the specified sequence of keys.
+     * </p>
+     *
+     * <p>
+     * Only unique elements are returned.
+     * </p>
+     *
+     * <p>
+     * This method uses deferred execution. The query represented by the
+     * returned sequence is not executed until the sequence is enumerated.
+     * </p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * record Product(String name, int code) {}
+     *
+     * Enumerable<Product> products = Linq.of(
+     *     new Product("apple", 9),
+     *     new Product("orange", 4),
+     *     new Product("lemon", 12)
+     * );
+     *
+     * Enumerable<Integer> excludedCodes = Linq.of(9);
+     *
+     * Enumerable<Product> result =
+     *     products.exceptBy(
+     *         excludedCodes,
+     *         Product::code,
+     *         Equalator.defaultEqualator()
+     *     );
+     *
+     * result.forEach(System.out::println);
+     *
+     * // This code produces the following output:
+     * //
+     * // Product[name=orange, code=4]
+     * // Product[name=lemon, code=12]
+     * }</pre>
+     *
+     * @param <K> The type of the key.
+     * @param second The sequence of keys whose corresponding elements
+     *               will be excluded from this sequence.
+     * @param keySelector A function used to extract the key from each element.
+     * @param equalator The equality function used to compare keys.
+     * @return A sequence that contains the set difference of the elements
+     *         of this sequence and the elements identified by the keys in
+     *         {@code second}.
+     */
+    <K> Enumerable<T> exceptBy(
+        @NotNull Enumerable<? extends K> second,
+        @NotNull Function<? super T, ? extends K> keySelector,
+        @Nullable Equalator<? super K> equalator
+    );
+
+    /**
+     * <p>Returns the first element in the sequence.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<String> fruits = Linq.of(
+     *     "apple", "banana", "orange"
+     * );
+     *
+     * String firstFruit = fruits.first();
+     *
+     * System.out.println(firstFruit);
+     *
+     * // This code produces the following output:
+     * //
+     * // apple
+     * }</pre>
+     *
+     * @return The first element in the sequence.
+     * @throws NoSuchElementException If the sequence contains no elements.
+     */
+    T first();
+
+    /**
+     * <p>Returns the first element in the sequence that satisfies a specified
+     * condition.</p>
+     *
+     * <p>The search stops as soon as an element that satisfies
+     * {@code predicate} is found.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<String> fruits = Linq.of(
+     *     "apple", "banana", "orange", "passionfruit", "grape"
+     * );
+     *
+     * String firstLongFruit = fruits.first(
+     *     fruit -> fruit.length() > 6
+     * );
+     *
+     * System.out.printf(
+     *     "The first fruit with more than six characters is %s.%n",
+     *     firstLongFruit
+     * );
+     *
+     * // This code produces the following output:
+     * //
+     * // The first fruit with more than six characters is banana.
+     * }</pre>
+     *
+     * @param predicate A function to test each element for a condition.
+     * @return The first element in the sequence that passes the test in
+     *         {@code predicate}.
+     * @throws NoSuchElementException If no element satisfies
+     *         {@code predicate}.
+     * @throws NullPointerException If {@code predicate} is {@code null}.
+     */
+    T first(@Nullable Predicate<? super T> predicate);
+
+
+    /**
+     * <p>Returns the first element of the sequence, or {@code null} if the
+     * sequence contains no elements.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<String> fruits = Linq.of(
+     *     "apple", "banana", "orange"
+     * );
+     *
+     * String firstFruit = fruits.firstOrDefault();
+     *
+     * System.out.println(firstFruit);
+     *
+     * // This code produces the following output:
+     * //
+     * // apple
+     * }</pre>
+     *
+     * @return The first element in the sequence, or {@code null} if the
+     *         sequence contains no elements.
+     */
+    @Nullable
+    T firstOrNull();
+
+    /**
+     * <p>Returns the first element in the sequence that satisfies a specified
+     * condition, or {@code null} if no such element is found.</p>
+     *
+     * <p>The search stops as soon as an element that satisfies
+     * {@code predicate} is found.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<String> fruits = Linq.of(
+     *     "apple", "banana", "orange", "grape"
+     * );
+     *
+     * String fruit = fruits.firstOrDefault(
+     *     value -> value.length() > 10
+     * );
+     *
+     * System.out.println(fruit);
+     *
+     * // This code produces the following output:
+     * //
+     * // null
+     * }</pre>
+     *
+     * @param predicate A function to test each element for a condition.
+     * @return The first element that satisfies {@code predicate}, or
+     *         {@code null} if no such element is found.
+     * @throws NullPointerException If {@code predicate} is {@code null}.
+     */
+    @Nullable
+    T firstOrNull(@Nullable Predicate<? super T> predicate);
+
+    /**
+     * <p>Returns the first element in the sequence, or the specified default
+     * value if the sequence contains no elements.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<String> fruits = Linq.empty();
+     *
+     * String first = fruits.firstOrDefault("unknown");
+     *
+     * System.out.println(first);
+     *
+     * // This code produces the following output:
+     * //
+     * // unknown
+     * }</pre>
+     *
+     * @param defaultValue The first element in the sequence, or {@code defaultValue}
+     *         if the sequence contains no elements.
+     * @return The first element in the sequence, or {@code defaultValue`
+     *         if the sequence contains no elements.
+     */
+    T firstOrDefault(T defaultValue);
+
+    /**
+     * <p>Returns the first element in the sequence that satisfies a
+     * specified condition, or the specified default value if no such
+     * element is found.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<String> fruits = Linq.of(
+     *     "apple", "banana", "orange"
+     * );
+     *
+     * String first = fruits.firstOrDefault(
+     *     fruit -> fruit.length() > 10,
+     *     "unknown"
+     * );
+     *
+     * System.out.println(first);
+     *
+     * // This code produces the following output:
+     * //
+     * // unknown
+     * }</pre>
+     *
+     * @param predicate A function to test each element for a condition.
+     * @param defaultValue The first element in the sequence, or {@code defaultValue}
+     *         if the sequence contains no elements.
+     * @return The first element that satisfies {@code predicate}, or
+     *         {@code defaultValue} if no such element is found.
+     * @throws NullPointerException If {@code predicate} is {@code null}.
+     */
+    T firstOrDefault(
+        @Nullable Predicate<? super T> predicate,
+        T defaultValue
+    );
+
+    /**
+     * <p>Groups the elements of the sequence according to a specified
+     * key selector function.</p>
+     *
+     * <p>Each group contains the elements that have the same key.
+     * Groups are produced according to the order in which their keys
+     * first appear in the source sequence, and elements within each
+     * group retain their original order.</p>
+     *
+     * <p>The default equality semantics are used to compare keys.</p>
+     *
+     * <p>This method uses deferred execution.</p>
+     *
+     * @param <K> the type of the group key
+     * @param keySelector the function used to extract the key from each element
+     * @return a sequence containing one {@link Groupable} for each distinct key
+     * @throws NullPointerException if {@code keySelector} is {@code null}
+     */
+    <K> Enumerable<Groupable<K, T>> groupBy(
+        @NotNull Function<? super T, ? extends K> keySelector
+    );
+
+    /**
+     * <p>Groups the elements of the sequence according to a specified
+     * key selector function and compares keys using the specified
+     * {@link Equalator}.</p>
+     *
+     * <p>Groups are produced according to the order in which their keys
+     * first appear in the source sequence, and elements within each
+     * group retain their original order.</p>
+     *
+     * <p>This method uses deferred execution.</p>
+     *
+     * @param <K> the type of the group key
+     * @param keySelector the function used to extract the key from each element
+     * @param equalator the equality function used to compare keys
+     * @return a sequence containing one {@link Groupable} for each distinct key
+     * @throws NullPointerException if {@code keySelector} or {@code equalator}
+     *         is {@code null}
+     */
+    <K> Enumerable<Groupable<K, T>> groupBy(
+        @NotNull Function<? super T, ? extends K> keySelector,
+        @Nullable Equalator<? super K> equalator
+    );
+
+    /**
+     * <p>Groups the elements of the sequence according to a specified
+     * key selector function and projects the elements of each group
+     * by using a specified element selector.</p>
+     *
+     * <p>Each resulting group contains the projected elements rather than
+     * the original source elements.</p>
+     *
+     * <p>This method uses deferred execution.</p>
+     *
+     * @param <K> the type of the group key
+     * @param <E> the type of the grouped elements
+     * @param keySelector the function used to extract the key from each element
+     * @param elementSelector the function used to transform each source element
+     *                        into an element of its group
+     * @return a sequence containing one {@link Groupable} for each distinct key
+     * @throws NullPointerException if {@code keySelector} or
+     *         {@code elementSelector} is {@code null}
+     */
+    <K, E> Enumerable<Groupable<K, E>> groupBy(
+        @NotNull Function<? super T, ? extends K> keySelector,
+        @NotNull Function<? super T, ? extends E> elementSelector
+    );
+
+    /**
+     * <p>Groups the elements of the sequence according to a specified
+     * key selector function, projects the elements of each group by using
+     * a specified element selector, and compares keys using the specified
+     * {@link Equalator}.</p>
+     *
+     * <p>This method uses deferred execution.</p>
+     *
+     * @param <K> the type of the group key
+     * @param <E> the type of the grouped elements
+     * @param keySelector the function used to extract the key from each element
+     * @param elementSelector the function used to transform each source element
+     *                        into an element of its group
+     * @param equalator the equality function used to compare keys
+     * @return a sequence containing one {@link Groupable} for each distinct key
+     * @throws NullPointerException if {@code keySelector},
+     *         {@code elementSelector}, or {@code equalator} is {@code null}
+     */
+    <K, E> Enumerable<Groupable<K, E>> groupBy(
+        @NotNull Function<? super T, ? extends K> keySelector,
+        @NotNull Function<? super T, ? extends E> elementSelector,
+        @Nullable Equalator<? super K> equalator
+    );
+
+    /**
+     * <p>Groups the elements of the sequence according to a specified
+     * key selector function and creates a result value from each group
+     * and its key.</p>
+     *
+     * <p>The {@code resultSelector} receives the key of each group and
+     * an {@link Enumerable} containing the elements of that group.</p>
+     *
+     * <p>This method uses deferred execution.</p>
+     *
+     * @param <K> the type of the group key
+     * @param <R> the type of the result value
+     * @param keySelector the function used to extract the key from each element
+     * @param resultSelector the function used to create a result from
+     *                       a group key and its elements
+     * @return a sequence containing one result value for each group
+     * @throws NullPointerException if {@code keySelector} or
+     *         {@code resultSelector} is {@code null}
+     */
+    <K, R> Enumerable<R> groupToResult(
+        @NotNull Function<? super T, ? extends K> keySelector,
+        @Nullable BinFunction<? super K, ? super Enumerable<T>, ? extends R> resultSelector
+    );
+
+    /**
+     * <p>Groups the elements of the sequence according to a specified
+     * key selector function, compares keys using the specified
+     * {@link Equalator}, and creates a result value from each group
+     * and its key.</p>
+     *
+     * <p>The {@code resultSelector} receives the key of each group and
+     * an {@link Enumerable} containing the elements of that group.</p>
+     *
+     * <p>This method uses deferred execution.</p>
+     *
+     * @param <K> the type of the group key
+     * @param <R> the type of the result value
+     * @param keySelector the function used to extract the key from each element
+     * @param resultSelector the function used to create a result from
+     *                       a group key and its elements
+     * @param equalator the equality function used to compare keys
+     * @return a sequence containing one result value for each group
+     * @throws NullPointerException if {@code keySelector},
+     *         {@code resultSelector}, or {@code equalator} is {@code null}
+     */
+    <K, R> Enumerable<R> groupToResult(
+        @NotNull Function<? super T, ? extends K> keySelector,
+        @NotNull BinFunction<? super K, ? super Enumerable<T>, ? extends R> resultSelector,
+        @Nullable Equalator<? super K> equalator
+    );
+
+    /**
+     * <p>Groups the elements of the sequence according to a specified
+     * key selector function, projects the elements of each group by using
+     * a specified element selector, and creates a result value from each
+     * group and its key.</p>
+     *
+     * <p>The {@code resultSelector} receives the key of each group and
+     * an {@link Enumerable} containing the projected elements of that group.</p>
+     *
+     * <p>This method uses deferred execution.</p>
+     *
+     * @param <K> the type of the group key
+     * @param <E> the type of the grouped elements
+     * @param <R> the type of the result value
+     * @param keySelector the function used to extract the key from each element
+     * @param elementSelector the function used to transform each source element
+     *                        into an element of its group
+     * @param resultSelector the function used to create a result from
+     *                       a group key and its elements
+     * @return a sequence containing one result value for each group
+     * @throws NullPointerException if {@code keySelector},
+     *         {@code elementSelector}, or {@code resultSelector} is {@code null}
+     */
+    <K, E, R> Enumerable<R> groupToResult(
+        @NotNull Function<? super T, ? extends K> keySelector,
+        @NotNull Function<? super T, ? extends E> elementSelector,
+        @NotNull BinFunction<? super K, ? super Enumerable<E>, ? extends R> resultSelector
+    );
+
+    /**
+     * <p>Groups the elements of the sequence according to a specified
+     * key selector function, projects the elements of each group by using
+     * a specified element selector, compares keys using the specified
+     * {@link Equalator}, and creates a result value from each group
+     * and its key.</p>
+     *
+     * <p>The {@code resultSelector} receives the key of each group and
+     * an {@link Enumerable} containing the projected elements of that group.</p>
+     *
+     * <p>Groups are produced according to the order in which their keys
+     * first appear in the source sequence, and elements within each
+     * group retain their original order.</p>
+     *
+     * <p>This method uses deferred execution.</p>
+     *
+     * @param <K> the type of the group key
+     * @param <E> the type of the grouped elements
+     * @param <R> the type of the result value
+     * @param keySelector the function used to extract the key from each element
+     * @param elementSelector the function used to transform each source element
+     *                        into an element of its group
+     * @param resultSelector the function used to create a result from
+     *                       a group key and its elements
+     * @param equalator the equality function used to compare keys
+     * @return a sequence containing one result value for each group
+     * @throws NullPointerException if {@code keySelector},
+     *         {@code elementSelector}, {@code resultSelector}, or
+     *         {@code equalator} is {@code null}
+     */
+    <K, E, R> Enumerable<R> groupToResult(
+        @NotNull Function<? super T, ? extends K> keySelector,
+        @NotNull Function<? super T, ? extends E> elementSelector,
+        @NotNull BinFunction<? super K, ? super Enumerable<E>, ? extends R> resultSelector,
+        @Nullable Equalator<? super K> equalator
+    );
+
+    /**
+     * <p>Correlates the elements of this sequence with the elements of
+     * another sequence based on matching keys, and groups the matching
+     * elements from the second sequence for each element of this sequence.</p>
+     *
+     * <p>The default equality semantics are used to compare keys.</p>
+     *
+     * <p>The {@code resultSelector} is invoked once for each element of
+     * this sequence, including elements for which no matching element
+     * exists in {@code inner}.</p>
+     *
+     * <p>This method uses deferred execution.</p>
+     *
+     * @param <I> The type of the elements in the inner sequence.
+     * @param <K> The type of the keys.
+     * @param <R> The type of the result elements.
+     * @param inner The sequence to join with this sequence.
+     * @param outerKeySelector A function used to extract the join key
+     *                         from each element of this sequence.
+     * @param innerKeySelector A function used to extract the join key
+     *                         from each element of {@code inner}.
+     * @param resultSelector A function used to create a result from an
+     *                       element of this sequence and its matching
+     *                       elements from {@code inner}.
+     * @return A sequence containing one result element for each element
+     *         in this sequence.
+     * @throws NullPointerException If {@code inner}, {@code outerKeySelector},
+     *         {@code innerKeySelector}, or {@code resultSelector} is {@code null}.
+     */
+    <K, I, R> Enumerable<R> groupJoin(
+        @NotNull Enumerable<? extends I> inner,
+        @NotNull Function<? super T, ? extends K> outerKeySelector,
+        @NotNull Function<? super I, ? extends K> innerKeySelector,
+        @NotNull BinFunction<? super T, ? super Enumerable<I>, ? extends R> resultSelector
+    );
+
+    /**
+     * <p>Correlates the elements of this sequence with the elements of
+     * another sequence based on matching keys, and groups the matching
+     * elements from the second sequence for each element of this sequence.</p>
+     *
+     * <p>The {@code resultSelector} is invoked once for each element of
+     * this sequence. It receives the current element and an
+     * {@link Enumerable} containing all elements from {@code inner} whose
+     * keys are equal to the key of the current element.</p>
+     *
+     * <p>If no elements in {@code inner} match an element in this sequence,
+     * the result selector is still invoked with an empty sequence.</p>
+     *
+     * <p>The order of the elements in this sequence is preserved, as is
+     * the order of matching elements from {@code inner} for each element.</p>
+     *
+     * <p>The specified {@link Equalator} is used to compare keys.</p>
+     *
+     * <p>This method uses deferred execution.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * record Person(String name, int id) {}
+     *
+     * record Pet(String name, int ownerId) {}
+     *
+     * Enumerable<Person> people = Linq.of(
+     *     new Person("Alice", 1),
+     *     new Person("Bob", 2),
+     *     new Person("Charlie", 3)
+     * );
+     *
+     * Enumerable<Pet> pets = Linq.of(
+     *     new Pet("Fluffy", 2),
+     *     new Pet("Mittens", 2),
+     *     new Pet("Buddy", 1)
+     * );
+     *
+     * Enumerable<String> result = people.groupJoin(
+     *     pets,
+     *     Person::id,
+     *     Pet::ownerId,
+     *     (person, personPets) ->
+     *         person.name() + ": "
+     *             + personPets
+     *                 .select(Pet::name)
+     *                 .join(", "),
+     *     Equalator.defaultEqualator()
+     * );
+     *
+     * result.forEach(System.out::println);
+     *
+     * // This code produces the following output:
+     * //
+     * // Alice: Buddy
+     * // Bob: Fluffy, Mittens
+     * // Charlie:
+     * }</pre>
+     *
+     * @param <I> The type of the elements in the inner sequence.
+     * @param <K> The type of the keys.
+     * @param <R> The type of the result elements.
+     * @param inner The sequence to join with this sequence.
+     * @param outerKeySelector A function used to extract the join key
+     *                         from each element of this sequence.
+     * @param innerKeySelector A function used to extract the join key
+     *                         from each element of {@code inner}.
+     * @param resultSelector A function used to create a result from an
+     *                       element of this sequence and its matching
+     *                       elements from {@code inner}.
+     * @param equalator The equality function used to compare keys.
+     * @return A sequence containing one result element for each element
+     *         in this sequence.
+     * @throws NullPointerException If {@code inner}, {@code outerKeySelector},
+     *         {@code innerKeySelector}, {@code resultSelector}, or
+     *         {@code equalator} is {@code null}.
+     */
+    <K, I, R> Enumerable<R> groupJoin(
+        @NotNull Enumerable<? extends I> inner,
+        @NotNull Function<? super T, ? extends K> outerKeySelector,
+        @NotNull Function<? super I, ? extends K> innerKeySelector,
+        @NotNull BinFunction<? super T, ? super Enumerable<I>, ? extends R> resultSelector,
+        @Nullable Equalator<? super K> equalator
+    );
+
+    /**
+     * <p>Produces the set intersection of this sequence and another sequence
+     * by using the default equality semantics to compare elements.</p>
+     *
+     * <p>The returned sequence contains distinct elements that occur in both
+     * sequences, in the order in which they first appear in this sequence.</p>
+     *
+     * <p>This method uses deferred execution.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<Integer> first = Linq.of(1, 2, 2, 3, 4);
+     * Enumerable<Integer> other = Linq.of(2, 3, 3, 5);
+     *
+     * Enumerable<Integer> result = first.intersect(other);
+     *
+     * // result: 2, 3
+     * }</pre>
+     *
+     * @param other The sequence whose elements are also searched for
+     *               in this sequence.
+     * @return A sequence that contains the distinct elements that occur
+     *         in both sequences.
+     * @throws NullPointerException If {@code other} is {@code null}.
+     */
+    Enumerable<T> intersect(
+        @NotNull Enumerable<? extends T> other
+    );
+
+    /**
+     * <p>Produces the set intersection of this sequence and another sequence
+     * by using the specified {@link Equalator} to compare elements.</p>
+     *
+     * <p>The returned sequence contains distinct elements that occur in both
+     * sequences, in the order in which they first appear in this sequence.</p>
+     *
+     * <p>This method uses deferred execution.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<String> first =
+     *     Linq.of("Apple", "banana", "APPLE", "orange");
+     *
+     * Enumerable<String> second =
+     *     Linq.of("apple", "BANANA");
+     *
+     * Enumerable<String> result =
+     *     first.intersect(
+     *         second,
+     *         Equalator.comparing(String::toLowerCase)
+     *     );
+     *
+     * // result: Apple, banana
+     * }</pre>
+     *
+     * @param second The sequence whose elements are also searched for
+     *               in this sequence.
+     * @param equalator The equality function used to compare elements.
+     * @return A sequence that contains the distinct elements that occur
+     *         in both sequences.
+     * @throws NullPointerException If {@code second} or {@code equalator}
+     *         is {@code null}.
+     */
+    Enumerable<T> intersect(
+        @NotNull Enumerable<? extends T> second,
+        @Nullable Equalator<? super T> equalator
+    );
+
+    /**
+     * <p>Produces the set intersection of this sequence and another sequence
+     * according to a specified key selector function.</p>
+     *
+     * <p>The elements of this sequence are compared with the elements of
+     * {@code other} by using the keys produced by {@code keySelector}.</p>
+     *
+     * <p>The returned sequence contains distinct elements from this sequence
+     * whose keys occur in {@code other}, in the order in which they first
+     * appear in this sequence.</p>
+     *
+     * <p>This method uses deferred execution.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * record Person(String name, int id) {}
+     *
+     * Enumerable<Person> people = Linq.of(
+     *     new Person("Alice", 1),
+     *     new Person("Bob", 2),
+     *     new Person("Charlie", 3)
+     * );
+     *
+     * Enumerable<Integer> ids = Linq.of(2, 3);
+     *
+     * Enumerable<Person> result =
+     *     people.intersectBy(ids, Person::id);
+     *
+     * // result:
+     * // Bob
+     * // Charlie
+     * }</pre>
+     *
+     * @param <K> The type of the key.
+     * @param other A sequence containing the keys to compare against.
+     * @param keySelector A function used to extract the key from each
+     *                    element of this sequence.
+     * @return A sequence containing the distinct elements whose keys
+     *         occur in {@code other}.
+     * @throws NullPointerException If {@code other} or {@code keySelector}
+     *         is {@code null}.
+     */
+    <K> Enumerable<T> intersectBy(
+        @NotNull Enumerable<? extends K> other,
+        @NotNull Function<? super T, ? extends K> keySelector
+    );
+
+    /**
+     * <p>Produces the set intersection of this sequence and another sequence
+     * according to a specified key selector function and the specified
+     * {@link Equalator}.</p>
+     *
+     * <p>The elements of this sequence are compared with the elements of
+     * {@code second} by using the keys produced by {@code keySelector} and
+     * compared by {@code equalator}.</p>
+     *
+     * <p>The returned sequence contains distinct elements from this sequence
+     * whose keys occur in {@code second}, in the order in which they first
+     * appear in this sequence.</p>
+     *
+     * <p>This method uses deferred execution.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * record Person(String name, String code) {}
+     *
+     * Enumerable<Person> people = Linq.of(
+     *     new Person("Alice", "A01"),
+     *     new Person("Bob", "B01"),
+     *     new Person("Charlie", "C01")
+     * );
+     *
+     * Enumerable<String> codes = Linq.of("a01", "C01");
+     *
+     * Enumerable<Person> result =
+     *     people.intersectBy(
+     *         codes,
+     *         Person::code,
+     *         Equalator.comparing(String::toLowerCase)
+     *     );
+     *
+     * // result:
+     * // Alice
+     * // Charlie
+     * }</pre>
+     *
+     * @param <K> The type of the key.
+     * @param second A sequence containing the keys to compare against.
+     * @param keySelector A function used to extract the key from each
+     *                    element of this sequence.
+     * @param equalator The equality function used to compare keys.
+     * @return A sequence containing the distinct elements whose keys
+     *         occur in {@code second}.
+     * @throws NullPointerException If {@code second}, {@code keySelector},
+     *         or {@code equalator} is {@code null}.
+     */
+    <K> Enumerable<T> intersectBy(
+        @NotNull Enumerable<? extends K> second,
+        @NotNull Function<? super T, ? extends K> keySelector,
+        @Nullable Equalator<? super K> equalator
+    );
+
+    /**
+     * <p>Correlates the elements of this sequence with the elements of
+     * another sequence based on matching keys, and produces a result value
+     * for each matching pair.</p>
+     *
+     * <p>This method performs an inner equijoin. Only elements from this
+     * sequence that have at least one matching element in {@code inner}
+     * are included in the result.</p>
+     *
+     * <p>The {@code resultSelector} is invoked for each matching pair of
+     * elements.</p>
+     *
+     * <p>The order of the elements in this sequence is preserved, and for
+     * each element of this sequence, the order of its matching elements
+     * from {@code inner} is preserved.</p>
+     *
+     * <p>The default equality semantics are used to compare keys.</p>
+     *
+     * <p>This method uses deferred execution.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * record Person(String name, int id) {}
+     * record Pet(String name, int ownerId) {}
+     *
+     * Enumerable<Person> people = Linq.of(
+     *     new Person("Alice", 1),
+     *     new Person("Bob", 2),
+     *     new Person("Charlie", 3)
+     * );
+     *
+     * Enumerable<Pet> pets = Linq.of(
+     *     new Pet("Buddy", 1),
+     *     new Pet("Fluffy", 2),
+     *     new Pet("Mittens", 2)
+     * );
+     *
+     * Enumerable<String> result = people.join(
+     *     pets,
+     *     Person::id,
+     *     Pet::ownerId,
+     *     (person, pet) ->
+     *         person.name() + " - " + pet.name()
+     * );
+     *
+     * // result:
+     * // Alice - Buddy
+     * // Bob - Fluffy
+     * // Bob - Mittens
+     * }</pre>
+     *
+     * @param <K> The type of the join key.
+     * @param <I> The type of the elements in the inner sequence.
+     * @param <R> The type of the result elements.
+     * @param inner The sequence to join with this sequence.
+     * @param outerKeySelector A function used to extract the join key from
+     *                         each element of this sequence.
+     * @param innerKeySelector A function used to extract the join key from
+     *                         each element of {@code inner}.
+     * @param resultSelector A function used to create a result from two
+     *                       matching elements.
+     * @return A sequence containing the result elements obtained by
+     *         performing an inner join on the two sequences.
+     * @throws NullPointerException If {@code inner},
+     *         {@code outerKeySelector}, {@code innerKeySelector}, or
+     *         {@code resultSelector} is {@code null}.
+     */
+    <K, I, R> Enumerable<R> join(
+        @NotNull Enumerable<? extends I> inner,
+        @NotNull Function<? super T, ? extends K> outerKeySelector,
+        @NotNull Function<? super I, ? extends K> innerKeySelector,
+        @NotNull BinFunction<? super T, ? super I, ? extends R> resultSelector
+    );
+
+    /**
+     * <p>Correlates the elements of this sequence with the elements of
+     * another sequence based on matching keys, and produces a result value
+     * for each matching pair.</p>
+     *
+     * <p>This method performs an inner equijoin. Only elements from this
+     * sequence that have at least one matching element in {@code inner}
+     * are included in the result.</p>
+     *
+     * <p>The specified {@link Equalator} is used to compare join keys.</p>
+     *
+     * <p>The {@code resultSelector} is invoked for each matching pair of
+     * elements.</p>
+     *
+     * <p>The order of the elements in this sequence is preserved, and for
+     * each element of this sequence, the order of its matching elements
+     * from {@code inner} is preserved.</p>
+     *
+     * <p>This method uses deferred execution.</p>
+     *
+     * @param <K> The type of the join key.
+     * @param <I> The type of the elements in the inner sequence.
+     * @param <R> The type of the result elements.
+     * @param inner The sequence to join with this sequence.
+     * @param outerKeySelector A function used to extract the join key from
+     *                         each element of this sequence.
+     * @param innerKeySelector A function used to extract the join key from
+     *                         each element of {@code inner}.
+     * @param resultSelector A function used to create a result from two
+     *                       matching elements.
+     * @param equalator The equality function used to compare join keys.
+     * @return A sequence containing the result elements obtained by
+     *         performing an inner join on the two sequences.
+     * @throws NullPointerException If {@code inner},
+     *         {@code outerKeySelector}, {@code innerKeySelector},
+     *         {@code resultSelector}, or {@code equalator} is {@code null}.
+     */
+    <K, I, R> Enumerable<R> join(
+        @NotNull Enumerable<? extends I> inner,
+        @NotNull Function<? super T, ? extends K> outerKeySelector,
+        @NotNull Function<? super I, ? extends K> innerKeySelector,
+        @NotNull BinFunction<? super T, ? super I, ? extends R> resultSelector,
+        @Nullable Equalator<? super K> equalator
+    );
+
+    /**
+     * <p>Returns the last element of a sequence.</p>
+     *
+     * <p>This method throws an exception if the sequence contains no elements.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<String> fruits =
+     *     Linq.of("apple", "mango", "orange", "grape");
+     *
+     * String last = fruits.last();
+     *
+     * System.out.println(last);
+     *
+     * // This code produces the following output:
+     * //
+     * // grape
+     * }</pre>
+     *
+     * @return The last element in the sequence.
+     * @throws NoSuchElementException If the sequence contains no elements.
+     */
+    @NotNull
+    T last();
+
+
+    /**
+     * <p>Returns the last element of a sequence that satisfies a specified
+     * condition.</p>
+     *
+     * <p>This method throws an exception if no element satisfies the
+     * condition.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<String> fruits =
+     *     Linq.of("apple", "mango", "orange", "grape");
+     *
+     * String last =
+     *     fruits.last(fruit -> fruit.length() > 5);
+     *
+     * System.out.println(last);
+     *
+     * // This code produces the following output:
+     * //
+     * // orange
+     * }</pre>
+     *
+     * @param predicate A function to test each element for a condition.
+     * @return The last element in the sequence that satisfies the condition.
+     * @throws NullPointerException If {@code predicate} is {@code null}.
+     * @throws NoSuchElementException If no element satisfies the condition.
+     */
+    @NotNull
+    T last(
+        @NotNull Predicate<? super T> predicate
+    );
+
+
+    /**
+     * <p>Returns the last element of a sequence, or a default value if the
+     * sequence contains no elements.</p>
+     *
+     * <p>If the sequence contains no elements, {@code null} is returned.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<String> fruits =
+     *     Linq.of("apple", "mango", "orange", "grape");
+     *
+     * String last =
+     *     fruits.lastOrNull();
+     *
+     * System.out.println(last);
+     *
+     * // This code produces the following output:
+     * //
+     * // grape
+     * }</pre>
+     *
+     * @return The last element in the sequence, or {@code null} if the
+     *         sequence contains no elements.
+     */
+    @Nullable
+    T lastOrNull();
+
+
+    /**
+     * <p>Returns the last element of a sequence that satisfies a specified
+     * condition, or a default value if no such element is found.</p>
+     *
+     * <p>If no element satisfies the condition, {@code null} is returned.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<String> fruits =
+     *     Linq.of("apple", "mango", "orange", "grape");
+     *
+     * String last =
+     *     fruits.lastOrNull(fruit -> fruit.length() > 6);
+     *
+     * System.out.println(last);
+     *
+     * // This code produces the following output:
+     * //
+     * // orange
+     * }</pre>
+     *
+     * @param predicate A function to test each element for a condition.
+     * @return The last element that satisfies the condition, or {@code null}
+     *         if no such element is found.
+     * @throws NullPointerException If {@code predicate} is {@code null}.
+     */
+    @Nullable
+    T lastOrNull(
+        @NotNull Predicate<? super T> predicate
+    );
+
+    /**
+     * <p>Returns the last element of a sequence, or the specified default
+     * value if the sequence contains no elements.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<String> fruits =
+     *     Linq.of("apple", "mango", "orange", "grape");
+     *
+     * String last = fruits.lastOrDefault("unknown");
+     *
+     * System.out.println(last);
+     *
+     * // This code produces the following output:
+     * //
+     * // grape
+     * }</pre>
+     *
+     * @param defaultElement The value to return if the sequence contains
+     *                        no elements.
+     * @return The last element in the sequence, or {@code defaultElement}
+     *         if the sequence contains no elements.
+     */
+    @NotNull
+    T lastOrDefault(@NotNull T defaultElement);
+
+
+    /**
+     * <p>Returns the last element of a sequence that satisfies a specified
+     * condition, or the specified default value if no such element is found.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<String> fruits =
+     *     Linq.of("apple", "mango", "orange", "grape");
+     *
+     * String last = fruits.lastOrDefault(
+     *     fruit -> fruit.length() > 6,
+     *     "unknown"
+     * );
+     *
+     * System.out.println(last);
+     *
+     * // This code produces the following output:
+     * //
+     * // orange
+     * }</pre>
+     *
+     * @param predicate A function to test each element for a condition.
+     * @param defaultElement The value to return if no element satisfies
+     *                       the condition.
+     * @return The last element that satisfies the condition, or
+     *         {@code defaultElement} if no such element is found.
+     * @throws NullPointerException If {@code predicate} is {@code null}.
+     */
+    @NotNull
+    T lastOrDefault(
+        @NotNull Predicate<? super T> predicate,
+        @NotNull T defaultElement
+    );
+
+    /**
+     * <p>Correlates the elements of this sequence with the elements of
+     * another sequence based on matching keys and produces a result element
+     * for each element of this sequence.</p>
+     *
+     * <p>This method performs a left outer equijoin. Every element in this
+     * sequence is included in the result, regardless of whether a matching
+     * element exists in {@code inner}.</p>
+     *
+     * <p>If an element in this sequence has no matching element in
+     * {@code inner}, {@code resultSelector} is invoked with {@code null}
+     * as its inner element.</p>
+     *
+     * <p>If multiple elements in {@code inner} match an element in this
+     * sequence, {@code resultSelector} is invoked once for each matching
+     * element.</p>
+     *
+     * <p>The default equality semantics are used to compare keys.</p>
+     *
+     * <p>This method uses deferred execution.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * record Person(String name, int id) {}
+     * record Pet(String name, int ownerId) {}
+     *
+     * Enumerable<Person> people = Linq.of(
+     *     new Person("Alice", 1),
+     *     new Person("Bob", 2),
+     *     new Person("Charlie", 3)
+     * );
+     *
+     * Enumerable<Pet> pets = Linq.of(
+     *     new Pet("Buddy", 1),
+     *     new Pet("Fluffy", 2)
+     * );
+     *
+     * Enumerable<String> result = people.leftJoin(
+     *     pets,
+     *     Person::id,
+     *     Pet::ownerId,
+     *     (person, pet) ->
+     *         person.name() + " - "
+     *             + (pet == null ? "No pet" : pet.name())
+     * );
+     *
+     * // This code produces the following output:
+     * //
+     * // Alice - Buddy
+     * // Bob - Fluffy
+     * // Charlie - No pet
+     * }</pre>
+     *
+     * @param <K> The type of the join key.
+     * @param <I> The type of the elements in the inner sequence.
+     * @param <R> The type of the result elements.
+     * @param inner The sequence to join with this sequence.
+     * @param outerKeySelector A function used to extract the join key from
+     *                         each element of this sequence.
+     * @param innerKeySelector A function used to extract the join key from
+     *                         each element of {@code inner}.
+     * @param resultSelector A function used to create a result from an element
+     *                       of this sequence and a matching element of
+     *                       {@code inner}.
+     * @return A sequence containing the result elements obtained by
+     *         performing a left outer join on the two sequences.
+     * @throws NullPointerException If {@code inner},
+     *         {@code outerKeySelector}, {@code innerKeySelector}, or
+     *         {@code resultSelector} is {@code null}.
+     */
+    @NotNull
+    <K, I, R> Enumerable<R> leftJoin(
+        @NotNull Enumerable<? extends I> inner,
+        @NotNull Function<? super T, ? extends K> outerKeySelector,
+        @NotNull Function<? super I, ? extends K> innerKeySelector,
+        @NotNull BinFunction<? super T, @Nullable I, ? extends R> resultSelector
+    );
+
+    /**
+     * <p>Correlates the elements of this sequence with the elements of
+     * another sequence based on matching keys and produces a result element
+     * for each element of this sequence.</p>
+     *
+     * <p>This method performs a left outer equijoin. Every element in this
+     * sequence is included in the result, regardless of whether a matching
+     * element exists in {@code inner}.</p>
+     *
+     * <p>If an element in this sequence has no matching element in
+     * {@code inner}, {@code resultSelector} is invoked with {@code null}
+     * as its inner element.</p>
+     *
+     * <p>If multiple elements in {@code inner} match an element in this
+     * sequence, {@code resultSelector} is invoked once for each matching
+     * element.</p>
+     *
+     * <p>The specified {@link Equalator} is used to compare join keys.</p>
+     *
+     * <p>This method uses deferred execution.</p>
+     *
+     * @param <K> The type of the join key.
+     * @param <I> The type of the elements in the inner sequence.
+     * @param <R> The type of the result elements.
+     * @param inner The sequence to join with this sequence.
+     * @param outerKeySelector A function used to extract the join key from
+     *                         each element of this sequence.
+     * @param innerKeySelector A function used to extract the join key from
+     *                         each element of {@code inner}.
+     * @param resultSelector A function used to create a result from an element
+     *                       of this sequence and a matching element of
+     *                       {@code inner}.
+     * @param equalator The equality function used to compare join keys.
+     * @return A sequence containing the result elements obtained by
+     *         performing a left outer join on the two sequences.
+     * @throws NullPointerException If {@code inner},
+     *         {@code outerKeySelector}, {@code innerKeySelector},
+     *         {@code resultSelector}, or {@code equalator} is {@code null}.
+     */
+    @NotNull
+    <K, I, R> Enumerable<R> leftJoin(
+        @NotNull Enumerable<? extends I> inner,
+        @NotNull Function<? super T, ? extends K> outerKeySelector,
+        @NotNull Function<? super I, ? extends K> innerKeySelector,
+        @NotNull BinFunction<? super T, @Nullable I, ? extends R> resultSelector,
+        @NotNull Equalator<? super K> equalator
+    );
+
+    /**
+     * <p>Correlates the elements of this sequence with the elements of
+     * another sequence based on matching keys and returns each matching
+     * pair as a {@link Pair}.</p>
+     *
+     * <p>This method performs a left outer equijoin. Every element in this
+     * sequence is included in the result, regardless of whether a matching
+     * element exists in {@code inner}.</p>
+     *
+     * <p>If an element in this sequence has no matching element in
+     * {@code inner}, the right value of the returned {@link Pair} is
+     * {@code null}.</p>
+     *
+     * <p>If multiple elements in {@code inner} match an element in this
+     * sequence, a separate {@link Pair} is produced for each matching
+     * element.</p>
+     *
+     * <p>The default equality semantics are used to compare keys.</p>
+     *
+     * <p>This method uses deferred execution.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * record Person(String name, int id) {}
+     * record Pet(String name, int ownerId) {}
+     *
+     * Enumerable<Person> people = Linq.of(
+     *     new Person("Alice", 1),
+     *     new Person("Bob", 2),
+     *     new Person("Charlie", 3)
+     * );
+     *
+     * Enumerable<Pet> pets = Linq.of(
+     *     new Pet("Buddy", 1),
+     *     new Pet("Fluffy", 2)
+     * );
+     *
+     * Enumerable<Pair<Person, Pet>> result = people.leftJoin(
+     *     pets,
+     *     Person::id,
+     *     Pet::ownerId
+     * );
+     *
+     * // Alice -> Buddy
+     * // Bob -> Fluffy
+     * // Charlie -> null
+     * }</pre>
+     *
+     * @param <K> The type of the join key.
+     * @param <I> The type of the elements in the inner sequence.
+     * @param inner The sequence to join with this sequence.
+     * @param outerKeySelector A function used to extract the join key from
+     *                         each element of this sequence.
+     * @param innerKeySelector A function used to extract the join key from
+     *                         each element of {@code inner}.
+     * @return A sequence containing a {@link Pair} for each matching pair
+     *         of elements, including pairs whose right value is {@code null}
+     *         when no matching inner element exists.
+     * @throws NullPointerException If {@code inner},
+     *         {@code outerKeySelector}, or {@code innerKeySelector} is
+     *         {@code null}.
+     */
+    @NotNull
+    <K, I> Enumerable<Pair<T, @Nullable I>> leftJoin(
+        @NotNull Enumerable<? extends I> inner,
+        @NotNull Function<? super T, ? extends K> outerKeySelector,
+        @NotNull Function<? super I, ? extends K> innerKeySelector
+    );
+
+    /**
+     * <p>Correlates the elements of this sequence with the elements of
+     * another sequence based on matching keys and returns each matching
+     * pair as a {@link Pair}.</p>
+     *
+     * <p>This method performs a left outer equijoin. Every element in this
+     * sequence is included in the result, regardless of whether a matching
+     * element exists in {@code inner}.</p>
+     *
+     * <p>If an element in this sequence has no matching element in
+     * {@code inner}, the right value of the returned {@link Pair} is
+     * {@code null}.</p>
+     *
+     * <p>The specified {@link Equalator} is used to compare join keys.</p>
+     *
+     * <p>This method uses deferred execution.</p>
+     *
+     * @param <K> The type of the join key.
+     * @param <I> The type of the elements in the inner sequence.
+     * @param inner The sequence to join with this sequence.
+     * @param outerKeySelector A function used to extract the join key from
+     *                         each element of this sequence.
+     * @param innerKeySelector A function used to extract the join key from
+     *                         each element of {@code inner}.
+     * @param equalator The equality function used to compare join keys.
+     * @return A sequence containing a {@link Pair} for each matching pair
+     *         of elements, including pairs whose right value is {@code null}
+     *         when no matching inner element exists.
+     * @throws NullPointerException If {@code inner},
+     *         {@code outerKeySelector}, {@code innerKeySelector}, or
+     *         {@code equalator} is {@code null}.
+     */
+    @NotNull
+    <K, I> Enumerable<Pair<T, @Nullable I>> leftJoin(
+        @NotNull Enumerable<? extends I> inner,
+        @NotNull Function<? super T, ? extends K> outerKeySelector,
+        @NotNull Function<? super I, ? extends K> innerKeySelector,
+        @NotNull Equalator<? super K> equalator
+    );
+
+    /**
+     * <p>Returns the maximum value in a sequence.</p>
+     *
+     * <p>The elements are compared according to their natural ordering.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<Integer> numbers =
+     *     Linq.of(3, 7, 2, 9, 5);
+     *
+     * Integer max = numbers.max();
+     *
+     * System.out.println(max);
+     *
+     * // This code produces the following output:
+     * //
+     * // 9
+     * }</pre>
+     *
+     * @return The maximum value in the sequence.
+     * @throws NoSuchElementException If the sequence contains no elements.
+     */
+    @NotNull
+    T max();
+
+    /**
+     * <p>Returns the maximum integer value obtained by applying the specified
+     * selector to each element of a sequence.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<String> fruits =
+     *     Linq.of("apple", "mango", "orange", "grape");
+     *
+     * int maxLength = fruits.maxToInt(String::length);
+     *
+     * System.out.println(maxLength);
+     *
+     * // This code produces the following output:
+     * //
+     * // 6
+     * }</pre>
+     *
+     * @param selector A function that transforms an element into an
+     *                 {@code int} value.
+     * @return The maximum integer value produced by the selector.
+     * @throws NullPointerException If {@code selector} is {@code null}.
+     * @throws NoSuchElementException If the sequence contains no elements.
+     */
+    int maxToInt(
+        @NotNull ToIntFunction<? super T> selector
+    );
+
+    /**
+     * <p>Returns the maximum {@code long} value obtained by applying the
+     * specified selector to each element of a sequence.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<String> words =
+     *     Linq.of("apple", "mango", "orange");
+     *
+     * long maxLength = words.maxToLong(String::length);
+     *
+     * System.out.println(maxLength);
+     *
+     * // This code produces the following output:
+     * //
+     * // 6
+     * }</pre>
+     *
+     * @param selector A function that transforms an element into a
+     *                 {@code long} value.
+     * @return The maximum {@code long} value produced by the selector.
+     * @throws NullPointerException If {@code selector} is {@code null}.
+     * @throws NoSuchElementException If the sequence contains no elements.
+     */
+    long maxToLong(
+        @NotNull ToLongFunction<? super T> selector
+    );
+
+    /**
+     * <p>Returns the maximum {@code double} value obtained by applying the
+     * specified selector to each element of a sequence.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<String> fruits =
+     *     Linq.of("apple", "mango", "orange");
+     *
+     * double maxLength =
+     *     fruits.maxToDouble(String::length);
+     *
+     * System.out.println(maxLength);
+     *
+     * // This code produces the following output:
+     * //
+     * // 6.0
+     * }</pre>
+     *
+     * @param selector A function that transforms an element into a
+     *                 {@code double} value.
+     * @return The maximum {@code double} value produced by the selector.
+     * @throws NullPointerException If {@code selector} is {@code null}.
+     * @throws NoSuchElementException If the sequence contains no elements.
+     */
+    double maxToDouble(
+        @NotNull ToDoubleFunction<? super T> selector
+    );
+
+    /**
+     * <p>Returns the maximum {@link BigDecimal} value obtained by applying
+     * the specified selector to each element of a sequence.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * record Product(String name, BigDecimal price) {}
+     *
+     * Enumerable<Product> products = Linq.of(
+     *     new Product("Apple", new BigDecimal("1.50")),
+     *     new Product("Mango", new BigDecimal("2.80")),
+     *     new Product("Orange", new BigDecimal("2.10"))
+     * );
+     *
+     * BigDecimal maxPrice =
+     *     products.maxToDecimal(Product::price);
+     *
+     * System.out.println(maxPrice);
+     *
+     * // This code produces the following output:
+     * //
+     * // 2.80
+     * }</pre>
+     *
+     * @param selector A function that transforms an element into a
+     *                 {@link BigDecimal} value.
+     * @return The maximum {@link BigDecimal} value produced by the selector.
+     * @throws NullPointerException If {@code selector} is {@code null}.
+     * @throws NoSuchElementException If the sequence contains no elements.
+     */
+    @NotNull
+    BigDecimal maxToDecimal(
+        @NotNull Function<? super T, ? extends BigDecimal> selector
+    );
+
+    /**
+     * <p>Returns the maximum element of a sequence according to a specified
+     * key selector.</p>
+     *
+     * <p>The elements are compared according to the natural ordering of the
+     * keys produced by {@code keySelector}.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * record Student(String name, int score) {}
+     *
+     * Enumerable<Student> students = Linq.of(
+     *     new Student("Alice", 85),
+     *     new Student("Bob", 92),
+     *     new Student("Charlie", 78)
+     * );
+     *
+     * Student best = students.maxBy(Student::score);
+     *
+     * System.out.println(best.name());
+     *
+     * // This code produces the following output:
+     * //
+     * // Bob
+     * }</pre>
+     *
+     * @param <K> The type of the key used to compare elements.
+     * @param keySelector A function that extracts a key from each element.
+     * @return The element whose selected key is the maximum key in the sequence.
+     * @throws NullPointerException If {@code keySelector} is {@code null}.
+     * @throws NoSuchElementException If the sequence contains no elements.
+     */
+    @NotNull
+    <K extends Comparable<? super K>> T maxBy(
+        @NotNull Function<? super T, ? extends K> keySelector
+    );
+
+
+    /**
+     * <p>Returns the maximum element of a sequence according to a specified
+     * key selector and comparator.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * record Student(String name, int score) {}
+     *
+     * Enumerable<Student> students = Linq.of(
+     *     new Student("Alice", 85),
+     *     new Student("Bob", 92),
+     *     new Student("Charlie", 78)
+     * );
+     *
+     * Student best = students.maxBy(
+     *     Student::name,
+     *     Comparator.naturalOrder()
+     * );
+     *
+     * System.out.println(best.name());
+     *
+     * // This code produces the following output:
+     * //
+     * // Charlie
+     * }</pre>
+     *
+     * @param <K> The type of the key used to compare elements.
+     * @param keySelector A function that extracts a key from each element.
+     * @param comparator The comparator used to compare the selected keys.
+     * @return The element whose selected key is the maximum key in the sequence.
+     * @throws NullPointerException If {@code keySelector} or
+     *                              {@code comparator} is {@code null}.
+     * @throws NoSuchElementException If the sequence contains no elements.
+     */
+    @NotNull
+    <K> T maxBy(
+        @NotNull Function<? super T, ? extends K> keySelector,
+        @NotNull Comparator<? super K> comparator
+    );
+
+    /**
+     * <p>Returns the minimum value in a sequence.</p>
+     *
+     * <p>The elements are compared according to their natural ordering.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<Integer> numbers =
+     *     Linq.of(3, 7, 2, 9, 5);
+     *
+     * Integer min = numbers.min();
+     *
+     * System.out.println(min);
+     *
+     * // This code produces the following output:
+     * //
+     * // 2
+     * }</pre>
+     *
+     * @return The minimum value in the sequence.
+     * @throws NoSuchElementException If the sequence contains no elements.
+     */
+    @NotNull
+    T min();
+
+
+    /**
+     * <p>Returns the minimum {@code int} value obtained by applying the
+     * specified selector to each element of a sequence.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<String> fruits =
+     *     Linq.of("apple", "mango", "orange", "grape");
+     *
+     * int minLength = fruits.minToInt(String::length);
+     *
+     * System.out.println(minLength);
+     *
+     * // This code produces the following output:
+     * //
+     * // 5
+     * }</pre>
+     *
+     * @param selector A function that transforms an element into an
+     *                 {@code int} value.
+     * @return The minimum {@code int} value produced by the selector.
+     * @throws NullPointerException If {@code selector} is {@code null}.
+     * @throws NoSuchElementException If the sequence contains no elements.
+     */
+    int minToInt(
+        @NotNull ToIntFunction<? super T> selector
+    );
+
+
+    /**
+     * <p>Returns the minimum {@code long} value obtained by applying the
+     * specified selector to each element of a sequence.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<String> words =
+     *     Linq.of("apple", "mango", "orange");
+     *
+     * long minLength = words.minToLong(String::length);
+     *
+     * System.out.println(minLength);
+     *
+     * // This code produces the following output:
+     * //
+     * // 5
+     * }</pre>
+     *
+     * @param selector A function that transforms an element into a
+     *                 {@code long} value.
+     * @return The minimum {@code long} value produced by the selector.
+     * @throws NullPointerException If {@code selector} is {@code null}.
+     * @throws NoSuchElementException If the sequence contains no elements.
+     */
+    long minToLong(
+        @NotNull ToLongFunction<? super T> selector
+    );
+
+
+    /**
+     * <p>Returns the minimum {@code double} value obtained by applying the
+     * specified selector to each element of a sequence.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<String> fruits =
+     *     Linq.of("apple", "mango", "orange");
+     *
+     * double minLength =
+     *     fruits.minToDouble(String::length);
+     *
+     * System.out.println(minLength);
+     *
+     * // This code produces the following output:
+     * //
+     * // 5.0
+     * }</pre>
+     *
+     * @param selector A function that transforms an element into a
+     *                 {@code double} value.
+     * @return The minimum {@code double} value produced by the selector.
+     * @throws NullPointerException If {@code selector} is {@code null}.
+     * @throws NoSuchElementException If the sequence contains no elements.
+     */
+    double minToDouble(
+        @NotNull ToDoubleFunction<? super T> selector
+    );
+
+
+    /**
+     * <p>Returns the minimum {@link BigDecimal} value obtained by applying
+     * the specified selector to each element of a sequence.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * record Product(String name, BigDecimal price) {}
+     *
+     * Enumerable<Product> products = Linq.of(
+     *     new Product("Apple", new BigDecimal("1.50")),
+     *     new Product("Mango", new BigDecimal("2.80")),
+     *     new Product("Orange", new BigDecimal("2.10"))
+     * );
+     *
+     * BigDecimal minPrice =
+     *     products.minToDecimal(Product::price);
+     *
+     * System.out.println(minPrice);
+     *
+     * // This code produces the following output:
+     * //
+     * // 1.50
+     * }</pre>
+     *
+     * @param selector A function that transforms an element into a
+     *                 {@link BigDecimal} value.
+     * @return The minimum {@link BigDecimal} value produced by the selector.
+     * @throws NullPointerException If {@code selector} is {@code null}.
+     * @throws NoSuchElementException If the sequence contains no elements.
+     */
+    @NotNull
+    BigDecimal minToDecimal(
+        @NotNull Function<? super T, ? extends BigDecimal> selector
+    );
+
+    /**
+     * <p>Returns the minimum element of a sequence according to a specified
+     * key selector.</p>
+     *
+     * <p>The elements are compared according to the natural ordering of the
+     * keys produced by {@code keySelector}.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * record Student(String name, int score) {}
+     *
+     * Enumerable<Student> students = Linq.of(
+     *     new Student("Alice", 85),
+     *     new Student("Bob", 92),
+     *     new Student("Charlie", 78)
+     * );
+     *
+     * Student worst = students.minBy(Student::score);
+     *
+     * System.out.println(worst.name());
+     *
+     * // This code produces the following output:
+     * //
+     * // Charlie
+     * }</pre>
+     *
+     * @param <K> The type of the key used to compare elements.
+     * @param keySelector A function that extracts a key from each element.
+     * @return The element whose selected key is the minimum key in the sequence.
+     * @throws NullPointerException If {@code keySelector} is {@code null}.
+     * @throws NoSuchElementException If the sequence contains no elements.
+     */
+    @NotNull
+    <K extends Comparable<? super K>> T minBy(
+        @NotNull Function<? super T, ? extends K> keySelector
+    );
+
+
+    /**
+     * <p>Returns the minimum element of a sequence according to a specified
+     * key selector and comparator.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * record Student(String name, int score) {}
+     *
+     * Enumerable<Student> students = Linq.of(
+     *     new Student("Alice", 85),
+     *     new Student("Bob", 92),
+     *     new Student("Charlie", 78)
+     * );
+     *
+     * Student first =
+     *     students.minBy(
+     *         Student::name,
+     *         Comparator.naturalOrder()
+     *     );
+     *
+     * System.out.println(first.name());
+     *
+     * // This code produces the following output:
+     * //
+     * // Alice
+     * }</pre>
+     *
+     * @param <K> The type of the key used to compare elements.
+     * @param keySelector A function that extracts a key from each element.
+     * @param comparator The comparator used to compare the selected keys.
+     * @return The element whose selected key is the minimum key in the sequence.
+     * @throws NullPointerException If {@code keySelector} or
+     *                              {@code comparator} is {@code null}.
+     * @throws NoSuchElementException If the sequence contains no elements.
+     */
+    @NotNull
+    <K> T minBy(
+        @NotNull Function<? super T, ? extends K> keySelector,
+        @NotNull Comparator<? super K> comparator
+    );
+
+    /**
+     * Sorts the elements of a sequence in ascending order.
+     *
+     * <p>The elements are compared according to their natural ordering.</p>
+     *
+     * <p>This method uses deferred execution.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<Integer> numbers =
+     *     Linq.of(5, 2, 8, 1, 4);
+     *
+     * OrderedEnumerable<Integer> ordered =
+     *     numbers.order();
+     *
+     * ordered.forEach(System.out::println);
+     *
+     * // This code produces the following output:
+     * //
+     * // 1
+     * // 2
+     * // 4
+     * // 5
+     * // 8
+     * }</pre>
+     *
+     * @return An ordered sequence containing the elements in ascending order.
+     */
+    @NotNull
+    OrderedEnumerable<T> order();
+
+
+    /**
+     * Sorts the elements of a sequence in ascending order according to
+     * a specified comparator.
+     *
+     * <p>This method uses deferred execution.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<String> fruits =
+     *     Linq.of("apple", "mango", "orange", "grape");
+     *
+     * OrderedEnumerable<String> ordered =
+     *     fruits.order(Comparator.comparingInt(String::length));
+     *
+     * ordered.forEach(System.out::println);
+     *
+     * // This code produces the following output:
+     * //
+     * // apple
+     * // grape
+     * // mango
+     * // orange
+     * }</pre>
+     *
+     * @param comparator The comparator used to compare elements.
+     * @return An ordered sequence containing the elements in ascending order.
+     * @throws NullPointerException If {@code comparator} is {@code null}.
+     */
+    @NotNull
+    OrderedEnumerable<T> order(
+        @NotNull Comparator<? super T> comparator
+    );
+
+
+    /**
+     * Sorts the elements of a sequence in ascending order according to
+     * a specified key selector.
+     *
+     * <p>The selected keys are compared according to their natural ordering.</p>
+     *
+     * <p>This method uses deferred execution.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * record Student(String name, int score) {}
+     *
+     * Enumerable<Student> students = Linq.of(
+     *     new Student("Alice", 90),
+     *     new Student("Bob", 75),
+     *     new Student("Charlie", 85)
+     * );
+     *
+     * OrderedEnumerable<Student> ordered =
+     *     students.orderBy(Student::score);
+     *
+     * ordered.forEach(student ->
+     *     System.out.println(student.name()));
+     *
+     * // This code produces the following output:
+     * //
+     * // Bob
+     * // Charlie
+     * // Alice
+     * }</pre>
+     *
+     * @param <K> The type of the ordering key.
+     * @param keySelector A function that extracts the ordering key from
+     *                    each element.
+     * @return An ordered sequence whose elements are sorted according to
+     *         the selected key.
+     * @throws NullPointerException If {@code keySelector} is {@code null}.
+     */
+    @NotNull
+    <K extends Comparable<? super K>> OrderedEnumerable<T> orderBy(
+        @NotNull Function<? super T, ? extends K> keySelector
+    );
+
+
+    /**
+     * Sorts the elements of a sequence in ascending order according to
+     * a specified key selector and comparator.
+     *
+     * <p>This method uses deferred execution.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * record Student(String name, int score) {}
+     *
+     * Enumerable<Student> students = Linq.of(
+     *     new Student("Alice", 90),
+     *     new Student("Bob", 75),
+     *     new Student("Charlie", 85)
+     * );
+     *
+     * OrderedEnumerable<Student> ordered =
+     *     students.orderBy(
+     *         Student::name,
+     *         Comparator.reverseOrder()
+     *     );
+     *
+     * ordered.forEach(student ->
+     *     System.out.println(student.name()));
+     *
+     * // This code produces the following output:
+     * //
+     * // Charlie
+     * // Bob
+     * // Alice
+     * }</pre>
+     *
+     * @param <K> The type of the ordering key.
+     * @param keySelector A function that extracts the ordering key from
+     *                    each element.
+     * @param comparator The comparator used to compare the selected keys.
+     * @return An ordered sequence whose elements are sorted according to
+     *         the selected key.
+     * @throws NullPointerException If {@code keySelector} or
+     *                              {@code comparator} is {@code null}.
+     */
+    @NotNull
+    <K> OrderedEnumerable<T> orderBy(
+        @NotNull Function<? super T, ? extends K> keySelector,
+        @NotNull Comparator<? super K> comparator
+    );
+
+
+    /**
+     * Sorts the elements of a sequence in descending order according to
+     * a specified key selector.
+     *
+     * <p>The selected keys are compared according to their natural ordering.</p>
+     *
+     * <p>This method uses deferred execution.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * record Student(String name, int score) {}
+     *
+     * Enumerable<Student> students = Linq.of(
+     *     new Student("Alice", 90),
+     *     new Student("Bob", 75),
+     *     new Student("Charlie", 85)
+     * );
+     *
+     * OrderedEnumerable<Student> ordered =
+     *     students.orderByDescending(Student::score);
+     *
+     * ordered.forEach(student ->
+     *     System.out.println(student.name()));
+     *
+     * // This code produces the following output:
+     * //
+     * // Alice
+     * // Charlie
+     * // Bob
+     * }</pre>
+     *
+     * @param <K> The type of the ordering key.
+     * @param keySelector A function that extracts the ordering key from
+     *                    each element.
+     * @return An ordered sequence whose elements are sorted according to
+     *         the selected key in descending order.
+     * @throws NullPointerException If {@code keySelector} is {@code null}.
+     */
+    @NotNull
+    <K extends Comparable<? super K>> OrderedEnumerable<T> orderByDescending(
+        @NotNull Function<? super T, ? extends K> keySelector
+    );
+
+
+    /**
+     * Sorts the elements of a sequence in descending order according to
+     * a specified key selector and comparator.
+     *
+     * <p>This method uses deferred execution.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * record Student(String name, int score) {}
+     *
+     * Enumerable<Student> students = Linq.of(
+     *     new Student("Alice", 90),
+     *     new Student("Bob", 75),
+     *     new Student("Charlie", 85)
+     * );
+     *
+     * OrderedEnumerable<Student> ordered =
+     *     students.orderByDescending(
+     *         Student::name,
+     *         Comparator.naturalOrder()
+     *     );
+     *
+     * ordered.forEach(student ->
+     *     System.out.println(student.name()));
+     *
+     * // This code produces the following output:
+     * //
+     * // Charlie
+     * // Bob
+     * // Alice
+     * }</pre>
+     *
+     * @param <K> The type of the ordering key.
+     * @param keySelector A function that extracts the ordering key from
+     *                    each element.
+     * @param comparator The comparator used to compare the selected keys.
+     * @return An ordered sequence whose elements are sorted according to
+     *         the selected key in descending order.
+     * @throws NullPointerException If {@code keySelector} or
+     *                              {@code comparator} is {@code null}.
+     */
+    @NotNull
+    <K> OrderedEnumerable<T> orderByDescending(
+        @NotNull Function<? super T, ? extends K> keySelector,
+        @NotNull Comparator<? super K> comparator
+    );
+
+
+    /**
+     * Sorts the elements of a sequence in ascending order according to
+     * an {@code int} key.
+     *
+     * <p>This method uses deferred execution.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<String> fruits =
+     *     Linq.of("apple", "mango", "orange", "grape");
+     *
+     * OrderedEnumerable<String> ordered =
+     *     fruits.orderByInt(String::length);
+     *
+     * ordered.forEach(System.out::println);
+     *
+     * // This code produces the following output:
+     * //
+     * // apple
+     * // grape
+     * // mango
+     * // orange
+     * }</pre>
+     *
+     * @param keySelector A function that extracts an {@code int} key from
+     *                    each element.
+     * @return An ordered sequence whose elements are sorted according to
+     *         the selected {@code int} key.
+     * @throws NullPointerException If {@code keySelector} is {@code null}.
+     */
+    @NotNull
+    OrderedEnumerable<T> orderByInt(
+        @NotNull ToIntFunction<? super T> keySelector
+    );
+
+
+    /**
+     * Sorts the elements of a sequence in descending order according to
+     * an {@code int} key.
+     *
+     * <p>This method uses deferred execution.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<String> fruits =
+     *     Linq.of("apple", "mango", "orange", "grape");
+     *
+     * OrderedEnumerable<String> ordered =
+     *     fruits.orderByIntDescending(String::length);
+     *
+     * ordered.forEach(System.out::println);
+     *
+     * // This code produces the following output:
+     * //
+     * // passionfruit
+     * // orange
+     * // mango
+     * // apple
+     * }</pre>
+     *
+     * @param keySelector A function that extracts an {@code int} key from
+     *                    each element.
+     * @return An ordered sequence whose elements are sorted according to
+     *         the selected {@code int} key in descending order.
+     * @throws NullPointerException If {@code keySelector} is {@code null}.
+     */
+    @NotNull
+    OrderedEnumerable<T> orderByIntDescending(
+        @NotNull ToIntFunction<? super T> keySelector
+    );
+
+
+    /**
+     * Sorts the elements of a sequence in ascending order according to
+     * a {@code long} key.
+     *
+     * <p>This method uses deferred execution.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * record FileInfo(String name, long size) {}
+     *
+     * Enumerable<FileInfo> files = Linq.of(
+     *     new FileInfo("a.txt", 500L),
+     *     new FileInfo("b.txt", 1200L),
+     *     new FileInfo("c.txt", 800L)
+     * );
+     *
+     * OrderedEnumerable<FileInfo> ordered =
+     *     files.orderByLong(FileInfo::size);
+     *
+     * // The elements are ordered by size:
+     * //
+     * // a.txt, c.txt, b.txt
+     * }</pre>
+     *
+     * @param keySelector A function that extracts a {@code long} key from
+     *                    each element.
+     * @return An ordered sequence whose elements are sorted according to
+     *         the selected {@code long} key.
+     * @throws NullPointerException If {@code keySelector} is {@code null}.
+     */
+    @NotNull
+    OrderedEnumerable<T> orderByLong(
+        @NotNull ToLongFunction<? super T> keySelector
+    );
+
+
+    /**
+     * Sorts the elements of a sequence in descending order according to
+     * a {@code long} key.
+     *
+     * <p>This method uses deferred execution.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * record FileInfo(String name, long size) {}
+     *
+     * Enumerable<FileInfo> files = Linq.of(
+     *     new FileInfo("a.txt", 500L),
+     *     new FileInfo("b.txt", 1200L),
+     *     new FileInfo("c.txt", 800L)
+     * );
+     *
+     * OrderedEnumerable<FileInfo> ordered =
+     *     files.orderByLongDescending(FileInfo::size);
+     *
+     * // The elements are ordered by size:
+     * //
+     * // b.txt, c.txt, a.txt
+     * }</pre>
+     *
+     * @param keySelector A function that extracts a {@code long} key from
+     *                    each element.
+     * @return An ordered sequence whose elements are sorted according to
+     *         the selected {@code long} key in descending order.
+     * @throws NullPointerException If {@code keySelector} is {@code null}.
+     */
+    @NotNull
+    OrderedEnumerable<T> orderByLongDescending(
+        @NotNull ToLongFunction<? super T> keySelector
+    );
+
+
+    /**
+     * Sorts the elements of a sequence in ascending order according to
+     * a {@code double} key.
+     *
+     * <p>This method uses deferred execution.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * record Product(String name, double price) {}
+     *
+     * Enumerable<Product> products = Linq.of(
+     *     new Product("Apple", 2.5),
+     *     new Product("Orange", 1.8),
+     *     new Product("Banana", 2.1)
+     * );
+     *
+     * OrderedEnumerable<Product> ordered =
+     *     products.orderByDouble(Product::price);
+     *
+     * // The elements are ordered by price:
+     * //
+     * // Orange, Banana, Apple
+     * }</pre>
+     *
+     * @param keySelector A function that extracts a {@code double} key from
+     *                    each element.
+     * @return An ordered sequence whose elements are sorted according to
+     *         the selected {@code double} key.
+     * @throws NullPointerException If {@code keySelector} is {@code null}.
+     */
+    @NotNull
+    OrderedEnumerable<T> orderByDouble(
+        @NotNull ToDoubleFunction<? super T> keySelector
+    );
+
+
+    /**
+     * Sorts the elements of a sequence in descending order according to
+     * a {@code double} key.
+     *
+     * <p>This method uses deferred execution.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * record Product(String name, double price) {}
+     *
+     * Enumerable<Product> products = Linq.of(
+     *     new Product("Apple", 2.5),
+     *     new Product("Orange", 1.8),
+     *     new Product("Banana", 2.1)
+     * );
+     *
+     * OrderedEnumerable<Product> ordered =
+     *     products.orderByDoubleDescending(Product::price);
+     *
+     * // The elements are ordered by price:
+     * //
+     * // Apple, Banana, Orange
+     * }</pre>
+     *
+     * @param keySelector A function that extracts a {@code double} key from
+     *                    each element.
+     * @return An ordered sequence whose elements are sorted according to
+     *         the selected {@code double} key in descending order.
+     * @throws NullPointerException If {@code keySelector} is {@code null}.
+     */
+    @NotNull
+    OrderedEnumerable<T> orderByDoubleDescending(
+        @NotNull ToDoubleFunction<? super T> keySelector
+    );
+
+    /**
+     * <p>Adds an element to the beginning of the sequence.</p>
+     *
+     * <p>This method does not modify the current sequence. Instead, it returns
+     * a new sequence whose first element is {@code element}, followed by all
+     * elements of the current sequence.</p>
+     *
+     * <p>This method uses deferred execution.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<Integer> numbers =
+     *     Linq.of(1, 2, 3, 4);
+     *
+     * Enumerable<Integer> result =
+     *     numbers.prepend(0);
+     *
+     * result.forEach(System.out::println);
+     *
+     * // This code produces the following output:
+     * //
+     * // 0
+     * // 1
+     * // 2
+     * // 3
+     * // 4
+     * }</pre>
+     *
+     * @param element The element to add to the beginning of the sequence.
+     * @return A new sequence that begins with {@code element}, followed by
+     *         the elements of the current sequence.
+     */
+    @NotNull
+    Enumerable<T> prepend(
+        @Nullable T element
+    );
+
+    /**
+     * <p>Reverses the order of the elements in a sequence.</p>
+     *
+     * <p>This method does not sort the elements or compare their values.
+     * It simply returns the elements in the reverse order from which they
+     * are produced by the underlying sequence.</p>
+     *
+     * <p>This method uses deferred execution.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<String> fruits =
+     *     Linq.of("apple", "mango", "orange", "grape");
+     *
+     * Enumerable<String> reversed =
+     *     fruits.reverse();
+     *
+     * reversed.forEach(System.out::println);
+     *
+     * // This code produces the following output:
+     * //
+     * // grape
+     * // orange
+     * // mango
+     * // apple
+     * }</pre>
+     *
+     * @return A sequence whose elements correspond to those of the current
+     *         sequence in reverse order.
+     */
+    @NotNull
+    Enumerable<T> reverse();
+
+    /**
+     * <p>Correlates the elements of two sequences based on matching keys
+     * and produces result elements by using a specified result selector.</p>
+     *
+     * <p>This method performs a right outer join. Every element from the
+     * second sequence is included in the result, regardless of whether
+     * a matching element is found in the first sequence.</p>
+     *
+     * <p>When a matching element is found in the first sequence, the
+     * {@code resultSelector} is invoked for the matching pair. When no
+     * matching element is found, the outer element is {@code null}.</p>
+     *
+     * <p>The default equality semantics are used to compare keys.</p>
+     *
+     * <p>This method uses deferred execution.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * record Employee(int id, String name) {}
+     * record Department(int id, String name) {}
+     *
+     * Enumerable<Employee> employees = Linq.of(
+     *     new Employee(1, "Alice"),
+     *     new Employee(2, "Bob")
+     * );
+     *
+     * Enumerable<Department> departments = Linq.of(
+     *     new Department(1, "IT"),
+     *     new Department(2, "HR"),
+     *     new Department(3, "Sales")
+     * );
+     *
+     * Enumerable<String> result =
+     *     employees.rightJoin(
+     *         departments,
+     *         Employee::id,
+     *         Department::id,
+     *         (employee, department) ->
+     *             employee == null
+     *                 ? department.name() + ": unassigned"
+     *                 : employee.name() + " -> " + department.name()
+     *     );
+     *
+     * result.forEach(System.out::println);
+     *
+     * // This code produces the following output:
+     * //
+     * // Alice -> IT
+     * // Bob -> HR
+     * // Sales: unassigned
+     * }</pre>
+     *
+     * @param <I> The type of elements in the second sequence.
+     * @param <K> The type of the join key.
+     * @param <R> The type of the result elements.
+     * @param inner The sequence to join to the current sequence.
+     * @param outerKeySelector A function to extract the join key from each
+     *                         element of the current sequence.
+     * @param innerKeySelector A function to extract the join key from each
+     *                         element of the second sequence.
+     * @param resultSelector A function to create a result element from a
+     *                       matching pair of elements.
+     * @return A sequence containing the results of the right outer join.
+     * @throws NullPointerException If {@code inner}, {@code outerKeySelector},
+     *                              {@code innerKeySelector}, or
+     *                              {@code resultSelector} is {@code null}.
+     */
+    @NotNull
+    <I, K, R> Enumerable<R> rightJoin(
+        @NotNull Iterable<? extends I> inner,
+        @NotNull Function<? super T, ? extends K> outerKeySelector,
+        @NotNull Function<? super I, ? extends K> innerKeySelector,
+        @NotNull BinFunction<? super T, ? super I, ? extends R> resultSelector
+    );
+
+    /**
+     * <p>Correlates the elements of two sequences based on matching keys
+     * and produces result elements by using a specified result selector.</p>
+     *
+     * <p>This method performs a right outer join. Every element from the
+     * second sequence is included in the result, regardless of whether
+     * a matching element is found in the first sequence.</p>
+     *
+     * <p>The specified {@code equalator} is used to compare and hash
+     * join keys.</p>
+     *
+     * <p>When a matching element is found in the first sequence, the
+     * {@code resultSelector} is invoked for the matching pair. When no
+     * matching element is found, the outer element is {@code null}.</p>
+     *
+     * <p>This method uses deferred execution.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * record Employee(int id, String name) {}
+     * record Department(int id, String name) {}
+     *
+     * Enumerable<Employee> employees = Linq.of(
+     *     new Employee(1, "Alice"),
+     *     new Employee(2, "Bob")
+     * );
+     *
+     * Enumerable<Department> departments = Linq.of(
+     *     new Department(1, "IT"),
+     *     new Department(2, "HR"),
+     *     new Department(3, "Sales")
+     * );
+     *
+     * Enumerable<String> result =
+     *     employees.rightJoin(
+     *         departments,
+     *         Employee::id,
+     *         Department::id,
+     *         (employee, department) ->
+     *             employee == null
+     *                 ? department.name() + ": unassigned"
+     *                 : employee.name() + " -> " + department.name(),
+     *         Equalator.defaultEqualator()
+     *     );
+     * }</pre>
+     *
+     * @param <I> The type of elements in the second sequence.
+     * @param <K> The type of the join key.
+     * @param <R> The type of the result elements.
+     * @param inner The sequence to join to the current sequence.
+     * @param outerKeySelector A function to extract the join key from each
+     *                         element of the current sequence.
+     * @param innerKeySelector A function to extract the join key from each
+     *                         element of the second sequence.
+     * @param resultSelector A function to create a result element from a
+     *                       matching pair of elements.
+     * @param equalator The equality function used to compare and hash keys.
+     * @return A sequence containing the results of the right outer join.
+     * @throws NullPointerException If {@code inner}, {@code outerKeySelector},
+     *                              {@code innerKeySelector},
+     *                              {@code resultSelector}, or {@code equalator}
+     *                              is {@code null}.
+     */
+    @NotNull
+    <I, K, R> Enumerable<R> rightJoin(
+        @NotNull Iterable<? extends I> inner,
+        @NotNull Function<? super T, ? extends K> outerKeySelector,
+        @NotNull Function<? super I, ? extends K> innerKeySelector,
+        @NotNull BinFunction<? super T, ? super I, ? extends R> resultSelector,
+        @NotNull Equalator<? super K> equalator
+    );
+
+    /**
+     * <p>Projects each element of the sequence into a new form.</p>
+     *
+     * <p>The selector function is invoked once for each element of the
+     * sequence, and the returned values form the resulting sequence.</p>
+     *
+     * <p>This method uses deferred execution.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<Integer> numbers =
+     *     Linq.of(1, 2, 3, 4, 5);
+     *
+     * Enumerable<Integer> squares =
+     *     numbers.select(number -> number * number);
+     *
+     * squares.forEach(System.out::println);
+     *
+     * // This code produces the following output:
+     * //
+     * // 1
+     * // 4
+     * // 9
+     * // 16
+     * // 25
+     * }</pre>
+     *
+     * @param <R> The type of the value returned by the selector.
+     * @param selector A transform function to apply to each element.
+     * @return A sequence whose elements are the result of invoking the
+     *         selector function on each element of the sequence.
+     * @throws NullPointerException If {@code selector} is {@code null}.
+     */
+    @NotNull
+    <R> Enumerable<R> select(
+        @NotNull Function<? super T, ? extends R> selector
+    );
+
+
+    /**
+     * <p>Projects each element of the sequence into a new form by
+     * incorporating the element's index.</p>
+     *
+     * <p>The second parameter of the selector represents the zero-based
+     * index of the element in the source sequence.</p>
+     *
+     * <p>This method uses deferred execution.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<String> fruits =
+     *     Linq.of(
+     *         "apple",
+     *         "banana",
+     *         "mango",
+     *         "orange"
+     *     );
+     *
+     * Enumerable<String> result =
+     *     fruits.select((fruit, index) ->
+     *         index + ": " + fruit
+     *     );
+     *
+     * result.forEach(System.out::println);
+     *
+     * // This code produces the following output:
+     * //
+     * // 0: apple
+     * // 1: banana
+     * // 2: mango
+     * // 3: orange
+     * }</pre>
+     *
+     * @param <R> The type of the value returned by the selector.
+     * @param selector A transform function to apply to each element.
+     *                 The second parameter represents the zero-based
+     *                 index of the element in the source sequence.
+     * @return A sequence whose elements are the result of invoking the
+     *         selector function on each element of the sequence.
+     * @throws NullPointerException If {@code selector} is {@code null}.
+     */
+    @NotNull
+    <R> Enumerable<R> select(
+        @NotNull BinFunction<? super T, Integer, ? extends R> selector
+    );
+
+    /**
+     * Projects each element of the sequence to an {@link Iterable},
+     * and flattens the resulting sequences into one sequence.
+     *
+     * @param <R> The type of the elements in the resulting sequence.
+     * @param selector A transform function to apply to each element.
+     * @return A flattened sequence containing the elements produced by
+     *         the selector.
+     * @throws NullPointerException If {@code selector} is {@code null}.
+     */
+    @NotNull
+    <R> Enumerable<R> selectMany(
+        @NotNull Function<? super T, ? extends Enumerable<? extends R>> selector
+    );
+
+
+    /**
+     * Projects each element of the sequence to an {@link Iterable},
+     * and flattens the resulting sequences into one sequence.
+     *
+     * <p>The second parameter of the selector represents the zero-based
+     * index of the source element.</p>
+     *
+     * @param <R> The type of the elements in the resulting sequence.
+     * @param selector A transform function to apply to each source element.
+     * @return A flattened sequence containing the elements produced by
+     *         the selector.
+     * @throws NullPointerException If {@code selector} is {@code null}.
+     */
+    @NotNull
+    <R> Enumerable<R> selectMany(
+        @NotNull BinFunction<? super T, Integer,
+            ? extends Enumerable<? extends R>> selector
+    );
+
+
+    /**
+     * Projects each element of the sequence to an {@link Iterable},
+     * flattens the resulting sequences into one sequence, and applies
+     * a result selector to each intermediate element.
+     *
+     * @param <C> The type of the intermediate elements.
+     * @param <R> The type of the resulting elements.
+     * @param collectionSelector A transform function that returns the
+     *                           intermediate sequence for each source element.
+     * @param resultSelector A transform function that combines the source
+     *                       element and an intermediate element.
+     * @return A flattened sequence containing the results produced by
+     *         the result selector.
+     * @throws NullPointerException If {@code collectionSelector} or
+     *                              {@code resultSelector} is {@code null}.
+     */
+    @NotNull
+    <C, R> Enumerable<R> selectMany(
+        @NotNull Function<? super T, ? extends Iterable<? extends C>> collectionSelector,
+        @NotNull BinFunction<? super T, ? super C, ? extends R> resultSelector
+    );
+
+
+    /**
+     * Projects each element of the sequence to an {@link Iterable},
+     * flattens the resulting sequences into one sequence, and applies
+     * a result selector to each intermediate element.
+     *
+     * <p>The second parameter of {@code collectionSelector} represents
+     * the zero-based index of the source element.</p>
+     *
+     * @param <C> The type of the intermediate elements.
+     * @param <R> The type of the resulting elements.
+     * @param collectionSelector A transform function that returns the
+     *                           intermediate sequence for each source element.
+     * @param resultSelector A transform function that combines the source
+     *                       element and an intermediate element.
+     * @return A flattened sequence containing the results produced by
+     *         the result selector.
+     * @throws NullPointerException If {@code collectionSelector} or
+     *                              {@code resultSelector} is {@code null}.
+     */
+    @NotNull
+    <C, R> Enumerable<R> selectMany(
+        @NotNull BinFunction<? super T, Integer,
+            ? extends Iterable<? extends C>> collectionSelector,
+        @NotNull BinFunction<? super T, ? super C, ? extends R> resultSelector
+    );
+
+    /**
+     * <p>Determines whether two sequences are equal by comparing their
+     * corresponding elements using the default equality semantics.</p>
+     *
+     * <p>The sequences are enumerated in parallel. The sequences are
+     * considered equal only when they contain the same number of elements
+     * and each pair of corresponding elements is equal.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<String> first =
+     *     Linq.of("apple", "banana", "orange");
+     *
+     * Enumerable<String> second =
+     *     Linq.of("apple", "banana", "orange");
+     *
+     * boolean equal =
+     *     first.sequenceEqual(second);
+     *
+     * System.out.println(equal);
+     *
+     * // This code produces the following output:
+     * //
+     * // true
+     * }</pre>
+     *
+     * @param other The sequence to compare with the current sequence.
+     * @return {@code true} if the two sequences have the same number of
+     *         elements and each pair of corresponding elements is equal;
+     *         {@code false} otherwise.
+     * @throws NullPointerException If {@code other} is {@code null}.
+     */
+    boolean sequenceEqual(
+        @NotNull Enumerable<? extends T> other
+    );
+
+
+    /**
+     * <p>Determines whether two sequences are equal by comparing their
+     * corresponding elements using a specified {@link Equalator}.</p>
+     *
+     * <p>The sequences are enumerated in parallel. The sequences are
+     * considered equal only when they contain the same number of elements
+     * and each pair of corresponding elements is considered equal by
+     * the specified {@code equalator}.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * record Person(String name, int age) {}
+     *
+     * Enumerable<Person> first =
+     *     Linq.of(
+     *         new Person("Alice", 20),
+     *         new Person("Bob", 21)
+     *     );
+     *
+     * Enumerable<Person> second =
+     *     Linq.of(
+     *         new Person("alice", 20),
+     *         new Person("bob", 21)
+     *     );
+     *
+     * boolean equal =
+     *     first.sequenceEqual(
+     *         second,
+     *         Equalator.comparing(
+     *             person -> person.name().toLowerCase()
+     *         )
+     *     );
+     *
+     * System.out.println(equal);
+     *
+     * // This code produces the following output:
+     * //
+     * // true
+     * }</pre>
+     *
+     * @param other The sequence to compare with the current sequence.
+     * @param equalator The equality function used to compare corresponding
+     *                  elements.
+     * @return {@code true} if the two sequences have the same number of
+     *         elements and each pair of corresponding elements is considered
+     *         equal by {@code equalator}; {@code false} otherwise.
+     * @throws NullPointerException If {@code other} or {@code equalator}
+     *                              is {@code null}.
+     */
+    boolean sequenceEqual(
+        @NotNull Enumerable<? extends T> other,
+        @NotNull Equalator<? super T> equalator
+    );
 }
