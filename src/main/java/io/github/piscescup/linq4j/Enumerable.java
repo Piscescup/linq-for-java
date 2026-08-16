@@ -7,11 +7,12 @@ import io.github.piscescup.interfaces.exfunction.BinFunction;
 import io.github.piscescup.interfaces.exfunction.BinPredicate;
 import io.github.piscescup.linq4j.base.Groupable;
 import io.github.piscescup.linq4j.exceptions.OverflowEnumerableException;
+import io.github.piscescup.util.validation.NullCheck;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.awt.image.RasterFormatException;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.*;
 import java.util.function.*;
 
@@ -441,7 +442,9 @@ public interface Enumerable<T>
      * @return {@code true} if the sequence contains at least one element;
      *         otherwise, {@code false}.
      */
-    boolean any();
+    default boolean any() {
+        return any(null);
+    }
 
     /**
      * <p>
@@ -473,7 +476,19 @@ public interface Enumerable<T>
      * @return {@code true} if the sequence is not empty and at least one element
      *         satisfies the specified condition; otherwise, {@code false}.
      */
-    boolean any(@Nullable Predicate<? super T> predicate);
+    default boolean any(@Nullable Predicate<? super T> predicate) {
+        try (Enumerator<T> e = enumerator()) {
+            if (predicate==null) return e.moveNext();
+
+            while (e.moveNext()) {
+                if (predicate.test(e.current())) {
+                    return true;
+                }
+            }
+            return false;
+        }
+    }
+
 
     /**
      * <p>
@@ -539,13 +554,31 @@ public interface Enumerable<T>
      * @throws ArithmeticException if the sequence contains no elements.
      * @param <R> The type of the result produced by the selector.
      */
-    double averageToDouble(@NotNull ToDoubleFunction<? super T> selector);
+    default double averageToDouble(@NotNull ToDoubleFunction<? super T> selector) {
+        NullCheck.requireNonNull(selector, "selector");
+        try (Enumerator<T> e = enumerator()) {
+            double sum = 0.0;
+            long count = 0;
+
+            while (e.moveNext()) {
+                sum += selector.applyAsDouble(e.current());
+                count++;
+            }
+
+            if (count == 0) {
+                throw new ArithmeticException("Cannot compute average of an empty sequence.");
+            }
+
+            return sum / count;
+        }
+    }
 
     /**
      * <p>
      * Computes the average of a sequence of {@link BigDecimal} values that are
      * obtained by invoking a transform function on each element of the input
-     * sequence.
+     * sequence, rounding the result according to the specified
+     * {@link RoundingMode}.
      * </p>
      *
      * <b>Usage:</b>
@@ -556,21 +589,46 @@ public interface Enumerable<T>
      *     new Product("Orange", new BigDecimal("1.80"))
      * );
      *
-     * BigDecimal average = products.averageToDecimal(Product::price);
+     * BigDecimal average = products.averageToDecimal(Product::price, RoundingMode.HALF_UP);
      *
      * System.out.printf("The average price is %s.%n", average);
      *
      * // This code produces the following output:
      * //
-     * // The average price is 1.833333333333333333333333333333333333.
+     * // The average price is 1.83.
      * }</pre>
      *
      * @param selector A transform function to apply to each element.
-     * @return The average of the sequence of values.
-     * @throws NullPointerException if {@code selector} is {@code null}.
+     * @param roundingMode The rounding mode to apply when the exact quotient
+     *                     cannot be represented with the scale of the sum.
+     * @return The average of the sequence of values, rounded according to
+     *         {@code roundingMode}.
+     * @throws NullPointerException if {@code selector} or {@code roundingMode} is {@code null}.
      * @throws ArithmeticException if the sequence contains no elements.
      */
-    BigDecimal averageToDecimal(@NotNull Function<? super T, ? extends BigDecimal> selector);
+    default BigDecimal averageToDecimal(
+        @NotNull Function<? super T, ? extends BigDecimal> selector,
+        @NotNull RoundingMode roundingMode
+    ) {
+        NullCheck.requireNonNull(selector, "selector");
+        NullCheck.requireNonNull(roundingMode, "roundingMode");
+
+        try (Enumerator<T> e = enumerator()) {
+            BigDecimal sum = BigDecimal.ZERO;
+            long count = 0;
+
+            while (e.moveNext()) {
+                sum = sum.add(selector.apply(e.current()));
+                count++;
+            }
+
+            if (count == 0) {
+                throw new ArithmeticException("Cannot compute average of an empty sequence.");
+            }
+
+            return sum.divide(BigDecimal.valueOf(count), roundingMode);
+        }
+    }
 
     /**
      * <p>
@@ -730,7 +788,9 @@ public interface Enumerable<T>
      * @return {@code true} if the sequence contains an element that is equal to
      *     the specified value; otherwise, {@code false}.
      */
-    boolean contains(T value);
+    default boolean contains(T value) {
+        return contains(value, null);
+    }
 
     /**
      * <p>
@@ -776,7 +836,20 @@ public interface Enumerable<T>
      * @see Equalator
      * @see Equalable
      */
-    boolean contains(T value, @Nullable Equalator<? super T> equalator);
+    default boolean contains(T value, @Nullable Equalator<? super T> equalator) {
+        final Equalator<? super T> effectiveEqualator = equalator != null
+            ? equalator
+            : Equalator.defaultEqualator();
+
+        try (Enumerator<T> e = enumerator()) {
+            while (e.moveNext()) {
+                if (effectiveEqualator.equals(e.current(), value)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+    }
 
     /**
      * <p>
@@ -794,7 +867,7 @@ public interface Enumerable<T>
      *     "grape"
      * );
      *
-     * int count = fruits.count();
+     * long count = fruits.count();
      *
      * System.out.printf("The sequence contains %d elements.%n", count);
      *
@@ -805,9 +878,17 @@ public interface Enumerable<T>
      *
      * @return The number of elements in the sequence.
      * @throws OverflowEnumerableException if the number of elements exceeds
-     *     {@link Integer#MAX_VALUE}.
+     *     {@link Long#MAX_VALUE}.
      */
-    int count();
+    default long count() {
+        try (Enumerator<T> e = enumerator()) {
+            long count = 0;
+            while (e.moveNext()) {
+                count++;
+            }
+            return count;
+        }
+    }
 
     /**
      * <p>
@@ -826,7 +907,7 @@ public interface Enumerable<T>
      *     "grape"
      * );
      *
-     * int count = fruits.count(fruit -> fruit.length() > 5);
+     * long count = fruits.count(fruit -> fruit.length() > 5);
      *
      * System.out.printf(
      *     "There are %d fruits whose names contain more than five characters.%n",
@@ -843,9 +924,21 @@ public interface Enumerable<T>
      *     specified by {@code predicate}.
      * @throws NullPointerException if {@code predicate} is {@code null}.
      * @throws OverflowEnumerableException if the number of matching elements
-     *     exceeds {@link Integer#MAX_VALUE}.
+     *     exceeds {@link Long#MAX_VALUE}.
      */
-    int count(@Nullable Predicate<? super T> predicate);
+    default long count(@NotNull Predicate<? super T> predicate) {
+        NullCheck.requireNonNull(predicate, "predicate");
+
+        try (Enumerator<T> e = enumerator()) {
+            long count = 0;
+            while (e.moveNext()) {
+                if (predicate.test(e.current())) {
+                    count++;
+                }
+            }
+            return count;
+        }
+    }
 
     /**
      * <p>
@@ -1170,7 +1263,22 @@ public interface Enumerable<T>
      * @throws IndexOutOfBoundsException if {@code index} is less than zero or
      *     greater than or equal to the number of elements in the sequence.
      */
-    T elementAt(int index);
+    default T elementAt(int index) {
+        if (index < 0) throw new IndexOutOfBoundsException("Index cannot be negative: " + index);
+
+        try (Enumerator<T> e = enumerator()) {
+            int currentIndex = 0;
+            while (e.moveNext()) {
+                if (currentIndex == index) {
+                    return e.current();
+                }
+                currentIndex++;
+            }
+            throw new IndexOutOfBoundsException(
+                "Index " + index + " is out of bounds for a sequence of length " + currentIndex
+            );
+        }
+    }
 
     /**
      * <p>
@@ -1202,7 +1310,9 @@ public interface Enumerable<T>
      *     {@code null} if the index is outside the bounds of the sequence.
      */
     @Nullable
-    T elementAtOrNull(int index);
+    default T elementAtOrNull(int index) {
+        return elementAtOrDefault(index, null);
+    }
 
     /**
      * <p>
@@ -1235,7 +1345,20 @@ public interface Enumerable<T>
      *     {@code null} if the index is outside the bounds of the sequence.
      */
     @Nullable
-    T elementAtOrDefault(int index, T defaultElement);
+    default T elementAtOrDefault(int index, @Nullable T defaultElement) {
+        if (index < 0) return defaultElement;
+
+        try (Enumerator<T> e = enumerator()) {
+            int currentIndex = 0;
+            while (e.moveNext()) {
+                if (currentIndex == index) {
+                    return e.current();
+                }
+                currentIndex++;
+            }
+            return defaultElement;
+        }
+    }
 
     /**
      * <p>
@@ -1484,7 +1607,14 @@ public interface Enumerable<T>
      * @return The first element in the sequence.
      * @throws NoSuchElementException If the sequence contains no elements.
      */
-    T first();
+    default T first() {
+        try (Enumerator<T> e = enumerator()) {
+            if (e.moveNext()) {
+                return e.current();
+            }
+            throw new NoSuchElementException("The sequence contains no elements.");
+        }
+    }
 
     /**
      * <p>Returns the first element in the sequence that satisfies a specified
@@ -1520,7 +1650,20 @@ public interface Enumerable<T>
      *         {@code predicate}.
      * @throws NullPointerException If {@code predicate} is {@code null}.
      */
-    T first(@Nullable Predicate<? super T> predicate);
+    default T first(@Nullable Predicate<? super T> predicate) {
+        if (predicate == null) throw new NullPointerException("predicate is null");
+
+
+        try (Enumerator<T> e = enumerator()) {
+            while (e.moveNext()) {
+                T current = e.current();
+                if (predicate.test(current)) {
+                    return current;
+                }
+            }
+            throw new NoSuchElementException("No element satisfies the condition.");
+        }
+    }
 
 
     /**
@@ -1546,7 +1689,14 @@ public interface Enumerable<T>
      *         sequence contains no elements.
      */
     @Nullable
-    T firstOrNull();
+    default T firstOrNull() {
+        try (Enumerator<T> e = enumerator()) {
+            if (e.moveNext()) {
+                return e.current();
+            }
+            return null;
+        }
+    }
 
     /**
      * <p>Returns the first element in the sequence that satisfies a specified
@@ -1578,7 +1728,18 @@ public interface Enumerable<T>
      * @throws NullPointerException If {@code predicate} is {@code null}.
      */
     @Nullable
-    T firstOrNull(@Nullable Predicate<? super T> predicate);
+    default T firstOrNull(@NotNull Predicate<? super T> predicate) {
+        NullCheck.requireNonNull(predicate, "predicate");
+        try (Enumerator<T> e = enumerator()) {
+            while (e.moveNext()) {
+                T current = e.current();
+                if (predicate.test(current)) {
+                    return current;
+                }
+            }
+            return null;
+        }
+    }
 
     /**
      * <p>Returns the first element in the sequence, or the specified default
@@ -1602,7 +1763,14 @@ public interface Enumerable<T>
      * @return The first element in the sequence, or {@code defaultValue`
      *         if the sequence contains no elements.
      */
-    T firstOrDefault(T defaultValue);
+    default T firstOrDefault(T defaultValue) {
+        try (Enumerator<T> e = enumerator()) {
+            if (e.moveNext()) {
+                return e.current();
+            }
+            return defaultValue;
+        }
+    }
 
     /**
      * <p>Returns the first element in the sequence that satisfies a
@@ -1634,10 +1802,22 @@ public interface Enumerable<T>
      *         {@code defaultValue} if no such element is found.
      * @throws NullPointerException If {@code predicate} is {@code null}.
      */
-    T firstOrDefault(
-        @Nullable Predicate<? super T> predicate,
+    default T firstOrDefault(
+        @NotNull Predicate<? super T> predicate,
         T defaultValue
-    );
+    ) {
+        NullCheck.requireNonNull(predicate, "predicate");
+
+        try (Enumerator<T> e = enumerator()) {
+            while (e.moveNext()) {
+                T current = e.current();
+                if (predicate.test(current)) {
+                    return current;
+                }
+            }
+            return defaultValue;
+        }
+    }
 
     /**
      * <p>Groups the elements of the sequence according to a specified
@@ -2282,7 +2462,19 @@ public interface Enumerable<T>
      * @throws NoSuchElementException If the sequence contains no elements.
      */
     @NotNull
-    T last();
+    default T last() {
+        try (Enumerator<T> enumerator = enumerator()) {
+            if (!enumerator.moveNext()) {
+                throw new NoSuchElementException("Sequence contains no elements.");
+            }
+
+            T result = enumerator.current();
+            while (enumerator.moveNext()) {
+                result = enumerator.current();
+            }
+            return result;
+        }
+    }
 
 
     /**
@@ -2310,12 +2502,32 @@ public interface Enumerable<T>
      * @param predicate A function to test each element for a condition.
      * @return The last element in the sequence that satisfies the condition.
      * @throws NullPointerException If {@code predicate} is {@code null}.
-     * @throws NoSuchElementException If no element satisfies the condition.
+     * @throws NoSuchElementException If no element satisfies the condition or the sequence contains no elements.
      */
     @NotNull
-    T last(
+    default T last(
         @NotNull Predicate<? super T> predicate
-    );
+    ) {
+        NullCheck.requireNonNull(predicate, "predicate");
+
+        try (Enumerator<T> enumerator = enumerator()) {
+            T result = null;
+            boolean found = false;
+
+            while (enumerator.moveNext()) {
+                T current = enumerator.current();
+                if (predicate.test(current)) {
+                    result = current;
+                    found = true;
+                }
+            }
+
+            if (!found) {
+                throw new NoSuchElementException("No element satisfies the condition.");
+            }
+            return result;
+        }
+    }
 
 
     /**
@@ -2343,8 +2555,9 @@ public interface Enumerable<T>
      *         sequence contains no elements.
      */
     @Nullable
-    T lastOrNull();
-
+    default T lastOrNull() {
+        return lastOrDefault(null);
+    }
 
     /**
      * <p>Returns the last element of a sequence that satisfies a specified
@@ -2373,9 +2586,11 @@ public interface Enumerable<T>
      * @throws NullPointerException If {@code predicate} is {@code null}.
      */
     @Nullable
-    T lastOrNull(
+    default T lastOrNull(
         @NotNull Predicate<? super T> predicate
-    );
+    ) {
+        return lastOrDefault(predicate, null);
+    }
 
     /**
      * <p>Returns the last element of a sequence, or the specified default
@@ -2400,8 +2615,17 @@ public interface Enumerable<T>
      * @return The last element in the sequence, or {@code defaultElement}
      *         if the sequence contains no elements.
      */
-    @NotNull
-    T lastOrDefault(@NotNull T defaultElement);
+    @Nullable
+    default T lastOrDefault(@Nullable T defaultElement) {
+        try (Enumerator<T> enumerator = enumerator()) {
+            T result = defaultElement;
+
+            while (enumerator.moveNext()) {
+                result = enumerator.current();
+            }
+            return result;
+        }
+    }
 
 
     /**
@@ -2432,11 +2656,24 @@ public interface Enumerable<T>
      *         {@code defaultElement} if no such element is found.
      * @throws NullPointerException If {@code predicate} is {@code null}.
      */
-    @NotNull
-    T lastOrDefault(
+    @Nullable
+    default T lastOrDefault(
         @NotNull Predicate<? super T> predicate,
-        @NotNull T defaultElement
-    );
+        @Nullable T defaultElement
+    ) {
+        NullCheck.requireNonNull(predicate, "predicate");
+
+        try (Enumerator<T> enumerator = enumerator()) {
+            T result = defaultElement;
+            while (enumerator.moveNext()) {
+                T current = enumerator.current();
+                if (predicate.test(current)) {
+                    result = current;
+                }
+            }
+            return result;
+        }
+    }
 
     /**
      * <p>Correlates the elements of this sequence with the elements of
@@ -2695,8 +2932,55 @@ public interface Enumerable<T>
      * @return The maximum value in the sequence.
      * @throws NoSuchElementException If the sequence contains no elements.
      */
+    @SuppressWarnings("unchecked")
     @NotNull
-    T max();
+    default T max() {
+        return max((Comparator<? super T>) Comparator.naturalOrder());
+    }
+
+    /**
+     * <p>Returns the maximum value in a sequence, using the specified
+     * {@link Comparator} to compare elements.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<String> fruits = Linq.of("apple", "mango", "fig", "passionfruit");
+     *
+     * // Find the longest fruit name.
+     * String longest = fruits.max(Comparator.comparingInt(String::length));
+     *
+     * System.out.println(longest);
+     *
+     * // This code produces the following output:
+     * //
+     * // passionfruit
+     * }</pre>
+     *
+     * @param comparator The comparator used to compare elements.
+     * @return The maximum value in the sequence, according to {@code comparator}.
+     * @throws NullPointerException If {@code comparator} is {@code null}.
+     * @throws NoSuchElementException If the sequence contains no elements.
+     * @see #max()
+     */
+    @NotNull
+    default T max(@NotNull Comparator<? super T> comparator) {
+        NullCheck.requireNonNull(comparator, "comparator");
+
+        try (Enumerator<T> enumerator = enumerator()) {
+            if (!enumerator.moveNext()) {
+                throw new NoSuchElementException("Sequence contains no elements.");
+            }
+
+            T result = enumerator.current();
+            while (enumerator.moveNext()) {
+                T current = enumerator.current();
+                if (comparator.compare(current, result) > 0) {
+                    result = current;
+                }
+            }
+            return result;
+        }
+    }
 
     /**
      * <p>Returns the maximum integer value obtained by applying the specified
@@ -2722,9 +3006,27 @@ public interface Enumerable<T>
      * @throws NullPointerException If {@code selector} is {@code null}.
      * @throws NoSuchElementException If the sequence contains no elements.
      */
-    int maxToInt(
+    default int maxToInt(
         @NotNull ToIntFunction<? super T> selector
-    );
+    ) {
+        NullCheck.requireNonNull(selector, "selector");
+
+        try (Enumerator<T> enumerator = enumerator()) {
+            if (!enumerator.moveNext()) {
+                throw new NoSuchElementException("Sequence contains no elements.");
+            }
+
+            int result = selector.applyAsInt(enumerator.current());
+
+            while (enumerator.moveNext()) {
+                int current = selector.applyAsInt(enumerator.current());
+                if (current > result) {
+                    result = current;
+                }
+            }
+            return result;
+        }
+    }
 
     /**
      * <p>Returns the maximum {@code long} value obtained by applying the
@@ -2750,9 +3052,27 @@ public interface Enumerable<T>
      * @throws NullPointerException If {@code selector} is {@code null}.
      * @throws NoSuchElementException If the sequence contains no elements.
      */
-    long maxToLong(
+    default long maxToLong(
         @NotNull ToLongFunction<? super T> selector
-    );
+    ) {
+        NullCheck.requireNonNull(selector, "selector");
+
+        try (Enumerator<T> enumerator = enumerator()) {
+            if (!enumerator.moveNext()) {
+                throw new NoSuchElementException("Sequence contains no elements.");
+            }
+
+            long result = selector.applyAsLong(enumerator.current());
+
+            while (enumerator.moveNext()) {
+                long current = selector.applyAsLong(enumerator.current());
+                if (current > result) {
+                    result = current;
+                }
+            }
+            return result;
+        }
+    }
 
     /**
      * <p>Returns the maximum {@code double} value obtained by applying the
@@ -2779,9 +3099,27 @@ public interface Enumerable<T>
      * @throws NullPointerException If {@code selector} is {@code null}.
      * @throws NoSuchElementException If the sequence contains no elements.
      */
-    double maxToDouble(
+    default double maxToDouble(
         @NotNull ToDoubleFunction<? super T> selector
-    );
+    ) {
+        NullCheck.requireNonNull(selector, "selector");
+
+        try (Enumerator<T> enumerator = enumerator()) {
+            if (!enumerator.moveNext()) {
+                throw new NoSuchElementException("Sequence contains no elements.");
+            }
+
+            double result = selector.applyAsDouble(enumerator.current());
+
+            while (enumerator.moveNext()) {
+                double current = selector.applyAsDouble(enumerator.current());
+                if (current > result) {
+                    result = current;
+                }
+            }
+            return result;
+        }
+    }
 
     /**
      * <p>Returns the maximum {@link BigDecimal} value obtained by applying
@@ -2814,9 +3152,27 @@ public interface Enumerable<T>
      * @throws NoSuchElementException If the sequence contains no elements.
      */
     @NotNull
-    BigDecimal maxToDecimal(
+    default BigDecimal maxToDecimal(
         @NotNull Function<? super T, ? extends BigDecimal> selector
-    );
+    ) {
+        NullCheck.requireNonNull(selector, "selector");
+
+        try (Enumerator<T> enumerator = enumerator()) {
+            if (!enumerator.moveNext()) {
+                throw new NoSuchElementException("Sequence contains no elements.");
+            }
+
+            BigDecimal result = selector.apply(enumerator.current());
+
+            while (enumerator.moveNext()) {
+                BigDecimal current = selector.apply(enumerator.current());
+                if (current.compareTo(result) > 0) {
+                    result = current;
+                }
+            }
+            return result;
+        }
+    }
 
     /**
      * <p>Returns the maximum element of a sequence according to a specified
@@ -2851,9 +3207,11 @@ public interface Enumerable<T>
      * @throws NoSuchElementException If the sequence contains no elements.
      */
     @NotNull
-    <K extends Comparable<? super K>> T maxBy(
+    default  <K extends Comparable<? super K>> T maxBy(
         @NotNull Function<? super T, ? extends K> keySelector
-    );
+    ) {
+        return maxBy(keySelector, Comparator.naturalOrder());
+    }
 
 
     /**
@@ -2891,10 +3249,32 @@ public interface Enumerable<T>
      * @throws NoSuchElementException If the sequence contains no elements.
      */
     @NotNull
-    <K> T maxBy(
+    default <K> T maxBy(
         @NotNull Function<? super T, ? extends K> keySelector,
         @NotNull Comparator<? super K> comparator
-    );
+    ) {
+        NullCheck.requireNonNull(keySelector, "keySelector");
+        NullCheck.requireNonNull(comparator, "comparator");
+
+        try (Enumerator<T> enumerator = enumerator()) {
+            if (!enumerator.moveNext()) {
+                throw new NoSuchElementException("Sequence contains no elements.");
+            }
+
+            T result = enumerator.current();
+            K resultKey = keySelector.apply(result);
+
+            while (enumerator.moveNext()) {
+                T current = enumerator.current();
+                K currentKey = keySelector.apply(current);
+                if (comparator.compare(currentKey, resultKey) > 0) {
+                    result = current;
+                    resultKey = currentKey;
+                }
+            }
+            return result;
+        }
+    }
 
     /**
      * <p>Returns the minimum value in a sequence.</p>
@@ -2917,10 +3297,57 @@ public interface Enumerable<T>
      *
      * @return The minimum value in the sequence.
      * @throws NoSuchElementException If the sequence contains no elements.
+     * @see #min(Comparator)
      */
     @NotNull
-    T min();
+    @SuppressWarnings("unchecked")
+    default T min() {
+        return min((Comparator<? super T>) Comparator.naturalOrder());
+    }
 
+    /**
+     * <p>Returns the minimum value in a sequence, using the specified
+     * {@link Comparator} to compare elements.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<String> fruits = Linq.of("apple", "mango", "fig", "passionfruit");
+     *
+     * // Find the shortest fruit name.
+     * String shortest = fruits.min(Comparator.comparingInt(String::length));
+     *
+     * System.out.println(shortest);
+     *
+     * // This code produces the following output:
+     * //
+     * // fig
+     * }</pre>
+     *
+     * @param comparator The comparator used to compare elements.
+     * @return The minimum value in the sequence, according to {@code comparator}.
+     * @throws NullPointerException If {@code comparator} is {@code null}.
+     * @throws NoSuchElementException If the sequence contains no elements.
+     * @see #min()
+     */
+    @NotNull
+    default T min(@NotNull Comparator<? super T> comparator) {
+        NullCheck.requireNonNull(comparator, "comparator");
+
+        try (Enumerator<T> enumerator = enumerator()) {
+            if (!enumerator.moveNext()) {
+                throw new NoSuchElementException("Sequence contains no elements.");
+            }
+
+            T result = enumerator.current();
+            while (enumerator.moveNext()) {
+                T current = enumerator.current();
+                if (comparator.compare(current, result) < 0) {
+                    result = current;
+                }
+            }
+            return result;
+        }
+    }
 
     /**
      * <p>Returns the minimum {@code int} value obtained by applying the
@@ -2946,9 +3373,27 @@ public interface Enumerable<T>
      * @throws NullPointerException If {@code selector} is {@code null}.
      * @throws NoSuchElementException If the sequence contains no elements.
      */
-    int minToInt(
+    default int minToInt(
         @NotNull ToIntFunction<? super T> selector
-    );
+    ) {
+        NullCheck.requireNonNull(selector, "selector");
+
+        try (Enumerator<T> enumerator = enumerator()) {
+            if (!enumerator.moveNext()) {
+                throw new NoSuchElementException("Sequence contains no elements.");
+            }
+
+            int result = selector.applyAsInt(enumerator.current());
+
+            while (enumerator.moveNext()) {
+                int current = selector.applyAsInt(enumerator.current());
+                if (current < result) {
+                    result = current;
+                }
+            }
+            return result;
+        }
+    }
 
 
     /**
@@ -2975,9 +3420,27 @@ public interface Enumerable<T>
      * @throws NullPointerException If {@code selector} is {@code null}.
      * @throws NoSuchElementException If the sequence contains no elements.
      */
-    long minToLong(
+    default long minToLong(
         @NotNull ToLongFunction<? super T> selector
-    );
+    ) {
+        NullCheck.requireNonNull(selector, "selector");
+
+        try (Enumerator<T> enumerator = enumerator()) {
+            if (!enumerator.moveNext()) {
+                throw new NoSuchElementException("Sequence contains no elements.");
+            }
+
+            long result = selector.applyAsLong(enumerator.current());
+
+            while (enumerator.moveNext()) {
+                long current = selector.applyAsLong(enumerator.current());
+                if (current < result) {
+                    result = current;
+                }
+            }
+            return result;
+        }
+    }
 
 
     /**
@@ -3005,9 +3468,27 @@ public interface Enumerable<T>
      * @throws NullPointerException If {@code selector} is {@code null}.
      * @throws NoSuchElementException If the sequence contains no elements.
      */
-    double minToDouble(
+    default double minToDouble(
         @NotNull ToDoubleFunction<? super T> selector
-    );
+    ) {
+        NullCheck.requireNonNull(selector, "selector");
+
+        try (Enumerator<T> enumerator = enumerator()) {
+            if (!enumerator.moveNext()) {
+                throw new NoSuchElementException("Sequence contains no elements.");
+            }
+
+            double result = selector.applyAsDouble(enumerator.current());
+
+            while (enumerator.moveNext()) {
+                double current = selector.applyAsDouble(enumerator.current());
+                if (current > result) {
+                    result = current;
+                }
+            }
+            return result;
+        }
+    }
 
 
     /**
@@ -3041,9 +3522,27 @@ public interface Enumerable<T>
      * @throws NoSuchElementException If the sequence contains no elements.
      */
     @NotNull
-    BigDecimal minToDecimal(
+    default BigDecimal minToDecimal(
         @NotNull Function<? super T, ? extends BigDecimal> selector
-    );
+    ) {
+        NullCheck.requireNonNull(selector, "selector");
+
+        try (Enumerator<T> enumerator = enumerator()) {
+            if (!enumerator.moveNext()) {
+                throw new NoSuchElementException("Sequence contains no elements.");
+            }
+
+            BigDecimal result = selector.apply(enumerator.current());
+
+            while (enumerator.moveNext()) {
+                BigDecimal current = selector.apply(enumerator.current());
+                if (current.compareTo(result) < 0) {
+                    result = current;
+                }
+            }
+            return result;
+        }
+    }
 
     /**
      * <p>Returns the minimum element of a sequence according to a specified
@@ -3078,9 +3577,11 @@ public interface Enumerable<T>
      * @throws NoSuchElementException If the sequence contains no elements.
      */
     @NotNull
-    <K extends Comparable<? super K>> T minBy(
+    default <K extends Comparable<? super K>> T minBy(
         @NotNull Function<? super T, ? extends K> keySelector
-    );
+    ) {
+        return minBy(keySelector, Comparator.naturalOrder());
+    }
 
 
     /**
@@ -3119,10 +3620,32 @@ public interface Enumerable<T>
      * @throws NoSuchElementException If the sequence contains no elements.
      */
     @NotNull
-    <K> T minBy(
+    default <K> T minBy(
         @NotNull Function<? super T, ? extends K> keySelector,
         @NotNull Comparator<? super K> comparator
-    );
+    ) {
+        NullCheck.requireNonNull(keySelector, "keySelector");
+        NullCheck.requireNonNull(comparator, "comparator");
+
+        try (Enumerator<T> enumerator = enumerator()) {
+            if (!enumerator.moveNext()) {
+                throw new NoSuchElementException("Sequence contains no elements.");
+            }
+
+            T result = enumerator.current();
+            K resultKey = keySelector.apply(result);
+
+            while (enumerator.moveNext()) {
+                T current = enumerator.current();
+                K currentKey = keySelector.apply(current);
+                if (comparator.compare(currentKey, resultKey) < 0) {
+                    result = current;
+                    resultKey = currentKey;
+                }
+            }
+            return result;
+        }
+    }
 
     /**
      * Sorts the elements of a sequence in ascending order.
@@ -4110,7 +4633,21 @@ public interface Enumerable<T>
      * @throws IllegalStateException If the sequence contains more than one element.
      * @see #single(Predicate)
      */
-    T single();
+    default T single() {
+        try (Enumerator<T> enumerator = enumerator()) {
+            if (!enumerator.moveNext()) {
+                throw new NoSuchElementException("Sequence contains no elements.");
+            }
+
+            T result = enumerator.current();
+
+            if (enumerator.moveNext()) {
+                throw new IllegalStateException("Sequence contains more than one element.");
+            }
+
+            return result;
+        }
+    }
 
     /**
      * <p>Returns the only element of a sequence that satisfies a specified condition,
@@ -4135,7 +4672,30 @@ public interface Enumerable<T>
      * @throws IllegalStateException If more than one element satisfies the condition.
      * @see #single()
      */
-    T single(@NotNull Predicate<? super T> predicate);
+    default T single(@NotNull Predicate<? super T> predicate) {
+        NullCheck.requireNonNull(predicate, "predicate");
+
+        try (Enumerator<T> enumerator = enumerator()) {
+            T result = null;
+            boolean found = false;
+
+            while (enumerator.moveNext()) {
+                T current = enumerator.current();
+                if (predicate.test(current)) {
+                    if (found) {
+                        throw new IllegalStateException("Sequence contains more than one matching element.");
+                    }
+                    result = current;
+                    found = true;
+                }
+            }
+
+            if (!found) {
+                throw new NoSuchElementException("No element satisfies the condition.");
+            }
+            return result;
+        }
+    }
 
     /**
      * <p>Returns the only element of a sequence, or {@code null} if the sequence is empty;
@@ -4158,7 +4718,9 @@ public interface Enumerable<T>
      * @see #singleOrNull(Predicate)
      */
     @Nullable
-    T singleOrNull();
+    default T singleOrNull() {
+        return singleOrDefault(null);
+    }
 
     /**
      * <p>Returns the only element of a sequence that satisfies a specified condition or {@code null}
@@ -4183,7 +4745,9 @@ public interface Enumerable<T>
      * @see #singleOrNull()
      */
     @Nullable
-    T singleOrNull(@NotNull Predicate<? super T> predicate);
+    default T singleOrNull(@NotNull Predicate<? super T> predicate) {
+        return singleOrDefault(predicate, null);
+    }
 
     /**
      * <p>Returns the only element of a sequence, or a specified default value if the sequence is empty;
@@ -4206,7 +4770,22 @@ public interface Enumerable<T>
      * @throws IllegalStateException If the sequence contains more than one element.
      * @see #singleOrDefault(Predicate, T)
      */
-    T singleOrDefault(T defaultValue);
+    @Nullable
+    default T singleOrDefault(@Nullable T defaultValue) {
+        try (Enumerator<T> enumerator = enumerator()) {
+            if (!enumerator.moveNext()) {
+                return defaultValue;
+            }
+
+            T result = enumerator.current();
+
+            if (enumerator.moveNext()) {
+                throw new IllegalStateException("Sequence contains more than one element.");
+            }
+
+            return result;
+        }
+    }
 
     /**
      * <p>Returns the only element of a sequence that satisfies a specified condition, or a specified default value
@@ -4231,7 +4810,28 @@ public interface Enumerable<T>
      * @throws IllegalStateException If more than one element satisfies the condition.
      * @see #singleOrDefault(T)
      */
-    T singleOrDefault(@NotNull Predicate<? super T> predicate, T defaultValue);
+    @Nullable
+    default T singleOrDefault(@NotNull Predicate<? super T> predicate, @Nullable T defaultValue) {
+        NullCheck.requireNonNull(predicate, "predicate");
+
+        try (Enumerator<T> enumerator = enumerator()) {
+            T result = defaultValue;
+            boolean found = false;
+
+            while (enumerator.moveNext()) {
+                T current = enumerator.current();
+                if (predicate.test(current)) {
+                    if (found) {
+                        throw new IllegalStateException("Sequence contains more than one matching element.");
+                    }
+                    result = current;
+                    found = true;
+                }
+            }
+
+            return result;
+        }
+    }
 
     /**
      * <p>Bypasses a specified number of elements in a sequence and then returns the remaining elements.</p>
@@ -4344,7 +4944,6 @@ public interface Enumerable<T>
      */
     @NotNull
     Enumerable<T> skipWhile(@NotNull BinPredicate<? super T, Integer> predicate);
-
     /**
      * <p>Computes the sum of a sequence of {@code int} values that are obtained by
      * applying the specified selector to each element of the sequence.</p>
@@ -4355,7 +4954,7 @@ public interface Enumerable<T>
      *     Linq.of("apple", "mango", "orange");
      *
      * // 5 + 5 + 6 = 16
-     * int totalLength = fruits.sumToInt(String::length);
+     * long totalLength = fruits.sumToInt(String::length);
      *
      * System.out.println(totalLength);
      *
@@ -4369,9 +4968,20 @@ public interface Enumerable<T>
      * @return The sum of the projected values. Returns {@code 0} if the sequence contains no elements.
      * @throws NullPointerException If {@code selector} is {@code null}.
      */
-    long sumToInt(
+    default long sumToInt(
         @NotNull ToIntFunction<? super T> selector
-    );
+    ) {
+        NullCheck.requireNonNull(selector, "selector");
+
+        long sum = 0L;
+        try (Enumerator<T> enumerator = enumerator()) {
+            while (enumerator.moveNext()) {
+                // sum += selector.applyAsInt(enumerator.current());
+                sum = Math.addExact(sum, selector.applyAsInt(enumerator.current()));
+            }
+        }
+        return sum;
+    }
 
     /**
      * <p>Computes the sum of a sequence of {@code long} values that are obtained by
@@ -4401,9 +5011,20 @@ public interface Enumerable<T>
      * @return The sum of the projected values. Returns {@code 0L} if the sequence contains no elements.
      * @throws NullPointerException If {@code selector} is {@code null}.
      */
-    long sumToLong(
+    default long sumToLong(
         @NotNull ToLongFunction<? super T> selector
-    );
+    ) {
+        NullCheck.requireNonNull(selector, "selector");
+
+        long sum = 0L;
+        try (Enumerator<T> enumerator = enumerator()) {
+            while (enumerator.moveNext()) {
+                // sum += selector.applyAsLong(enumerator.current());
+                sum = Math.addExact(sum, selector.applyAsLong(enumerator.current()));
+            }
+        }
+        return sum;
+    }
 
     /**
      * <p>Computes the sum of a sequence of {@code double} values that are obtained by
@@ -4433,9 +5054,19 @@ public interface Enumerable<T>
      * @return The sum of the projected values. Returns {@code 0.0} if the sequence contains no elements.
      * @throws NullPointerException If {@code selector} is {@code null}.
      */
-    double sumToDouble(
+    default double sumToDouble(
         @NotNull ToDoubleFunction<? super T> selector
-    );
+    ) {
+        NullCheck.requireNonNull(selector, "selector");
+
+        double sum = 0.0;
+        try (Enumerator<T> enumerator = enumerator()) {
+            while (enumerator.moveNext()) {
+                sum += selector.applyAsDouble(enumerator.current());
+            }
+        }
+        return sum;
+    }
 
     /**
      * <p>Computes the sum of a sequence of {@link BigDecimal} values that are obtained by
@@ -4467,9 +5098,19 @@ public interface Enumerable<T>
      * @throws NullPointerException If {@code selector} is {@code null}.
      */
     @NotNull
-    BigDecimal sumToDecimal(
+    default BigDecimal sumToDecimal(
         @NotNull Function<? super T, ? extends BigDecimal> selector
-    );
+    ) {
+        NullCheck.requireNonNull(selector, "selector");
+
+        BigDecimal sum = BigDecimal.ZERO;
+        try (Enumerator<T> enumerator = enumerator()) {
+            while (enumerator.moveNext()) {
+                sum = sum.add(selector.apply(enumerator.current()));
+            }
+        }
+        return sum;
+    }
 
     /**
      * <p>Returns a specified number of contiguous elements from the start of a sequence.</p>
@@ -4883,7 +5524,11 @@ public interface Enumerable<T>
      * @see #toArray()
      */
     @NotNull
-    <A> A[] toArray(@NotNull IntFunction<A[]> generator);
+    default T[] toArray(@NotNull IntFunction<T[]> generator) {
+        NullCheck.requireNonNull(generator, "generator");
+
+        return this.toList().toArray(generator);
+    }
 
     /**
      * <p>Creates an array of {@link Object} from an enumerable sequence.</p>
@@ -4909,7 +5554,9 @@ public interface Enumerable<T>
      * @see #toArray(IntFunction)
      */
     @NotNull
-    Object[] toArray();
+    default Object[] toArray() {
+        return this.toList().toArray();
+    }
 
     /**
      * <p>Creates a {@link java.util.Map} from an enumerable sequence according to a specified key selector function.</p>
