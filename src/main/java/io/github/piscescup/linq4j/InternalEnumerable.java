@@ -1,5 +1,7 @@
 package io.github.piscescup.linq4j;
 
+import org.jetbrains.annotations.NotNull;
+
 import java.util.Iterator;
 import java.util.Objects;
 import java.util.function.Consumer;
@@ -25,7 +27,7 @@ public interface InternalEnumerable<T> extends Iterable<T> {
      * @see enumerator()
      */
     @Override
-    default Iterator<T> iterator() {
+    default @NotNull Iterator<T> iterator() {
         return enumerator();
     }
 

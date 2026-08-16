@@ -1,6 +1,5 @@
 package io.github.piscescup.linq4j;
 
-import java.util.function.Consumer;
 
 /**
  *

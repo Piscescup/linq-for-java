@@ -11,7 +11,6 @@ import io.github.piscescup.util.validation.NullCheck;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.awt.image.RasterFormatException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.*;
