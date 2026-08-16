@@ -1,5 +1,7 @@
 package io.github.piscescup.linq4j;
 
+import io.github.piscescup.util.validation.NullCheck;
+
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.function.Consumer;
@@ -87,7 +89,14 @@ public interface Enumerator<T> extends AutoCloseable, Iterator<T> {
      * @throws NullPointerException if the specified action is {@code null}
      */
     @Override
-    void forEachRemaining(Consumer<? super T> action);
+    default void forEachRemaining(Consumer<? super T> action) {
+        NullCheck.requireNonNull(action, "action");
+        try (Enumerator<T> e = this) {
+            while (e.moveNext()) {
+                action.accept(e.current());
+            }
+        }
+    }
 
     /**
      * Removes from the underlying collection the last element
@@ -103,7 +112,9 @@ public interface Enumerator<T> extends AutoCloseable, Iterator<T> {
      *         been called after the last call to {@code next()}
      */
     @Override
-    void remove();
+    default void remove() {
+        throw new UnsupportedOperationException("Remove operation is not supported.");
+    }
 
     /**
      * Resets the enumerator to its initial position,
@@ -114,7 +125,9 @@ public interface Enumerator<T> extends AutoCloseable, Iterator<T> {
      *
      * @throws UnsupportedOperationException if reset is not supported
      */
-    void reset();
+    default void reset() {
+        throw new UnsupportedOperationException("Reset operation is not supported.");
+    }
 
     /**
      * Closes this enumerator and releases any underlying resources.
