@@ -1,7 +1,10 @@
 package io.github.piscescup.linq4j;
 
+import io.github.piscescup.collection.EqualatorHashMap;
+import io.github.piscescup.collection.EqualatorMap;
 import io.github.piscescup.interfaces.Equalable;
 import io.github.piscescup.interfaces.Equalator;
+import io.github.piscescup.interfaces.HashEqualator;
 import io.github.piscescup.interfaces.Pair;
 import io.github.piscescup.interfaces.exfunction.BinFunction;
 import io.github.piscescup.interfaces.exfunction.BinPredicate;
@@ -5559,7 +5562,17 @@ public interface Enumerable<T>
     }
 
     /**
-     * <p>Creates a {@link java.util.Map} from an enumerable sequence according to a specified key selector function.</p>
+     * <p>Creates a {@link Map} from this enumerable sequence according to a
+     * specified key selector function.</p>
+     *
+     * <p>Each element in this sequence is added to the resulting map as a value,
+     * and the key for each element is produced by {@code keySelector}. Key
+     * equality and hashing are determined by the standard Java
+     * {@link Object#equals(Object)} and {@link Object#hashCode()} semantics.</p>
+     *
+     * <p>Each key produced by {@code keySelector} must be unique. If two elements
+     * produce equal keys, an {@link IllegalStateException} is thrown.</p>
+     *
      * <b>Usage:</b>
      * <pre>{@code
      * record Package(String trackingNumber, double weight) {}
@@ -5569,11 +5582,16 @@ public interface Enumerable<T>
      *     new Package("1V0002", 2.2)
      * );
      *
-     * // Create a map using TrackingNumber as the key and the Package object as the value.
-     * Map<String, Package> dictionary = packages.toDictionary(Package::trackingNumber);
+     * // Create a map using the tracking number as the key
+     * // and the Package object as the value.
+     * Map<String, Package> map = packages.toMap(Package::trackingNumber);
      *
-     * for (Map.Entry<String, Package> entry : dictionary.entrySet()) {
-     *     System.out.printf("Key: %s, Weight: %.1f\n", entry.getKey(), entry.getValue().weight());
+     * for (Map.Entry<String, Package> entry : map.entrySet()) {
+     *     System.out.printf(
+     *         "Key: %s, Weight: %.1f%n",
+     *         entry.getKey(),
+     *         entry.getValue().weight()
+     *     );
      * }
      *
      * // This code produces the following output:
@@ -5582,20 +5600,57 @@ public interface Enumerable<T>
      * // Key: 1V0002, Weight: 2.2
      * }</pre>
      *
-     * @param keySelector A function to extract a key from each element.
-     * @param <K> The type of the key returned by {@code keySelector}.
-     * @return A {@link java.util.Map} that contains keys and values. The values are the original elements from the input sequence.
-     * @throws NullPointerException If {@code keySelector} is {@code null}, or if it produces a {@code null} key.
-     * @throws IllegalStateException If {@code keySelector} produces duplicate keys for two elements.
+     * @param keySelector the function used to extract a key from each element
+     * @param <K> the type of the key returned by {@code keySelector}
+     * @return a {@link Map} containing the elements of this sequence, keyed by
+     *         the values produced by {@code keySelector}
+     * @throws NullPointerException if {@code keySelector} is {@code null}, or if
+     *                              it produces a {@code null} key
+     * @throws IllegalStateException if {@code keySelector} produces duplicate
+     *                               keys
+     *
      * @see #toMap(Function, Function)
+     * @see #toMap(Function, Equalator)
+     * @see #toMap(Function, HashEqualator)
      */
     @NotNull
-    <K> Map<K, T> toMap(
-        @NotNull Function<? super T, ? extends K> keySelector
-    );
+    default <K> Map<K, T> toMap(
+        @NotNull final Function<? super T, ? extends K> keySelector
+    ) {
+        Objects.requireNonNull(keySelector, "keySelector");
+
+        Map<K, T> result = new HashMap<>();
+
+        for (T element : this) {
+            K key = Objects.requireNonNull(
+                keySelector.apply(element),
+                "keySelector produced a null key"
+            );
+
+            if (result.containsKey(key)) {
+                throw new IllegalStateException(
+                    "keySelector produced a duplicate key: " + key
+                );
+            }
+
+            result.put(key, element);
+        }
+
+        return result;
+    }
 
     /**
-     * <p>Creates a {@link Map} from an enumerable sequence according to specified key selector and element selector functions.</p>
+     * <p>Creates a {@link Map} from this enumerable sequence according to
+     * specified key selector and element selector functions.</p>
+     *
+     * <p>The key for each source element is produced by {@code keySelector}, and
+     * the corresponding value is produced by {@code elementSelector}. Key
+     * equality and hashing are determined by the standard Java
+     * {@link Object#equals(Object)} and {@link Object#hashCode()} semantics.</p>
+     *
+     * <p>Each key produced by {@code keySelector} must be unique. If two elements
+     * produce equal keys, an {@link IllegalStateException} is thrown.</p>
+     *
      * <b>Usage:</b>
      * <pre>{@code
      * record Employee(int id, String name) {}
@@ -5605,14 +5660,19 @@ public interface Enumerable<T>
      *     new Employee(1002, "Bob")
      * );
      *
-     * // Create a map using ID as the key and Name as the value.
+     * // Create a map using the employee ID as the key
+     * // and the employee name as the value.
      * Map<Integer, String> map = employees.toMap(
      *     Employee::id,
      *     Employee::name
      * );
      *
      * for (Map.Entry<Integer, String> entry : map.entrySet()) {
-     *     System.out.printf("ID: %d, Name: %s\n", entry.getKey(), entry.getValue());
+     *     System.out.printf(
+     *         "ID: %d, Name: %s%n",
+     *         entry.getKey(),
+     *         entry.getValue()
+     *     );
      * }
      *
      * // This code produces the following output:
@@ -5621,23 +5681,73 @@ public interface Enumerable<T>
      * // ID: 1002, Name: Bob
      * }</pre>
      *
-     * @param keySelector A function to extract a key from each element.
-     * @param elementSelector A transform function to produce a result element value from each element.
-     * @param <K> The type of the key returned by {@code keySelector}.
-     * @param <V> The type of the value returned by {@code elementSelector}.
-     * @return A {@link Map} that contains values of type {@code V} selected from the input sequence.
-     * @throws NullPointerException If {@code keySelector} or {@code elementSelector} is {@code null}, or if a key is {@code null}.
-     * @throws IllegalStateException If {@code keySelector} produces duplicate keys for two elements.
+     * @param keySelector the function used to extract a key from each element
+     * @param elementSelector the function used to transform each source element
+     *                        into a value for the resulting map
+     * @param <K> the type of the key returned by {@code keySelector}
+     * @param <V> the type of the value returned by {@code elementSelector}
+     * @return a {@link Map} containing keys produced by {@code keySelector} and
+     *         values produced by {@code elementSelector}
+     * @throws NullPointerException if {@code keySelector} or
+     *                              {@code elementSelector} is {@code null}, or if
+     *                              {@code keySelector} produces a {@code null} key
+     * @throws IllegalStateException if {@code keySelector} produces duplicate
+     *                               keys
+     *
+     * @see #toMap(Function)
      * @see #toMap(Function, Function, Equalator)
+     * @see #toMap(Function, Function, HashEqualator)
      */
     @NotNull
-    <K, V> Map<K, V> toMap(
-        @NotNull Function<? super T, ? extends K> keySelector,
-        @NotNull Function<? super T, ? extends V> elementSelector
-    );
+    default <K, V> Map<K, V> toMap(
+        @NotNull final Function<? super T, ? extends K> keySelector,
+        @NotNull final Function<? super T, ? extends V> elementSelector
+    ) {
+        Objects.requireNonNull(keySelector, "keySelector");
+        Objects.requireNonNull(elementSelector, "elementSelector");
+
+        Map<K, V> result = new HashMap<>();
+
+        for (T element : this) {
+            K key = Objects.requireNonNull(
+                keySelector.apply(element),
+                "keySelector produced a null key"
+            );
+
+            if (result.containsKey(key)) {
+                throw new IllegalStateException(
+                    "keySelector produced a duplicate key: " + key
+                );
+            }
+
+            result.put(
+                key,
+                elementSelector.apply(element)
+            );
+        }
+
+        return result;
+    }
 
     /**
-     * <p>Creates a {@link Map} from an enumerable sequence according to a specified key selector function and key comparer.</p>
+     * <p>Creates a {@link Map} from this enumerable sequence according to a
+     * specified key selector function and key {@link Equalator}.</p>
+     *
+     * <p>Each element in this sequence is added to the resulting map as a value,
+     * and the key for each element is produced by {@code keySelector}. Key
+     * equality is determined by the supplied {@code comparer} instead of
+     * {@link Object#equals(Object)}.</p>
+     *
+     * <p>Because an {@link Equalator} defines equality without providing a
+     * corresponding hash function, the resulting map uses an
+     * {@link EqualatorMap}. Key lookup may therefore require a linear search. If
+     * custom equality together with hash-based lookup is required, use the
+     * overload accepting a {@link HashEqualator}.</p>
+     *
+     * <p>Each key produced by {@code keySelector} must be unique according to
+     * {@code comparer}. If two keys are considered equal by {@code comparer}, an
+     * {@link IllegalStateException} is thrown.</p>
+     *
      * <b>Usage:</b>
      * <pre>{@code
      * record Package(String trackingNumber, double weight) {}
@@ -5647,18 +5757,15 @@ public interface Enumerable<T>
      *     new Package("1V0002", 2.2)
      * );
      *
-     * Equalator<String> ignoreCaseEqualator = Equalator.of(
-     *     String::equalsIgnoreCase,
-     *     String::toLowerCase
-     * );
+     * Equalator<String> ignoreCaseEqualator = String::equalsIgnoreCase;
      *
-     * // Create a map using case-insensitive TrackingNumber as the key.
+     * // Create a map using case-insensitive tracking numbers as keys.
      * Map<String, Package> map = packages.toMap(
      *     Package::trackingNumber,
      *     ignoreCaseEqualator
      * );
      *
-     * // Looking up "1V0001" will succeed even though the key is "1v0001".
+     * // Looking up "1V0001" succeeds even though the stored key is "1v0001".
      * System.out.println(map.containsKey("1V0001"));
      *
      * // This code produces the following output:
@@ -5666,22 +5773,69 @@ public interface Enumerable<T>
      * // true
      * }</pre>
      *
-     * @param keySelector A function to extract a key from each element.
-     * @param comparer An {@link Equalator} to compare keys.
-     * @param <K> The type of the key returned by {@code keySelector}.
-     * @return A {@link Map} that contains keys and values.
-     * @throws NullPointerException If {@code keySelector} or {@code comparer} is {@code null}, or if a key is {@code null}.
-     * @throws IllegalStateException If {@code keySelector} produces duplicate keys.
+     * @param keySelector the function used to extract a key from each element
+     * @param comparer the {@link Equalator} used to determine key equality
+     * @param <K> the type of the key returned by {@code keySelector}
+     * @return a {@link Map} containing the elements of this sequence, keyed by
+     *         the values produced by {@code keySelector}
+     * @throws NullPointerException if {@code keySelector} or {@code comparer} is
+     *                              {@code null}, or if {@code keySelector}
+     *                              produces a {@code null} key
+     * @throws IllegalStateException if {@code keySelector} produces duplicate
+     *                               keys according to {@code comparer}
+     *
      * @see #toMap(Function)
+     * @see #toMap(Function, HashEqualator)
+     * @see #toMap(Function, Function, Equalator)
      */
     @NotNull
-    <K> Map<K, T> toMap(
-        @NotNull Function<? super T, ? extends K> keySelector,
-        @NotNull Equalator<? super K> comparer
-    );
+    default <K> Map<K, T> toMap(
+        @NotNull final Function<? super T, ? extends K> keySelector,
+        @NotNull final Equalator<? super K> comparer
+    ) {
+        Objects.requireNonNull(keySelector, "keySelector");
+        Objects.requireNonNull(comparer, "comparer");
+
+        Map<K, T> result = new EqualatorMap<>(comparer);
+
+        for (T element : this) {
+            K key = Objects.requireNonNull(
+                keySelector.apply(element),
+                "keySelector produced a null key"
+            );
+
+            if (result.containsKey(key)) {
+                throw new IllegalStateException(
+                    "keySelector produced a duplicate key: " + key
+                );
+            }
+
+            result.put(key, element);
+        }
+
+        return result;
+    }
 
     /**
-     * <p>Creates a {@link Map} from an enumerable sequence according to a specified key selector function, a comparer, and an element selector function.</p>
+     * <p>Creates a {@link Map} from this enumerable sequence according to
+     * specified key selector and element selector functions and a key
+     * {@link Equalator}.</p>
+     *
+     * <p>The key for each source element is produced by {@code keySelector}, and
+     * the corresponding value is produced by {@code elementSelector}. Key
+     * equality is determined by the supplied {@code comparer} instead of
+     * {@link Object#equals(Object)}.</p>
+     *
+     * <p>Because an {@link Equalator} defines equality without providing a
+     * corresponding hash function, the resulting map uses an
+     * {@link EqualatorMap}. Key lookup may therefore require a linear search. If
+     * custom equality together with hash-based lookup is required, use the
+     * overload accepting a {@link HashEqualator}.</p>
+     *
+     * <p>Each key produced by {@code keySelector} must be unique according to
+     * {@code comparer}. If two keys are considered equal by {@code comparer}, an
+     * {@link IllegalStateException} is thrown.</p>
+     *
      * <b>Usage:</b>
      * <pre>{@code
      * record Employee(int id, String department) {}
@@ -5691,12 +5845,10 @@ public interface Enumerable<T>
      *     new Employee(1002, "IT")
      * );
      *
-     * Equalator<String> ignoreCaseEqualator = Equalator.of(
-     *     String::equalsIgnoreCase,
-     *     String::toLowerCase
-     * );
+     * Equalator<String> ignoreCaseEqualator = String::equalsIgnoreCase;
      *
-     * // Create a map with Department as the key (case-insensitive) and ID as the value.
+     * // Create a map using case-insensitive departments as keys
+     * // and employee IDs as values.
      * Map<String, Integer> map = employees.toMap(
      *     Employee::department,
      *     Employee::id,
@@ -5710,22 +5862,249 @@ public interface Enumerable<T>
      * // Sales ID: 1001
      * }</pre>
      *
-     * @param keySelector A function to extract a key from each element.
-     * @param elementSelector A transform function to produce a result element value from each element.
-     * @param comparer An {@link Equalator} to compare keys.
-     * @param <K> The type of the key returned by {@code keySelector}.
-     * @param <V> The type of the value returned by {@code elementSelector}.
-     * @return A {@link Map} that contains values of type {@code V} selected from the input sequence.
-     * @throws NullPointerException If {@code keySelector}, {@code elementSelector}, or {@code comparer} is {@code null}, or if a key is {@code null}.
-     * @throws IllegalStateException If {@code keySelector} produces duplicate keys.
+     * @param keySelector the function used to extract a key from each element
+     * @param elementSelector the function used to transform each source element
+     *                        into a value for the resulting map
+     * @param comparer the {@link Equalator} used to determine key equality
+     * @param <K> the type of the key returned by {@code keySelector}
+     * @param <V> the type of the value returned by {@code elementSelector}
+     * @return a {@link Map} containing keys produced by {@code keySelector} and
+     *         values produced by {@code elementSelector}
+     * @throws NullPointerException if {@code keySelector},
+     *                              {@code elementSelector}, or {@code comparer}
+     *                              is {@code null}, or if {@code keySelector}
+     *                              produces a {@code null} key
+     * @throws IllegalStateException if {@code keySelector} produces duplicate
+     *                               keys according to {@code comparer}
+     *
      * @see #toMap(Function, Function)
+     * @see #toMap(Function, Function, HashEqualator)
+     * @see #toMap(Function, Equalator)
      */
     @NotNull
-    <K, V> Map<K, V> toMap(
-        @NotNull Function<? super T, ? extends K> keySelector,
-        @NotNull Function<? super T, ? extends V> elementSelector,
-        @NotNull Equalator<? super K> comparer
-    );
+    default <K, V> Map<K, V> toMap(
+        @NotNull final Function<? super T, ? extends K> keySelector,
+        @NotNull final Function<? super T, ? extends V> elementSelector,
+        @NotNull final Equalator<? super K> comparer
+    ) {
+        Objects.requireNonNull(keySelector, "keySelector");
+        Objects.requireNonNull(elementSelector, "elementSelector");
+        Objects.requireNonNull(comparer, "comparer");
+
+        Map<K, V> result = new EqualatorMap<>(comparer);
+
+        for (T element : this) {
+            K key = Objects.requireNonNull(
+                keySelector.apply(element),
+                "keySelector produced a null key"
+            );
+
+            if (result.containsKey(key)) {
+                throw new IllegalStateException(
+                    "keySelector produced a duplicate key: " + key
+                );
+            }
+
+            result.put(
+                key,
+                elementSelector.apply(element)
+            );
+        }
+
+        return result;
+    }
+
+    /**
+     * <p>Creates a {@link Map} from this enumerable sequence according to a
+     * specified key selector function and key {@link HashEqualator}.</p>
+     *
+     * <p>Each element in this sequence is added to the resulting map as a value,
+     * and the key for each element is produced by {@code keySelector}. Both key
+     * equality and key hash values are determined by the supplied
+     * {@code comparer}.</p>
+     *
+     * <p>The resulting map uses an {@link EqualatorHashMap}, allowing custom key
+     * equality semantics while retaining hash-based lookup. The equality and
+     * hash functions defined by {@code comparer} must be consistent: if two keys
+     * are considered equal, they must produce the same hash value.</p>
+     *
+     * <p>Each key produced by {@code keySelector} must be unique according to
+     * {@code comparer}. If two keys are considered equal by {@code comparer}, an
+     * {@link IllegalStateException} is thrown.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * record Package(String trackingNumber, double weight) {}
+     *
+     * Enumerable<Package> packages = Linq.of(
+     *     new Package("1v0001", 1.5),
+     *     new Package("1V0002", 2.2)
+     * );
+     *
+     * HashEqualator<String> ignoreCaseEqualator = HashEqualator.of(
+     *     String::equalsIgnoreCase,
+     *     value -> value.toLowerCase(Locale.ROOT).hashCode()
+     * );
+     *
+     * // Create a hash-based map using case-insensitive tracking numbers as keys.
+     * Map<String, Package> map = packages.toMap(
+     *     Package::trackingNumber,
+     *     ignoreCaseEqualator
+     * );
+     *
+     * // Looking up "1V0001" succeeds even though the stored key is "1v0001".
+     * System.out.println(map.containsKey("1V0001"));
+     *
+     * // This code produces the following output:
+     * //
+     * // true
+     * }</pre>
+     *
+     * @param keySelector the function used to extract a key from each element
+     * @param comparer the {@link HashEqualator} used to determine key equality
+     *                 and hash values
+     * @param <K> the type of the key returned by {@code keySelector}
+     * @return a {@link Map} containing the elements of this sequence, keyed by
+     *         the values produced by {@code keySelector}
+     * @throws NullPointerException if {@code keySelector} or {@code comparer} is
+     *                              {@code null}, or if {@code keySelector}
+     *                              produces a {@code null} key
+     * @throws IllegalStateException if {@code keySelector} produces duplicate
+     *                               keys according to {@code comparer}
+     *
+     * @see #toMap(Function)
+     * @see #toMap(Function, Equalator)
+     * @see #toMap(Function, Function, HashEqualator)
+     */
+    @NotNull
+    default <K> Map<K, T> toMap(
+        @NotNull final Function<? super T, ? extends K> keySelector,
+        @NotNull final HashEqualator<? super K> comparer
+    ) {
+        Objects.requireNonNull(keySelector, "keySelector");
+        Objects.requireNonNull(comparer, "comparer");
+
+        Map<K, T> result = new EqualatorHashMap<>(comparer);
+
+        for (T element : this) {
+            K key = Objects.requireNonNull(
+                keySelector.apply(element),
+                "keySelector produced a null key"
+            );
+
+            if (result.containsKey(key)) {
+                throw new IllegalStateException(
+                    "keySelector produced a duplicate key: " + key
+                );
+            }
+
+            result.put(key, element);
+        }
+
+        return result;
+    }
+
+    /**
+     * <p>Creates a {@link Map} from this enumerable sequence according to
+     * specified key selector and element selector functions and a key
+     * {@link HashEqualator}.</p>
+     *
+     * <p>The key for each source element is produced by {@code keySelector}, and
+     * the corresponding value is produced by {@code elementSelector}. Both key
+     * equality and key hash values are determined by the supplied
+     * {@code comparer}.</p>
+     *
+     * <p>The resulting map uses an {@link EqualatorHashMap}, allowing custom key
+     * equality semantics while retaining hash-based lookup. The equality and
+     * hash functions defined by {@code comparer} must be consistent: if two keys
+     * are considered equal, they must produce the same hash value.</p>
+     *
+     * <p>Each key produced by {@code keySelector} must be unique according to
+     * {@code comparer}. If two keys are considered equal by {@code comparer}, an
+     * {@link IllegalStateException} is thrown.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * record Employee(int id, String department) {}
+     *
+     * Enumerable<Employee> employees = Linq.of(
+     *     new Employee(1001, "Sales"),
+     *     new Employee(1002, "IT")
+     * );
+     *
+     * HashEqualator<String> ignoreCaseEqualator = HashEqualator.of(
+     *     String::equalsIgnoreCase,
+     *     value -> value.toLowerCase(Locale.ROOT).hashCode()
+     * );
+     *
+     * // Create a hash-based map using case-insensitive departments as keys
+     * // and employee IDs as values.
+     * Map<String, Integer> map = employees.toMap(
+     *     Employee::department,
+     *     Employee::id,
+     *     ignoreCaseEqualator
+     * );
+     *
+     * System.out.println("Sales ID: " + map.get("sales"));
+     *
+     * // This code produces the following output:
+     * //
+     * // Sales ID: 1001
+     * }</pre>
+     *
+     * @param keySelector the function used to extract a key from each element
+     * @param elementSelector the function used to transform each source element
+     *                        into a value for the resulting map
+     * @param comparer the {@link HashEqualator} used to determine key equality
+     *                 and hash values
+     * @param <K> the type of the key returned by {@code keySelector}
+     * @param <V> the type of the value returned by {@code elementSelector}
+     * @return a {@link Map} containing keys produced by {@code keySelector} and
+     *         values produced by {@code elementSelector}
+     * @throws NullPointerException if {@code keySelector},
+     *                              {@code elementSelector}, or {@code comparer}
+     *                              is {@code null}, or if {@code keySelector}
+     *                              produces a {@code null} key
+     * @throws IllegalStateException if {@code keySelector} produces duplicate
+     *                               keys according to {@code comparer}
+     *
+     * @see #toMap(Function, Function)
+     * @see #toMap(Function, Function, Equalator)
+     * @see #toMap(Function, HashEqualator)
+     */
+    @NotNull
+    default <K, V> Map<K, V> toMap(
+        @NotNull final Function<? super T, ? extends K> keySelector,
+        @NotNull final Function<? super T, ? extends V> elementSelector,
+        @NotNull final HashEqualator<? super K> comparer
+    ) {
+        Objects.requireNonNull(keySelector, "keySelector");
+        Objects.requireNonNull(elementSelector, "elementSelector");
+        Objects.requireNonNull(comparer, "comparer");
+
+        Map<K, V> result = new EqualatorHashMap<>(comparer);
+
+        for (T element : this) {
+            K key = Objects.requireNonNull(
+                keySelector.apply(element),
+                "keySelector produced a null key"
+            );
+
+            if (result.containsKey(key)) {
+                throw new IllegalStateException(
+                    "keySelector produced a duplicate key: " + key
+                );
+            }
+
+            result.put(
+                key,
+                elementSelector.apply(element)
+            );
+        }
+
+        return result;
+    }
+
 
     /**
      * <p>Creates an unmodifiable {@link Map} from an enumerable sequence according to a specified key selector function.</p>
