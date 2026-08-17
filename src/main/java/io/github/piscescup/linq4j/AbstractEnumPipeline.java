@@ -6,7 +6,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
 import java.util.function.Supplier;
-import java.util.stream.Streams;
 
 /**
  * <h2>Abstract Enumerable Pipeline</h2>
@@ -343,7 +342,7 @@ abstract class AbstractEnumPipeline<T_IN, T_OUT, ENUM_OUT extends BaseEnumerable
      */
     @Override
     public final boolean isParallel() {
-        return parallel;
+        return sourceStage.parallel;
     }
 
     /**
@@ -354,7 +353,7 @@ abstract class AbstractEnumPipeline<T_IN, T_OUT, ENUM_OUT extends BaseEnumerable
      */
     @Override
     public final boolean isSequential() {
-        return !parallel;
+        return !sourceStage.parallel;
     }
 
     @Override

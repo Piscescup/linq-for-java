@@ -60,6 +60,6 @@ public interface Groupable<K, V> {
      * @return an {@link Enumerable} view over the group elements
      */
     default Enumerable<V> getEnumerableGroupElements() {
-        return Linq.of(getGroupElements());
+        return Linq.of();
     }
 }
