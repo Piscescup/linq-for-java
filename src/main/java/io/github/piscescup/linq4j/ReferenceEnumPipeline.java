@@ -133,17 +133,17 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
 
     /** {@inheritDoc} */
     @Override
-    public final <K, A> @NotNull Enumerable<Pair<K, A>> aggregateBy(
+    public final <K, A> @NotNull Enumerable<Pair<K, A>> aggregateBySeed(
         @NotNull Function<? super T_OUT, ? extends K> keySelector,
         @NotNull A seed,
         @NotNull BinFunction<? super A, ? super T_OUT, ? extends A> aggregator
     ) {
-        return aggregateByInHash(keySelector, seed, aggregator, HashEqualator.defaultHashEqualator());
+        return aggregateBySeedInHash(keySelector, seed, aggregator, HashEqualator.defaultHashEqualator());
     }
 
     /** {@inheritDoc} */
     @Override
-    public final <K, A> @NotNull Enumerable<Pair<K, A>> aggregateBy(
+    public final <K, A> @NotNull Enumerable<Pair<K, A>> aggregateBySeed(
         @NotNull Function<? super T_OUT, ? extends K> keySelector,
         @NotNull A seed,
         @NotNull BinFunction<? super A, ? super T_OUT, ? extends A> aggregator,
@@ -1276,7 +1276,7 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
 
     /** {@inheritDoc} */
     @Override
-    public final <K, I, R> @NotNull Enumerable<R> leftJoin(
+    public final <K, I, R> @NotNull Enumerable<R> leftJoinOnEqualator(
         @NotNull Enumerable<? extends I> inner,
         @NotNull Function<? super T_OUT, ? extends K> outerKeySelector,
         @NotNull Function<? super I, ? extends K> innerKeySelector,
@@ -1372,14 +1372,14 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
 
     /** {@inheritDoc} */
     @Override
-    public final <K, I> @NotNull Enumerable<Pair<T_OUT, @Nullable I>> leftJoin(
+    public final <K, I> @NotNull Enumerable<Pair<T_OUT, @Nullable I>> leftJoinOnEqualator(
         @NotNull Enumerable<? extends I> inner,
         @NotNull Function<? super T_OUT, ? extends K> outerKeySelector,
         @NotNull Function<? super I, ? extends K> innerKeySelector,
         @NotNull Equalator<? super K> equalator
     ) {
         BinFunction<T_OUT, I, Pair<T_OUT, I>> selector = Pair::of;
-        return leftJoin(inner, outerKeySelector, innerKeySelector, selector, equalator);
+        return leftJoinOnEqualator(inner, outerKeySelector, innerKeySelector, selector, equalator);
     }
 
     // ---------------------------------------------------------------------
@@ -2509,16 +2509,16 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
 
     /** {@inheritDoc} */
     @Override
-    public final <K> @NotNull Map<K, T_OUT> toMap(
+    public final <K> @NotNull Map<K, T_OUT> toMapOnEqualator(
         @NotNull Function<? super T_OUT, ? extends K> keySelector,
         @NotNull Equalator<? super K> comparer
     ) {
-        return toMap(keySelector, Function.identity(), comparer);
+        return toMapOnEqualator(keySelector, Function.identity(), comparer);
     }
 
     /** {@inheritDoc} */
     @Override
-    public final <K, V> @NotNull Map<K, V> toMap(
+    public final <K, V> @NotNull Map<K, V> toMapOnEqualator(
         @NotNull Function<? super T_OUT, ? extends K> keySelector,
         @NotNull Function<? super T_OUT, ? extends V> elementSelector,
         @NotNull Equalator<? super K> comparer
@@ -2551,14 +2551,14 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
 
     /** {@inheritDoc} */
     @Override
-    public final <K, A> @NotNull Enumerable<Pair<K, A>> aggregateByInHash(
+    public final <K, A> @NotNull Enumerable<Pair<K, A>> aggregateBySeedInHash(
         @NotNull Function<? super T_OUT, ? extends K> keySelector,
         @NotNull A seed,
         @NotNull BinFunction<? super A, ? super T_OUT, ? extends A> aggregator,
         @NotNull HashEqualator<? super K> keyEqualator
     ) {
         NullCheck.requireNonNull(keyEqualator, "keyEqualator");
-        return aggregateBy(
+        return aggregateBySeed(
             keySelector,
             seed,
             aggregator,
@@ -2759,7 +2759,7 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         @NotNull HashEqualator<? super K> equalator
     ) {
         NullCheck.requireNonNull(equalator, "equalator");
-        return leftJoin(
+        return leftJoinOnEqualator(
             inner,
             outerKeySelector,
             innerKeySelector,
@@ -2777,7 +2777,7 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         @NotNull HashEqualator<? super K> equalator
     ) {
         NullCheck.requireNonNull(equalator, "equalator");
-        return leftJoin(
+        return leftJoinOnEqualator(
             inner,
             outerKeySelector,
             innerKeySelector,

@@ -240,7 +240,7 @@ public interface Enumerable<T>
      * @param <K> The type of the key returned by {@code keySelector}.
      * @param <A> The type of the accumulator value.
      */
-    <K, A> Enumerable<Pair<K, A>> aggregateBy(
+    <K, A> Enumerable<Pair<K, A>> aggregateBySeed(
         @NotNull Function<? super T, ? extends K> keySelector,
         @NotNull A seed,
         @NotNull BinFunction<? super A, ? super T, ? extends A> aggregator
@@ -286,7 +286,7 @@ public interface Enumerable<T>
      * @param <K> The type of the key returned by {@code keySelector}.
      * @param <A> The type of the accumulator value.
      */
-    <K, A> Enumerable<Pair<K, A>> aggregateBy(
+    <K, A> Enumerable<Pair<K, A>> aggregateBySeed(
         @NotNull Function<? super T, ? extends K> keySelector,
         @NotNull A seed,
         @NotNull BinFunction<? super A, ? super T, ? extends A> aggregator,
@@ -433,7 +433,7 @@ public interface Enumerable<T>
      * @param <K> The type of the key.
      * @param <A> The type of the accumulator value.
      */
-    <K, A> @NotNull Enumerable<Pair<K, A>> aggregateByInHash(
+    <K, A> @NotNull Enumerable<Pair<K, A>> aggregateBySeedInHash(
         @NotNull Function<? super T, ? extends K> keySelector,
         @NotNull A seed,
         @NotNull BinFunction<? super A, ? super T, ? extends A> aggregator,
@@ -3507,7 +3507,7 @@ public interface Enumerable<T>
      *         {@code resultSelector}, or {@code equalator} is {@code null}.
      */
     @NotNull
-    <K, I, R> Enumerable<R> leftJoin(
+    <K, I, R> Enumerable<R> leftJoinOnEqualator(
         @NotNull Enumerable<? extends I> inner,
         @NotNull Function<? super T, ? extends K> outerKeySelector,
         @NotNull Function<? super I, ? extends K> innerKeySelector,
@@ -3617,7 +3617,7 @@ public interface Enumerable<T>
      *         {@code equalator} is {@code null}.
      */
     @NotNull
-    <K, I> Enumerable<Pair<T, @Nullable I>> leftJoin(
+    <K, I> Enumerable<Pair<T, @Nullable I>> leftJoinOnEqualator(
         @NotNull Enumerable<? extends I> inner,
         @NotNull Function<? super T, ? extends K> outerKeySelector,
         @NotNull Function<? super I, ? extends K> innerKeySelector,
@@ -4299,7 +4299,7 @@ public interface Enumerable<T>
 
             while (enumerator.moveNext()) {
                 double current = selector.applyAsDouble(enumerator.current());
-                if (current > result) {
+                if (current < result) {
                     result = current;
                 }
             }
@@ -6570,7 +6570,7 @@ public interface Enumerable<T>
      *                               keys
      *
      * @see #toMap(Function, Function)
-     * @see #toMap(Function, Equalator)
+     * @see #toMapOnEqualator(Function, Equalator)
      * @see #toMapInHash(Function, HashEqualator)
      */
     @NotNull
@@ -6655,7 +6655,7 @@ public interface Enumerable<T>
      *                               keys
      *
      * @see #toMap(Function)
-     * @see #toMap(Function, Function, Equalator)
+     * @see #toMapOnEqualator(Function, Function, Equalator)
      * @see #toMapInHash(Function, Function, HashEqualator)
      */
     @NotNull
@@ -6746,10 +6746,10 @@ public interface Enumerable<T>
      *
      * @see #toMap(Function)
      * @see #toMapInHash(Function, HashEqualator)
-     * @see #toMap(Function, Function, Equalator)
+     * @see #toMapOnEqualator(Function, Function, Equalator)
      */
     @NotNull
-    default <K> Map<K, T> toMap(
+    default <K> Map<K, T> toMapOnEqualator(
         @NotNull final Function<? super T, ? extends K> keySelector,
         @NotNull final Equalator<? super K> comparer
     ) {
@@ -6839,10 +6839,10 @@ public interface Enumerable<T>
      *
      * @see #toMap(Function, Function)
      * @see #toMapInHash(Function, Function, HashEqualator)
-     * @see #toMap(Function, Equalator)
+     * @see #toMapOnEqualator(Function, Equalator)
      */
     @NotNull
-    default <K, V> Map<K, V> toMap(
+    default <K, V> Map<K, V> toMapOnEqualator(
         @NotNull final Function<? super T, ? extends K> keySelector,
         @NotNull final Function<? super T, ? extends V> elementSelector,
         @NotNull final Equalator<? super K> comparer
@@ -6933,7 +6933,7 @@ public interface Enumerable<T>
      *                               keys according to {@code comparer}
      *
      * @see #toMap(Function)
-     * @see #toMap(Function, Equalator)
+     * @see #toMapOnEqualator(Function, Equalator)
      * @see #toMapInHash(Function, Function, HashEqualator)
      */
     @NotNull
@@ -7029,7 +7029,7 @@ public interface Enumerable<T>
      *                               keys according to {@code comparer}
      *
      * @see #toMap(Function, Function)
-     * @see #toMap(Function, Function, Equalator)
+     * @see #toMapOnEqualator(Function, Function, Equalator)
      * @see #toMapInHash(Function, HashEqualator)
      */
     @NotNull
@@ -7122,11 +7122,11 @@ public interface Enumerable<T>
      * @throws IllegalStateException If {@code keySelector} produces duplicate keys.
      */
     @NotNull
-    default <K> Map<K, T> toUnmodifiableMap(
+    default <K> Map<K, T> toUnmodifiableMapOnEqualator(
         @NotNull Function<? super T, ? extends K> keySelector,
         @NotNull Equalator<? super K> comparer
     ) {
-        return Collections.unmodifiableMap(toMap(keySelector, comparer));
+        return Collections.unmodifiableMap(toMapOnEqualator(keySelector, comparer));
     }
 
     /**
@@ -7142,12 +7142,12 @@ public interface Enumerable<T>
      * @throws IllegalStateException If {@code keySelector} produces duplicate keys.
      */
     @NotNull
-    default <K, V> Map<K, V> toUnmodifiableMap(
+    default <K, V> Map<K, V> toUnmodifiableMapOnEqualator(
         @NotNull Function<? super T, ? extends K> keySelector,
         @NotNull Function<? super T, ? extends V> elementSelector,
         @NotNull Equalator<? super K> comparer
     ) {
-        return Collections.unmodifiableMap(toMap(keySelector, elementSelector, comparer));
+        return Collections.unmodifiableMap(toMapOnEqualator(keySelector, elementSelector, comparer));
     }
 
     /**
@@ -7224,7 +7224,7 @@ public interface Enumerable<T>
      * @throws IllegalStateException If {@code keySelector} produces duplicate keys.
      */
     @NotNull
-    default <K> SortedMap<K, T> toUnmodifiableSortedMap(
+    default <K> SortedMap<K, T> toUnmodifiableSortedMapOnComparator(
         @NotNull Function<? super T, ? extends K> keySelector,
         @NotNull Comparator<? super K> keyComparator
     ) {
@@ -7250,7 +7250,7 @@ public interface Enumerable<T>
      * @throws IllegalStateException If {@code keySelector} produces duplicate keys.
      */
     @NotNull
-    default <K, V> SortedMap<K, V> toUnmodifiableSortedMap(
+    default <K, V> SortedMap<K, V> toUnmodifiableSortedMapOnComparator(
         @NotNull Function<? super T, ? extends K> keySelector,
         @NotNull Function<? super T, ? extends V> elementSelector,
         @NotNull Comparator<? super K> keyComparator
