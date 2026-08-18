@@ -1,7 +1,10 @@
 package io.github.piscescup.linq4j;
 
+import io.github.piscescup.collection.EqualatorHashMap;
+import io.github.piscescup.collection.EqualatorHashSet;
 import io.github.piscescup.collection.EqualatorMap;
 import io.github.piscescup.interfaces.Equalator;
+import io.github.piscescup.interfaces.HashEqualator;
 import io.github.piscescup.interfaces.Pair;
 import io.github.piscescup.interfaces.exfunction.BinFunction;
 import io.github.piscescup.interfaces.exfunction.BinPredicate;
@@ -135,7 +138,7 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         @NotNull A seed,
         @NotNull BinFunction<? super A, ? super T_OUT, ? extends A> aggregator
     ) {
-        return aggregateBy(keySelector, seed, aggregator, Equalator.defaultEqualator());
+        return aggregateByInHash(keySelector, seed, aggregator, HashEqualator.defaultHashEqualator());
     }
 
     /** {@inheritDoc} */
@@ -152,7 +155,7 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         final Equalator<? super K> effectiveEqualator =
             keyEqualator != null
                 ? keyEqualator
-                : Equalator.defaultEqualator();
+                : HashEqualator.defaultHashEqualator();
 
         return new StatefulOp<T_OUT, Pair<K, A>>(this) {
             @Override
@@ -160,8 +163,8 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
                 @NotNull Enumerator<T_OUT> upstream
             ) {
                 return new PipelineEnumerator<T_OUT, Pair<K, A>>(upstream) {
-                    private final EqualatorMap<K, A> aggregates =
-                        new EqualatorMap<>(effectiveEqualator);
+                    private final Map<K, A> aggregates =
+                        newOrderedEqualityMap(effectiveEqualator);
                     private Iterator<Map.Entry<K, A>> iterator;
                     private boolean initialized;
 
@@ -175,17 +178,10 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
                             T_OUT element = upstream.current();
                             K key = keySelector.apply(element);
 
-                            if (aggregates.containsKey(key)) {
-                                aggregates.put(
-                                    key,
-                                    aggregator.apply(aggregates.get(key), element)
-                                );
-                            } else {
-                                aggregates.put(
-                                    key,
-                                    aggregator.apply(seed, element)
-                                );
-                            }
+                            aggregates.put(
+                                key,
+                                aggregator.apply(aggregates.getOrDefault(key, seed), element)
+                            );
                         }
 
                         iterator = aggregates.entrySet().iterator();
@@ -215,7 +211,7 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         @NotNull Function<? super K, ? extends A> seedSelector,
         @NotNull BinFunction<? super A, ? super T_OUT, ? extends A> aggregator
     ) {
-        return aggregateBy(keySelector, seedSelector, aggregator, Equalator.defaultEqualator());
+        return aggregateByInHash(keySelector, seedSelector, aggregator, HashEqualator.defaultHashEqualator());
     }
 
     /** {@inheritDoc} */
@@ -233,7 +229,7 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         final Equalator<? super K> effectiveEqualator =
             keyEqualator != null
                 ? keyEqualator
-                : Equalator.defaultEqualator();
+                : HashEqualator.defaultHashEqualator();
 
         return new StatefulOp<T_OUT, Pair<K, A>>(this) {
             @Override
@@ -241,8 +237,8 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
                 @NotNull Enumerator<T_OUT> upstream
             ) {
                 return new PipelineEnumerator<T_OUT, Pair<K, A>>(upstream) {
-                    private final EqualatorMap<K, A> aggregates =
-                        new EqualatorMap<>(effectiveEqualator);
+                    private final Map<K, A> aggregates =
+                        newOrderedEqualityMap(effectiveEqualator);
                     private Iterator<Map.Entry<K, A>> iterator;
                     private boolean initialized;
 
@@ -338,7 +334,7 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         NullCheck.requireNonNull(targetType, "targetType");
         return new StatelessOp<T_OUT, R>(this) {
             @Override
-            protected @NotNull Enumerator<R> opWrapEnumerator(
+            protected @NotNull Enumerator<T_OUT> opWrapEnumerator(
                 @NotNull Enumerator<T_OUT> upstream
             ) {
                 return new PipelineEnumerator<T_OUT, R>(upstream) {
@@ -440,7 +436,7 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
     public final <K> @NotNull Enumerable<Pair<K, Integer>> countBy(
         @NotNull Function<? super T_OUT, ? extends K> keySelector
     ) {
-        return countBy(keySelector, Equalator.defaultEqualator());
+        return countByInHash(keySelector, HashEqualator.defaultHashEqualator());
     }
 
     /** {@inheritDoc} */
@@ -454,7 +450,7 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         final Equalator<? super K> effectiveEqualator =
             keyEqualator != null
                 ? keyEqualator
-                : Equalator.defaultEqualator();
+                : HashEqualator.defaultHashEqualator();
 
         return new StatefulOp<T_OUT, Pair<K, Integer>>(this) {
             @Override
@@ -462,8 +458,8 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
                 @NotNull Enumerator<T_OUT> upstream
             ) {
                 return new PipelineEnumerator<T_OUT, Pair<K, Integer>>(upstream) {
-                    private final EqualatorMap<K, Integer> counts =
-                        new EqualatorMap<>(effectiveEqualator);
+                    private final Map<K, Integer> counts =
+                        newOrderedEqualityMap(effectiveEqualator);
                     private Iterator<Map.Entry<K, Integer>> iterator;
                     private boolean initialized;
 
@@ -476,14 +472,11 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
                         while (upstream.moveNext()) {
                             K key = keySelector.apply(upstream.current());
 
-                            if (counts.containsKey(key)) {
-                                counts.put(
-                                    key,
-                                    Math.addExact(counts.get(key), 1)
-                                );
-                            } else {
-                                counts.put(key, 1);
-                            }
+                            counts.merge(
+                                key,
+                                1,
+                                Math::addExact
+                            );
                         }
 
                         iterator = counts.entrySet().iterator();
@@ -553,7 +546,31 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
     /** {@inheritDoc} */
     @Override
     public final @NotNull Enumerable<T_OUT> distinct() {
-        return distinct(null);
+        return new StatefulOp<T_OUT, T_OUT>(this) {
+            @Override
+            protected @NotNull Enumerator<T_OUT> opWrapEnumerator(
+                @NotNull Enumerator<T_OUT> upstream
+            ) {
+                return new PipelineEnumerator<T_OUT, T_OUT>(upstream) {
+
+                    private final Set<T_OUT> seen = new HashSet<>();
+
+                    @Override
+                    protected boolean moveNextCore() {
+                        while (upstream.moveNext()) {
+                            T_OUT element = upstream.current();
+
+                            if (seen.add(element)) {
+                                setCurrent(element);
+                                return true;
+                            }
+                        }
+
+                        return false;
+                    }
+                };
+            }
+        };
     }
 
     /** {@inheritDoc} */
@@ -564,7 +581,7 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         final Equalator<? super T_OUT> effectiveEqualator =
             equalator != null
                 ? equalator
-                : Equalator.defaultEqualator();
+                : HashEqualator.defaultHashEqualator();
 
         return new StatefulOp<T_OUT, T_OUT>(this) {
             @Override
@@ -572,16 +589,15 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
                 @NotNull Enumerator<T_OUT> upstream
             ) {
                 return new PipelineEnumerator<T_OUT, T_OUT>(upstream) {
-                    private final EqualatorMap<T_OUT, Boolean> seen =
-                        new EqualatorMap<>(effectiveEqualator);
+                    private final Set<T_OUT> seen =
+                        newEqualitySet(effectiveEqualator);
 
                     @Override
                     protected boolean moveNextCore() {
                         while (upstream.moveNext()) {
                             T_OUT element = upstream.current();
 
-                            if (!seen.containsKey(element)) {
-                                seen.put(element, Boolean.TRUE);
+                            if (seen.add(element)) {
                                 setCurrent(element);
                                 return true;
                             }
@@ -599,7 +615,7 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
     public final <K> @NotNull Enumerable<T_OUT> distinctBy(
         @NotNull Function<? super T_OUT, ? extends K> keySelector
     ) {
-        return distinctBy(keySelector, null);
+        return distinctByInHash(keySelector, HashEqualator.defaultHashEqualator());
     }
 
     /** {@inheritDoc} */
@@ -613,7 +629,7 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         final Equalator<? super K> effectiveEqualator =
             keyEqualator != null
                 ? keyEqualator
-                : Equalator.defaultEqualator();
+                : HashEqualator.defaultHashEqualator();
 
         return new StatefulOp<T_OUT, T_OUT>(this) {
             @Override
@@ -621,17 +637,15 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
                 @NotNull Enumerator<T_OUT> upstream
             ) {
                 return new PipelineEnumerator<T_OUT, T_OUT>(upstream) {
-                    private final EqualatorMap<K, Boolean> seenKeys =
-                        new EqualatorMap<>(effectiveEqualator);
+                    private final Set<K> seenKeys =
+                        newEqualitySet(effectiveEqualator);
 
                     @Override
                     protected boolean moveNextCore() {
                         while (upstream.moveNext()) {
                             T_OUT element = upstream.current();
-                            K key = keySelector.apply(element);
 
-                            if (!seenKeys.containsKey(key)) {
-                                seenKeys.put(key, Boolean.TRUE);
+                            if (seenKeys.add(keySelector.apply(element))) {
                                 setCurrent(element);
                                 return true;
                             }
@@ -649,7 +663,7 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
     public final @NotNull Enumerable<T_OUT> except(
         @NotNull Enumerable<? extends T_OUT> other
     ) {
-        return except(other, null);
+        return exceptInHash(other, HashEqualator.defaultHashEqualator());
     }
 
     /** {@inheritDoc} */
@@ -663,7 +677,7 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         final Equalator<? super T_OUT> effectiveEqualator =
             equalator != null
                 ? equalator
-                : Equalator.defaultEqualator();
+                : HashEqualator.defaultHashEqualator();
 
         return new StatefulOp<T_OUT, T_OUT>(this) {
             @Override
@@ -671,10 +685,8 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
                 @NotNull Enumerator<T_OUT> upstream
             ) {
                 return new PipelineEnumerator<T_OUT, T_OUT>(upstream) {
-                    private final EqualatorMap<T_OUT, Boolean> excluded =
-                        new EqualatorMap<>(effectiveEqualator);
-                    private final EqualatorMap<T_OUT, Boolean> yielded =
-                        new EqualatorMap<>(effectiveEqualator);
+                    private final Set<T_OUT> seen =
+                        newEqualitySet(effectiveEqualator);
                     private boolean initialized;
 
                     private void initialize() {
@@ -685,7 +697,7 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
 
                         try (Enumerator<? extends T_OUT> enumerator = other.enumerator()) {
                             while (enumerator.moveNext()) {
-                                excluded.put(enumerator.current(), Boolean.TRUE);
+                                seen.add(enumerator.current());
                             }
                         }
                     }
@@ -697,11 +709,7 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
                         while (upstream.moveNext()) {
                             T_OUT element = upstream.current();
 
-                            if (
-                                !excluded.containsKey(element)
-                                    && !yielded.containsKey(element)
-                            ) {
-                                yielded.put(element, Boolean.TRUE);
+                            if (seen.add(element)) {
                                 setCurrent(element);
                                 return true;
                             }
@@ -720,7 +728,7 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         @NotNull Enumerable<? extends K> other,
         @NotNull Function<? super T_OUT, ? extends K> keySelector
     ) {
-        return exceptBy(other, keySelector, null);
+        return exceptByInHash(other, keySelector, HashEqualator.defaultHashEqualator());
     }
 
     /** {@inheritDoc} */
@@ -736,7 +744,7 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         final Equalator<? super K> effectiveEqualator =
             equalator != null
                 ? equalator
-                : Equalator.defaultEqualator();
+                : HashEqualator.defaultHashEqualator();
 
         return new StatefulOp<T_OUT, T_OUT>(this) {
             @Override
@@ -744,10 +752,8 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
                 @NotNull Enumerator<T_OUT> upstream
             ) {
                 return new PipelineEnumerator<T_OUT, T_OUT>(upstream) {
-                    private final EqualatorMap<K, Boolean> excludedKeys =
-                        new EqualatorMap<>(effectiveEqualator);
-                    private final EqualatorMap<K, Boolean> yieldedKeys =
-                        new EqualatorMap<>(effectiveEqualator);
+                    private final Set<K> seenKeys =
+                        newEqualitySet(effectiveEqualator);
                     private boolean initialized;
 
                     private void initialize() {
@@ -758,7 +764,7 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
 
                         try (Enumerator<? extends K> enumerator = second.enumerator()) {
                             while (enumerator.moveNext()) {
-                                excludedKeys.put(enumerator.current(), Boolean.TRUE);
+                                seenKeys.add(enumerator.current());
                             }
                         }
                     }
@@ -769,13 +775,8 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
 
                         while (upstream.moveNext()) {
                             T_OUT element = upstream.current();
-                            K key = keySelector.apply(element);
 
-                            if (
-                                !excludedKeys.containsKey(key)
-                                    && !yieldedKeys.containsKey(key)
-                            ) {
-                                yieldedKeys.put(key, Boolean.TRUE);
+                            if (seenKeys.add(keySelector.apply(element))) {
                                 setCurrent(element);
                                 return true;
                             }
@@ -797,7 +798,7 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
     public final <K> @NotNull Enumerable<Groupable<K, T_OUT>> groupBy(
         @NotNull Function<? super T_OUT, ? extends K> keySelector
     ) {
-        return groupBy(keySelector, Function.identity(), null);
+        return groupByInHash(keySelector, Function.identity(), HashEqualator.defaultHashEqualator());
     }
 
     /** {@inheritDoc} */
@@ -815,7 +816,7 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         @NotNull Function<? super T_OUT, ? extends K> keySelector,
         @NotNull Function<? super T_OUT, ? extends E> elementSelector
     ) {
-        return groupBy(keySelector, elementSelector, null);
+        return groupByInHash(keySelector, elementSelector, HashEqualator.defaultHashEqualator());
     }
 
     /** {@inheritDoc} */
@@ -831,7 +832,7 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         final Equalator<? super K> effectiveEqualator =
             equalator != null
                 ? equalator
-                : Equalator.defaultEqualator();
+                : HashEqualator.defaultHashEqualator();
 
         return new StatefulOp<T_OUT, Groupable<K, E>>(this) {
             @Override
@@ -839,8 +840,8 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
                 @NotNull Enumerator<T_OUT> upstream
             ) {
                 return new PipelineEnumerator<T_OUT, Groupable<K, E>>(upstream) {
-                    private final EqualatorMap<K, List<E>> groups =
-                        new EqualatorMap<>(effectiveEqualator);
+                    private final Map<K, List<E>> groups =
+                        newOrderedEqualityMap(effectiveEqualator);
                     private Iterator<Map.Entry<K, List<E>>> iterator;
                     private boolean initialized;
 
@@ -855,15 +856,9 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
                             K key = keySelector.apply(sourceElement);
                             E element = elementSelector.apply(sourceElement);
 
-                            List<E> group;
-                            if (groups.containsKey(key)) {
-                                group = groups.get(key);
-                            } else {
-                                group = new ArrayList<>();
-                                groups.put(key, group);
-                            }
-
-                            group.add(element);
+                            groups
+                                .computeIfAbsent(key, ignored -> new ArrayList<>())
+                                .add(element);
                         }
 
                         iterator = groups.entrySet().iterator();
@@ -895,10 +890,10 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
     @Override
     public final <K, R> @NotNull Enumerable<R> groupToResult(
         @NotNull Function<? super T_OUT, ? extends K> keySelector,
-        @Nullable BinFunction<? super K, ? super Enumerable<T_OUT>, ? extends R> resultSelector
+        @NotNull BinFunction<? super K, ? super Enumerable<T_OUT>, ? extends R> resultSelector
     ) {
         NullCheck.requireNonNull(resultSelector, "resultSelector");
-        return groupToResult(keySelector, resultSelector, null);
+        return groupToResultInHash(keySelector, resultSelector, HashEqualator.defaultHashEqualator());
     }
 
     /** {@inheritDoc} */
@@ -924,7 +919,7 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         @NotNull Function<? super T_OUT, ? extends E> elementSelector,
         @NotNull BinFunction<? super K, ? super Enumerable<E>, ? extends R> resultSelector
     ) {
-        return groupToResult(keySelector, elementSelector, resultSelector, null);
+        return groupToResultInHash(keySelector, elementSelector, resultSelector, HashEqualator.defaultHashEqualator());
     }
 
     /** {@inheritDoc} */
@@ -957,12 +952,12 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         @NotNull Function<? super I, ? extends K> innerKeySelector,
         @NotNull BinFunction<? super T_OUT, ? super Enumerable<I>, ? extends R> resultSelector
     ) {
-        return groupJoin(
+        return groupJoinInHash(
             inner,
             outerKeySelector,
             innerKeySelector,
             resultSelector,
-            null
+            HashEqualator.defaultHashEqualator()
         );
     }
 
@@ -983,7 +978,7 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         final Equalator<? super K> effectiveEqualator =
             equalator != null
                 ? equalator
-                : Equalator.defaultEqualator();
+                : HashEqualator.defaultHashEqualator();
 
         return new StatefulOp<T_OUT, R>(this) {
             @Override
@@ -991,8 +986,8 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
                 @NotNull Enumerator<T_OUT> upstream
             ) {
                 return new PipelineEnumerator<T_OUT, R>(upstream) {
-                    private final EqualatorMap<K, List<I>> lookup =
-                        new EqualatorMap<>(effectiveEqualator);
+                    private final Map<K, List<I>> lookup =
+                        newEqualityMap(effectiveEqualator);
                     private boolean initialized;
 
                     private void initialize() {
@@ -1006,15 +1001,9 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
                                 I value = enumerator.current();
                                 K key = innerKeySelector.apply(value);
 
-                                List<I> group;
-                                if (lookup.containsKey(key)) {
-                                    group = lookup.get(key);
-                                } else {
-                                    group = new ArrayList<>();
-                                    lookup.put(key, group);
-                                }
-
-                                group.add(value);
+                                lookup
+                                    .computeIfAbsent(key, ignored -> new ArrayList<>())
+                                    .add(value);
                             }
                         }
                     }
@@ -1030,9 +1019,7 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
                         T_OUT outer = upstream.current();
                         K key = outerKeySelector.apply(outer);
                         List<I> matches =
-                            lookup.containsKey(key)
-                                ? lookup.get(key)
-                                : Collections.emptyList();
+                            lookup.getOrDefault(key, Collections.emptyList());
 
                         setCurrent(
                             resultSelector.apply(
@@ -1052,7 +1039,7 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
     public final @NotNull Enumerable<T_OUT> intersect(
         @NotNull Enumerable<? extends T_OUT> other
     ) {
-        return intersect(other, null);
+        return intersectInHash(other, HashEqualator.defaultHashEqualator());
     }
 
     /** {@inheritDoc} */
@@ -1066,7 +1053,7 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         final Equalator<? super T_OUT> effectiveEqualator =
             equalator != null
                 ? equalator
-                : Equalator.defaultEqualator();
+                : HashEqualator.defaultHashEqualator();
 
         return new StatefulOp<T_OUT, T_OUT>(this) {
             @Override
@@ -1074,8 +1061,8 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
                 @NotNull Enumerator<T_OUT> upstream
             ) {
                 return new PipelineEnumerator<T_OUT, T_OUT>(upstream) {
-                    private final EqualatorMap<T_OUT, Boolean> remaining =
-                        new EqualatorMap<>(effectiveEqualator);
+                    private final Set<T_OUT> remaining =
+                        newEqualitySet(effectiveEqualator);
                     private boolean initialized;
 
                     private void initialize() {
@@ -1086,7 +1073,7 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
 
                         try (Enumerator<? extends T_OUT> enumerator = second.enumerator()) {
                             while (enumerator.moveNext()) {
-                                remaining.put(enumerator.current(), Boolean.TRUE);
+                                remaining.add(enumerator.current());
                             }
                         }
                     }
@@ -1098,8 +1085,7 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
                         while (upstream.moveNext()) {
                             T_OUT element = upstream.current();
 
-                            if (remaining.containsKey(element)) {
-                                remaining.remove(element);
+                            if (remaining.remove(element)) {
                                 setCurrent(element);
                                 return true;
                             }
@@ -1118,7 +1104,7 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         @NotNull Enumerable<? extends K> other,
         @NotNull Function<? super T_OUT, ? extends K> keySelector
     ) {
-        return intersectBy(other, keySelector, null);
+        return intersectByInHash(other, keySelector, HashEqualator.defaultHashEqualator());
     }
 
     /** {@inheritDoc} */
@@ -1134,7 +1120,7 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         final Equalator<? super K> effectiveEqualator =
             equalator != null
                 ? equalator
-                : Equalator.defaultEqualator();
+                : HashEqualator.defaultHashEqualator();
 
         return new StatefulOp<T_OUT, T_OUT>(this) {
             @Override
@@ -1142,8 +1128,8 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
                 @NotNull Enumerator<T_OUT> upstream
             ) {
                 return new PipelineEnumerator<T_OUT, T_OUT>(upstream) {
-                    private final EqualatorMap<K, Boolean> remainingKeys =
-                        new EqualatorMap<>(effectiveEqualator);
+                    private final Set<K> remainingKeys =
+                        newEqualitySet(effectiveEqualator);
                     private boolean initialized;
 
                     private void initialize() {
@@ -1154,7 +1140,7 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
 
                         try (Enumerator<? extends K> enumerator = second.enumerator()) {
                             while (enumerator.moveNext()) {
-                                remainingKeys.put(enumerator.current(), Boolean.TRUE);
+                                remainingKeys.add(enumerator.current());
                             }
                         }
                     }
@@ -1165,10 +1151,8 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
 
                         while (upstream.moveNext()) {
                             T_OUT element = upstream.current();
-                            K key = keySelector.apply(element);
 
-                            if (remainingKeys.containsKey(key)) {
-                                remainingKeys.remove(key);
+                            if (remainingKeys.remove(keySelector.apply(element))) {
                                 setCurrent(element);
                                 return true;
                             }
@@ -1189,7 +1173,7 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         @NotNull Function<? super I, ? extends K> innerKeySelector,
         @NotNull BinFunction<? super T_OUT, ? super I, ? extends R> resultSelector
     ) {
-        return join(inner, outerKeySelector, innerKeySelector, resultSelector, null);
+        return joinInhash(inner, outerKeySelector, innerKeySelector, resultSelector, HashEqualator.defaultHashEqualator());
     }
 
     /** {@inheritDoc} */
@@ -1209,7 +1193,7 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         final Equalator<? super K> effectiveEqualator =
             equalator != null
                 ? equalator
-                : Equalator.defaultEqualator();
+                : HashEqualator.defaultHashEqualator();
 
         return new StatefulOp<T_OUT, R>(this) {
             @Override
@@ -1217,8 +1201,8 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
                 @NotNull Enumerator<T_OUT> upstream
             ) {
                 return new PipelineEnumerator<T_OUT, R>(upstream) {
-                    private final EqualatorMap<K, List<I>> lookup =
-                        new EqualatorMap<>(effectiveEqualator);
+                    private final Map<K, List<I>> lookup =
+                        newEqualityMap(effectiveEqualator);
                     private List<I> matches = Collections.emptyList();
                     private T_OUT currentOuter;
                     private int matchIndex;
@@ -1235,15 +1219,9 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
                                 I value = enumerator.current();
                                 K key = innerKeySelector.apply(value);
 
-                                List<I> group;
-                                if (lookup.containsKey(key)) {
-                                    group = lookup.get(key);
-                                } else {
-                                    group = new ArrayList<>();
-                                    lookup.put(key, group);
-                                }
-
-                                group.add(value);
+                                lookup
+                                    .computeIfAbsent(key, ignored -> new ArrayList<>())
+                                    .add(value);
                             }
                         }
                     }
@@ -1270,9 +1248,7 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
                             currentOuter = upstream.current();
                             K key = outerKeySelector.apply(currentOuter);
                             matches =
-                                lookup.containsKey(key)
-                                    ? lookup.get(key)
-                                    : Collections.emptyList();
+                                lookup.getOrDefault(key, Collections.emptyList());
                             matchIndex = 0;
                         }
                     }
@@ -1289,12 +1265,12 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         @NotNull Function<? super I, ? extends K> innerKeySelector,
         @NotNull BinFunction<? super T_OUT, @Nullable I, ? extends R> resultSelector
     ) {
-        return leftJoin(
+        return leftJoinInHash(
             inner,
             outerKeySelector,
             innerKeySelector,
             resultSelector,
-            Equalator.defaultEqualator()
+            HashEqualator.defaultHashEqualator()
         );
     }
 
@@ -1319,8 +1295,8 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
                 @NotNull Enumerator<T_OUT> upstream
             ) {
                 return new PipelineEnumerator<T_OUT, R>(upstream) {
-                    private final EqualatorMap<K, List<I>> lookup =
-                        new EqualatorMap<>(equalator);
+                    private final Map<K, List<I>> lookup =
+                        newEqualityMap(equalator);
                     private List<I> matches = Collections.emptyList();
                     private T_OUT currentOuter;
                     private int matchIndex;
@@ -1338,15 +1314,9 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
                                 I value = enumerator.current();
                                 K key = innerKeySelector.apply(value);
 
-                                List<I> group;
-                                if (lookup.containsKey(key)) {
-                                    group = lookup.get(key);
-                                } else {
-                                    group = new ArrayList<>();
-                                    lookup.put(key, group);
-                                }
-
-                                group.add(value);
+                                lookup
+                                    .computeIfAbsent(key, ignored -> new ArrayList<>())
+                                    .add(value);
                             }
                         }
                     }
@@ -1379,9 +1349,7 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
                             currentOuter = upstream.current();
                             K key = outerKeySelector.apply(currentOuter);
                             matches =
-                                lookup.containsKey(key)
-                                    ? lookup.get(key)
-                                    : Collections.emptyList();
+                                lookup.getOrDefault(key, Collections.emptyList());
                             matchIndex = 0;
                             pendingUnmatched = matches.isEmpty();
                         }
@@ -1595,7 +1563,7 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
     /** {@inheritDoc} */
     @Override
     public final <I, K, R> @NotNull Enumerable<R> rightJoin(
-        @NotNull Iterable<? extends I> inner,
+        @NotNull Enumerable<? extends I> inner,
         @NotNull Function<? super T_OUT, ? extends K> outerKeySelector,
         @NotNull Function<? super I, ? extends K> innerKeySelector,
         @NotNull BinFunction<? super T_OUT, ? super I, ? extends R> resultSelector
@@ -1605,14 +1573,14 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
             outerKeySelector,
             innerKeySelector,
             resultSelector,
-            Equalator.defaultEqualator()
+            HashEqualator.defaultHashEqualator()
         );
     }
 
     /** {@inheritDoc} */
     @Override
     public final <I, K, R> @NotNull Enumerable<R> rightJoin(
-        @NotNull Iterable<? extends I> inner,
+        @NotNull Enumerable<? extends I> inner,
         @NotNull Function<? super T_OUT, ? extends K> outerKeySelector,
         @NotNull Function<? super I, ? extends K> innerKeySelector,
         @NotNull BinFunction<? super T_OUT, ? super I, ? extends R> resultSelector,
@@ -1630,8 +1598,8 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
                 @NotNull Enumerator<T_OUT> upstream
             ) {
                 return new PipelineEnumerator<T_OUT, R>(upstream) {
-                    private final EqualatorMap<K, List<T_OUT>> lookup =
-                        new EqualatorMap<>(equalator);
+                    private final Map<K, List<T_OUT>> lookup =
+                        newEqualityMap(equalator);
                     private Iterator<? extends I> innerIterator;
                     private List<T_OUT> matches = Collections.emptyList();
                     private I currentInner;
@@ -1649,15 +1617,9 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
                             T_OUT outer = upstream.current();
                             K key = outerKeySelector.apply(outer);
 
-                            List<T_OUT> group;
-                            if (lookup.containsKey(key)) {
-                                group = lookup.get(key);
-                            } else {
-                                group = new ArrayList<>();
-                                lookup.put(key, group);
-                            }
-
-                            group.add(outer);
+                            lookup
+                                .computeIfAbsent(key, ignored -> new ArrayList<>())
+                                .add(outer);
                         }
 
                         innerIterator = inner.iterator();
@@ -1691,9 +1653,7 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
                             currentInner = innerIterator.next();
                             K key = innerKeySelector.apply(currentInner);
                             matches =
-                                lookup.containsKey(key)
-                                    ? lookup.get(key)
-                                    : Collections.emptyList();
+                                lookup.getOrDefault(key, Collections.emptyList());
                             matchIndex = 0;
                             pendingUnmatched = matches.isEmpty();
                         }
@@ -1948,7 +1908,7 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
     public final boolean sequenceEqual(
         @NotNull Enumerable<? extends T_OUT> other
     ) {
-        return sequenceEqual(other, Equalator.defaultEqualator());
+        return sequenceEqual(other, HashEqualator.defaultHashEqualator());
     }
 
     /** {@inheritDoc} */
@@ -2253,7 +2213,7 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
     public final @NotNull Enumerable<T_OUT> union(
         @NotNull Enumerable<? extends T_OUT> other
     ) {
-        return union(other, Equalator.defaultEqualator());
+        return unionInHash(other, HashEqualator.defaultHashEqualator());
     }
 
     /** {@inheritDoc} */
@@ -2271,41 +2231,37 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
                 @NotNull Enumerator<T_OUT> upstream
             ) {
                 return new PipelineEnumerator<T_OUT, T_OUT>(upstream) {
-                    private final EqualatorMap<T_OUT, Boolean> seen =
-                        new EqualatorMap<>(comparer);
+                    private final Set<T_OUT> seen =
+                        newEqualitySet(comparer);
                     private Enumerator<? extends T_OUT> second;
                     private boolean firstDone;
 
                     @Override
                     protected boolean moveNextCore() {
-                        while (true) {
-                            if (!firstDone) {
-                                while (upstream.moveNext()) {
-                                    T_OUT element = upstream.current();
+                        if (!firstDone) {
+                            while (upstream.moveNext()) {
+                                T_OUT element = upstream.current();
 
-                                    if (!seen.containsKey(element)) {
-                                        seen.put(element, Boolean.TRUE);
-                                        setCurrent(element);
-                                        return true;
-                                    }
-                                }
-
-                                firstDone = true;
-                                second = other.enumerator();
-                            }
-
-                            while (second != null && second.moveNext()) {
-                                T_OUT element = second.current();
-
-                                if (!seen.containsKey(element)) {
-                                    seen.put(element, Boolean.TRUE);
+                                if (seen.add(element)) {
                                     setCurrent(element);
                                     return true;
                                 }
                             }
 
-                            return false;
+                            firstDone = true;
+                            second = other.enumerator();
                         }
+
+                        while (second != null && second.moveNext()) {
+                            T_OUT element = second.current();
+
+                            if (seen.add(element)) {
+                                setCurrent(element);
+                                return true;
+                            }
+                        }
+
+                        return false;
                     }
 
                     @Override
@@ -2330,7 +2286,7 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         @NotNull Enumerable<? extends T_OUT> second,
         @NotNull Function<? super T_OUT, ? extends K> keySelector
     ) {
-        return unionBy(second, keySelector, Equalator.defaultEqualator());
+        return unionByInHash(second, keySelector, HashEqualator.defaultHashEqualator());
     }
 
     /** {@inheritDoc} */
@@ -2350,46 +2306,37 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
                 @NotNull Enumerator<T_OUT> upstream
             ) {
                 return new PipelineEnumerator<T_OUT, T_OUT>(upstream) {
-                    private final EqualatorMap<K, Boolean> seenKeys =
-                        new EqualatorMap<>(comparer);
+                    private final Set<K> seenKeys =
+                        newEqualitySet(comparer);
                     private Enumerator<? extends T_OUT> secondEnumerator;
                     private boolean firstDone;
 
                     @Override
                     protected boolean moveNextCore() {
-                        while (true) {
-                            if (!firstDone) {
-                                while (upstream.moveNext()) {
-                                    T_OUT element = upstream.current();
-                                    K key = keySelector.apply(element);
+                        if (!firstDone) {
+                            while (upstream.moveNext()) {
+                                T_OUT element = upstream.current();
 
-                                    if (!seenKeys.containsKey(key)) {
-                                        seenKeys.put(key, Boolean.TRUE);
-                                        setCurrent(element);
-                                        return true;
-                                    }
-                                }
-
-                                firstDone = true;
-                                secondEnumerator = second.enumerator();
-                            }
-
-                            while (
-                                secondEnumerator != null
-                                    && secondEnumerator.moveNext()
-                            ) {
-                                T_OUT element = secondEnumerator.current();
-                                K key = keySelector.apply(element);
-
-                                if (!seenKeys.containsKey(key)) {
-                                    seenKeys.put(key, Boolean.TRUE);
+                                if (seenKeys.add(keySelector.apply(element))) {
                                     setCurrent(element);
                                     return true;
                                 }
                             }
 
-                            return false;
+                            firstDone = true;
+                            secondEnumerator = second.enumerator();
                         }
+
+                        while (secondEnumerator != null && secondEnumerator.moveNext()) {
+                            T_OUT element = secondEnumerator.current();
+
+                            if (seenKeys.add(keySelector.apply(element))) {
+                                setCurrent(element);
+                                return true;
+                            }
+                        }
+
+                        return false;
                     }
 
                     @Override
@@ -2580,7 +2527,7 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         NullCheck.requireNonNull(elementSelector, "elementSelector");
         NullCheck.requireNonNull(comparer, "comparer");
 
-        EqualatorMap<K, V> result = new EqualatorMap<>(comparer);
+        Map<K, V> result = newEqualityMap(comparer);
         try (Enumerator<T_OUT> e = enumerator()) {
             while (e.moveNext()) {
                 T_OUT element = e.current();
@@ -2595,6 +2542,505 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
             }
         }
         return result;
+    }
+
+
+    // ---------------------------------------------------------------------
+    // HashEqualator overloads
+    // ---------------------------------------------------------------------
+
+    /** {@inheritDoc} */
+    @Override
+    public final <K, A> @NotNull Enumerable<Pair<K, A>> aggregateByInHash(
+        @NotNull Function<? super T_OUT, ? extends K> keySelector,
+        @NotNull A seed,
+        @NotNull BinFunction<? super A, ? super T_OUT, ? extends A> aggregator,
+        @NotNull HashEqualator<? super K> keyEqualator
+    ) {
+        NullCheck.requireNonNull(keyEqualator, "keyEqualator");
+        return aggregateBy(
+            keySelector,
+            seed,
+            aggregator,
+            (Equalator<? super K>) keyEqualator
+        );
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public final <K, A> @NotNull Enumerable<Pair<K, A>> aggregateByInHash(
+        @NotNull Function<? super T_OUT, ? extends K> keySelector,
+        @NotNull Function<? super K, ? extends A> seedSelector,
+        @NotNull BinFunction<? super A, ? super T_OUT, ? extends A> aggregator,
+        @NotNull HashEqualator<? super K> keyEqualator
+    ) {
+        NullCheck.requireNonNull(keyEqualator, "keyEqualator");
+        return aggregateBy(
+            keySelector,
+            seedSelector,
+            aggregator,
+            (Equalator<? super K>) keyEqualator
+        );
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public final <K> @NotNull Enumerable<Pair<K, Integer>> countByInHash(
+        @NotNull Function<? super T_OUT, ? extends K> keySelector,
+        @NotNull HashEqualator<? super K> keyEqualator
+    ) {
+        NullCheck.requireNonNull(keyEqualator, "keyEqualator");
+        return countBy(keySelector, (Equalator<? super K>) keyEqualator);
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public final @NotNull Enumerable<T_OUT> distinctInHash(
+        @NotNull HashEqualator<? super T_OUT> equalator
+    ) {
+        NullCheck.requireNonNull(equalator, "equalator");
+        return distinct((Equalator<? super T_OUT>) equalator);
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public final <K> @NotNull Enumerable<T_OUT> distinctByInHash(
+        @NotNull Function<? super T_OUT, ? extends K> keySelector,
+        @NotNull HashEqualator<? super K> keyEqualator
+    ) {
+        NullCheck.requireNonNull(keyEqualator, "keyEqualator");
+        return distinctBy(keySelector, (Equalator<? super K>) keyEqualator);
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public final @NotNull Enumerable<T_OUT> exceptInHash(
+        @NotNull Enumerable<? extends T_OUT> other,
+        @NotNull HashEqualator<? super T_OUT> equalator
+    ) {
+        NullCheck.requireNonNull(equalator, "equalator");
+        return except(other, (Equalator<? super T_OUT>) equalator);
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public final <K> @NotNull Enumerable<T_OUT> exceptByInHash(
+        @NotNull Enumerable<? extends K> other,
+        @NotNull Function<? super T_OUT, ? extends K> keySelector,
+        @NotNull HashEqualator<? super K> equalator
+    ) {
+        NullCheck.requireNonNull(equalator, "equalator");
+        return exceptBy(other, keySelector, (Equalator<? super K>) equalator);
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public final <K> @NotNull Enumerable<Groupable<K, T_OUT>> groupByInHash(
+        @NotNull Function<? super T_OUT, ? extends K> keySelector,
+        @NotNull HashEqualator<? super K> equalator
+    ) {
+        NullCheck.requireNonNull(equalator, "equalator");
+        return groupBy(keySelector, (Equalator<? super K>) equalator);
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public final <K, E> @NotNull Enumerable<Groupable<K, E>> groupByInHash(
+        @NotNull Function<? super T_OUT, ? extends K> keySelector,
+        @NotNull Function<? super T_OUT, ? extends E> elementSelector,
+        @NotNull HashEqualator<? super K> equalator
+    ) {
+        NullCheck.requireNonNull(equalator, "equalator");
+        return groupBy(
+            keySelector,
+            elementSelector,
+            (Equalator<? super K>) equalator
+        );
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public final <K, R> @NotNull Enumerable<R> groupToResultInHash(
+        @NotNull Function<? super T_OUT, ? extends K> keySelector,
+        @NotNull BinFunction<? super K, ? super Enumerable<T_OUT>, ? extends R> resultSelector,
+        @NotNull HashEqualator<? super K> equalator
+    ) {
+        NullCheck.requireNonNull(equalator, "equalator");
+        return groupToResult(
+            keySelector,
+            resultSelector,
+            (Equalator<? super K>) equalator
+        );
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public final <K, E, R> @NotNull Enumerable<R> groupToResultInHash(
+        @NotNull Function<? super T_OUT, ? extends K> keySelector,
+        @NotNull Function<? super T_OUT, ? extends E> elementSelector,
+        @NotNull BinFunction<? super K, ? super Enumerable<E>, ? extends R> resultSelector,
+        @NotNull HashEqualator<? super K> equalator
+    ) {
+        NullCheck.requireNonNull(equalator, "equalator");
+        return groupToResult(
+            keySelector,
+            elementSelector,
+            resultSelector,
+            (Equalator<? super K>) equalator
+        );
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public final <K, I, R> @NotNull Enumerable<R> groupJoinInHash(
+        @NotNull Enumerable<? extends I> inner,
+        @NotNull Function<? super T_OUT, ? extends K> outerKeySelector,
+        @NotNull Function<? super I, ? extends K> innerKeySelector,
+        @NotNull BinFunction<? super T_OUT, ? super Enumerable<I>, ? extends R> resultSelector,
+        @NotNull HashEqualator<? super K> equalator
+    ) {
+        NullCheck.requireNonNull(equalator, "equalator");
+        return groupJoin(
+            inner,
+            outerKeySelector,
+            innerKeySelector,
+            resultSelector,
+            (Equalator<? super K>) equalator
+        );
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public final @NotNull Enumerable<T_OUT> intersectInHash(
+        @NotNull Enumerable<? extends T_OUT> other,
+        @NotNull HashEqualator<? super T_OUT> equalator
+    ) {
+        NullCheck.requireNonNull(equalator, "equalator");
+        return intersect(other, (Equalator<? super T_OUT>) equalator);
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public final <K> @NotNull Enumerable<T_OUT> intersectByInHash(
+        @NotNull Enumerable<? extends K> other,
+        @NotNull Function<? super T_OUT, ? extends K> keySelector,
+        @NotNull HashEqualator<? super K> equalator
+    ) {
+        NullCheck.requireNonNull(equalator, "equalator");
+        return intersectBy(other, keySelector, (Equalator<? super K>) equalator);
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public final <K, I, R> @NotNull Enumerable<R> joinInhash(
+        @NotNull Enumerable<? extends I> inner,
+        @NotNull Function<? super T_OUT, ? extends K> outerKeySelector,
+        @NotNull Function<? super I, ? extends K> innerKeySelector,
+        @NotNull BinFunction<? super T_OUT, ? super I, ? extends R> resultSelector,
+        @NotNull HashEqualator<? super K> equalator
+    ) {
+        NullCheck.requireNonNull(equalator, "equalator");
+        return join(
+            inner,
+            outerKeySelector,
+            innerKeySelector,
+            resultSelector,
+            (Equalator<? super K>) equalator
+        );
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public final <K, I, R> @NotNull Enumerable<R> leftJoinInHash(
+        @NotNull Enumerable<? extends I> inner,
+        @NotNull Function<? super T_OUT, ? extends K> outerKeySelector,
+        @NotNull Function<? super I, ? extends K> innerKeySelector,
+        @NotNull BinFunction<? super T_OUT, @Nullable I, ? extends R> resultSelector,
+        @NotNull HashEqualator<? super K> equalator
+    ) {
+        NullCheck.requireNonNull(equalator, "equalator");
+        return leftJoin(
+            inner,
+            outerKeySelector,
+            innerKeySelector,
+            resultSelector,
+            (Equalator<? super K>) equalator
+        );
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public final <K, I> @NotNull Enumerable<Pair<T_OUT, @Nullable I>> leftJoinInHash(
+        @NotNull Enumerable<? extends I> inner,
+        @NotNull Function<? super T_OUT, ? extends K> outerKeySelector,
+        @NotNull Function<? super I, ? extends K> innerKeySelector,
+        @NotNull HashEqualator<? super K> equalator
+    ) {
+        NullCheck.requireNonNull(equalator, "equalator");
+        return leftJoin(
+            inner,
+            outerKeySelector,
+            innerKeySelector,
+            (Equalator<? super K>) equalator
+        );
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public final <I, K, R> @NotNull Enumerable<R> rightJoinInHash(
+        @NotNull Enumerable<? extends I> inner,
+        @NotNull Function<? super T_OUT, ? extends K> outerKeySelector,
+        @NotNull Function<? super I, ? extends K> innerKeySelector,
+        @NotNull BinFunction<? super @Nullable T_OUT, ? super I, ? extends R> resultSelector,
+        @NotNull HashEqualator<? super K> equalator
+    ) {
+        NullCheck.requireNonNull(equalator, "equalator");
+        return rightJoin(
+            inner,
+            outerKeySelector,
+            innerKeySelector,
+            resultSelector,
+            (Equalator<? super K>) equalator
+        );
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public final @NotNull Enumerable<T_OUT> unionInHash(
+        @NotNull Enumerable<? extends T_OUT> other,
+        @NotNull HashEqualator<? super T_OUT> comparer
+    ) {
+        NullCheck.requireNonNull(comparer, "comparer");
+        return union(other, (Equalator<? super T_OUT>) comparer);
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public final <K> @NotNull Enumerable<T_OUT> unionByInHash(
+        @NotNull Enumerable<? extends T_OUT> second,
+        @NotNull Function<? super T_OUT, ? extends K> keySelector,
+        @NotNull HashEqualator<? super K> comparer
+    ) {
+        NullCheck.requireNonNull(comparer, "comparer");
+        return unionBy(second, keySelector, (Equalator<? super K>) comparer);
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public final <K> @NotNull Map<K, T_OUT> toMapInHash(
+        @NotNull Function<? super T_OUT, ? extends K> keySelector,
+        @NotNull HashEqualator<? super K> comparer
+    ) {
+        NullCheck.requireNonNull(comparer, "comparer");
+        return toMapInHash(
+            keySelector,
+            Function.identity(),
+            comparer
+        );
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public final <K, V> @NotNull Map<K, V> toMapInHash(
+        @NotNull Function<? super T_OUT, ? extends K> keySelector,
+        @NotNull Function<? super T_OUT, ? extends V> elementSelector,
+        @NotNull HashEqualator<? super K> comparer
+    ) {
+        NullCheck.requireNonNull(keySelector, "keySelector");
+        NullCheck.requireNonNull(elementSelector, "elementSelector");
+        NullCheck.requireNonNull(comparer, "comparer");
+
+        Map<K, V> result = new EqualatorHashMap<>(comparer);
+        try (Enumerator<T_OUT> e = enumerator()) {
+            while (e.moveNext()) {
+                T_OUT element = e.current();
+                K key = Objects.requireNonNull(
+                    keySelector.apply(element),
+                    "keySelector produced a null key"
+                );
+                if (result.containsKey(key)) {
+                    throw new IllegalStateException("Duplicate key: " + key);
+                }
+                result.put(key, elementSelector.apply(element));
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Creates an insertion-ordered map whose key equality semantics are
+     * determined by the specified equalator.
+     *
+     * <p>For a {@link HashEqualator}, lookups are backed by
+     * {@link EqualatorHashMap} while a separate key-order list preserves the
+     * first-occurrence order required by grouping-style LINQ operators.</p>
+     */
+    @NotNull
+    @SuppressWarnings("unchecked")
+    private static <K, V> Map<K, V> newOrderedEqualityMap(
+        @NotNull Equalator<? super K> equalator
+    ) {
+        if (equalator instanceof HashEqualator<?> hashEqualator) {
+            return new OrderedHashEqualatorMap<>(
+                (HashEqualator<? super K>) hashEqualator
+            );
+        }
+
+        return new EqualatorMap<>(equalator);
+    }
+
+    /**
+     * Internal insertion-ordered map that combines hash-based custom key
+     * lookup with first-insertion ordering.
+     */
+    private static final class OrderedHashEqualatorMap<K, V>
+        extends AbstractMap<K, V> {
+
+        @NotNull
+        private final EqualatorHashMap<K, V> lookup;
+
+        @NotNull
+        private final List<K> keyOrder = new ArrayList<>();
+
+        private OrderedHashEqualatorMap(
+            @NotNull HashEqualator<? super K> equalator
+        ) {
+            this.lookup = new EqualatorHashMap<>(equalator);
+        }
+
+        @Override
+        public int size() {
+            return lookup.size();
+        }
+
+        @Override
+        public boolean containsKey(Object key) {
+            return lookup.containsKey(key);
+        }
+
+        @Override
+        public V get(Object key) {
+            return lookup.get(key);
+        }
+
+        @Override
+        public V put(K key, V value) {
+            if (!lookup.containsKey(key)) {
+                keyOrder.add(key);
+            }
+            return lookup.put(key, value);
+        }
+
+        @Override
+        public void clear() {
+            lookup.clear();
+            keyOrder.clear();
+        }
+
+        @Override
+        @NotNull
+        public Set<Entry<K, V>> entrySet() {
+            return new AbstractSet<>() {
+                @Override
+                @NotNull
+                public Iterator<Entry<K, V>> iterator() {
+                    Iterator<K> iterator = keyOrder.iterator();
+
+                    return new Iterator<>() {
+                        private K currentKey;
+                        private boolean canRemove;
+
+                        @Override
+                        public boolean hasNext() {
+                            return iterator.hasNext();
+                        }
+
+                        @Override
+                        public Entry<K, V> next() {
+                            currentKey = iterator.next();
+                            canRemove = true;
+                            K key = currentKey;
+
+                            return new SimpleEntry<>(key, lookup.get(key)) {
+                                @Override
+                                public V setValue(V value) {
+                                    V oldValue = lookup.put(key, value);
+                                    super.setValue(value);
+                                    return oldValue;
+                                }
+                            };
+                        }
+
+                        @Override
+                        public void remove() {
+                            if (!canRemove) {
+                                throw new IllegalStateException();
+                            }
+                            lookup.remove(currentKey);
+                            iterator.remove();
+                            currentKey = null;
+                            canRemove = false;
+                        }
+                    };
+                }
+
+                @Override
+                public int size() {
+                    return lookup.size();
+                }
+
+                @Override
+                public void clear() {
+                    OrderedHashEqualatorMap.this.clear();
+                }
+            };
+        }
+    }
+
+    /**
+     * Creates a set whose element equality semantics are determined by the
+     * specified equalator.
+     *
+     * <p>Hash-capable equalators use {@link EqualatorHashSet}; other
+     * equalators use a set view backed by {@link EqualatorMap}.</p>
+     *
+     * @param equalator the equalator used to compare elements
+     * @param <E> the element type
+     * @return a set using the specified equality semantics
+     */
+    @NotNull
+    @SuppressWarnings("unchecked")
+    private static <E> Set<E> newEqualitySet(
+        @NotNull Equalator<? super E> equalator
+    ) {
+        if (equalator instanceof HashEqualator<?> hashEqualator) {
+            return new EqualatorHashSet<>(
+                (HashEqualator<? super E>) hashEqualator
+            );
+        }
+
+        return Collections.newSetFromMap(
+            new EqualatorMap<>(equalator)
+        );
+    }
+
+    /**
+     * Creates a map whose key equality semantics are determined by the
+     * specified equalator. Hash-capable equalators automatically use
+     * {@link EqualatorHashMap}; other equalators use {@link EqualatorMap}.
+     */
+    @NotNull
+    @SuppressWarnings("unchecked")
+    private static <K, V> Map<K, V> newEqualityMap(
+        @NotNull Equalator<? super K> equalator
+    ) {
+        if (equalator instanceof HashEqualator<?> hashEqualator) {
+            return new EqualatorHashMap<>(
+                (HashEqualator<? super K>) hashEqualator
+            );
+        }
+
+        return new EqualatorMap<>(equalator);
     }
 
     // ---------------------------------------------------------------------
@@ -2699,7 +3145,7 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         ) {
             super(orderingSource);
             this.orderingSource = orderingSource;
-            this.comparator = (left, right) -> comparator.compare(left, right);
+            this.comparator = comparator::compare;
         }
 
         @Override
