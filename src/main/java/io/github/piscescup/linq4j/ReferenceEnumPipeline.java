@@ -334,7 +334,7 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         NullCheck.requireNonNull(targetType, "targetType");
         return new StatelessOp<T_OUT, R>(this) {
             @Override
-            protected @NotNull Enumerator<R> opWrapEnumerator(
+            protected @NotNull Enumerator<T_OUT> opWrapEnumerator(
                 @NotNull Enumerator<T_OUT> upstream
             ) {
                 return new PipelineEnumerator<T_OUT, R>(upstream) {
