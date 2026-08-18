@@ -3,6 +3,8 @@ package io.github.piscescup.linq4j;
 import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.Test;
 
+import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 
@@ -50,10 +52,35 @@ public class Test1 {
     public void test() {
         Enumerable<Person> people = Linq.of(TEST_DATA);
 
-        System.out.println(people.max());
+        io.github.piscescup.linq.Enumerable<Person> people1 = io.github.piscescup.linq.Linq.fromIterable(Test1.TEST_DATA);
 
+        long t3 = System.currentTimeMillis();
+        people1
+            .groupBy(Person::address)
+            .orderBy(g -> g.key().charAt(0))
+            .thenBy(g -> g.elements().size())
+            .select(g -> g.elements().toString())
+            .distinct()
+            .toList();
+        long t4 = System.currentTimeMillis();
+
+        System.out.println("-----");
+        System.out.println(t4 - t3); // 5 5 6 4 6 ; avg = 26/5
+        System.out.println("-----");
+
+        long t1 = System.currentTimeMillis();
         people
-            .select(Person::email)
-            .forEach(System.out::println);
+            .groupBy(Person::address)
+            .orderBy(g -> g.getGroupKey().charAt(0))
+            .thenBy(g -> g.getGroupElements().size())
+            .select(g -> g.getGroupElements().toString())
+            .distinct()
+            .toList();
+        long t2 = System.currentTimeMillis();
+
+        System.out.println("-----");
+        System.out.println(t2 - t1); // 5 6 5 6 5 ; avg = 27/5
+        System.out.println("-----");
+
     }
 }
