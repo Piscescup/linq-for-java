@@ -1,27 +1,86 @@
 <?xml version="1.0" encoding="UTF-8"?>
+
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+         xsi:schemaLocation="
+             http://maven.apache.org/POM/4.0.0
+             https://maven.apache.org/xsd/maven-4.0.0.xsd">
+
     <modelVersion>4.0.0</modelVersion>
 
+    <!-- ============================================================ -->
+    <!-- Project                                                      -->
+    <!-- ============================================================ -->
     <groupId>io.github.piscescup</groupId>
     <artifactId>linq-for-java</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>1.0.0</version>
 
+    <name>linq-for-java</name>
+    <description>
+        A Java implementation inspired by .NET LINQ.
+    </description>
+    <url>https://github.com/Piscescup/linq-for-java</url>
+
+
+    <!-- ============================================================ -->
+    <!-- Properties                                                   -->
+    <!-- ============================================================ -->
     <properties>
+
+        <!-- Java -->
         <maven.compiler.source>25</maven.compiler.source>
         <maven.compiler.target>25</maven.compiler.target>
+
+        <!-- Encoding -->
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+        <!-- Dependencies -->
+        <commons-lib.version>1.1.5</commons-lib.version>
+        <jetbrains-annotations.version>26.0.2</jetbrains-annotations.version>
+
+        <junit-platform.version>6.1.3</junit-platform.version>
+        <junit-jupiter.version>6.0.0</junit-jupiter.version>
+
+        <!-- Benchmark only -->
+        <linq-in-java.version>1.0.2</linq-in-java.version>
+        <jmh.version>1.37</jmh.version>
+
+        <!-- Maven Plugins -->
+        <maven-compiler-plugin.version>3.14.1</maven-compiler-plugin.version>
+        <maven-source-plugin.version>3.4.0</maven-source-plugin.version>
+        <maven-javadoc-plugin.version>3.12.0</maven-javadoc-plugin.version>
+        <maven-gpg-plugin.version>3.2.8</maven-gpg-plugin.version>
+
+        <build-helper-maven-plugin.version>
+            3.6.1
+        </build-helper-maven-plugin.version>
+
+        <maven-shade-plugin.version>3.6.0</maven-shade-plugin.version>
+
+        <central-publishing-maven-plugin.version>
+            0.11.0
+        </central-publishing-maven-plugin.version>
     </properties>
 
+
+    <!-- ============================================================ -->
+    <!-- License                                                      -->
+    <!-- ============================================================ -->
     <licenses>
         <license>
             <name>Apache License, Version 2.0</name>
-            <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <url>
+                https://www.apache.org/licenses/LICENSE-2.0.txt
+            </url>
             <distribution>repo</distribution>
         </license>
     </licenses>
 
+
+    <!-- ============================================================ -->
+    <!-- Developers                                                   -->
+    <!-- ============================================================ -->
     <developers>
         <developer>
             <name>Ren YuanTong</name>
@@ -29,94 +88,88 @@
         </developer>
     </developers>
 
+
+    <!-- ============================================================ -->
+    <!-- SCM                                                          -->
+    <!-- ============================================================ -->
     <scm>
         <connection>
             scm:git:https://github.com/Piscescup/linq-for-java.git
         </connection>
+
         <developerConnection>
             scm:git:ssh://git@github.com/Piscescup/linq-for-java.git
         </developerConnection>
+
         <url>
             https://github.com/Piscescup/linq-for-java
         </url>
+
         <tag>HEAD</tag>
     </scm>
 
 
-
+    <!-- ============================================================ -->
+    <!-- Dependencies                                                 -->
+    <!-- ============================================================ -->
     <dependencies>
+        <!-- ======================================================== -->
+        <!-- Production Dependencies                                  -->
+        <!-- ======================================================== -->
         <dependency>
             <groupId>io.github.piscescup</groupId>
             <artifactId>commons-lib</artifactId>
-            <version>1.1.5</version>
+            <version>${commons-lib.version}</version>
         </dependency>
+
         <dependency>
             <groupId>org.jetbrains</groupId>
             <artifactId>annotations</artifactId>
-            <version>26.0.2</version>
-            <scope>compile</scope>
+            <version>${jetbrains-annotations.version}</version>
         </dependency>
 
+
+        <!-- ======================================================== -->
+        <!-- Test Dependencies                                        -->
+        <!-- ======================================================== -->
         <dependency>
             <groupId>org.junit.platform</groupId>
             <artifactId>junit-platform-launcher</artifactId>
-            <version>6.1.3</version>
+            <version>${junit-platform.version}</version>
             <scope>test</scope>
         </dependency>
+
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
-            <version>6.0.0</version>
+            <version>${junit-jupiter.version}</version>
             <scope>test</scope>
         </dependency>
 
-        <dependency>
-            <groupId>io.github.piscescup</groupId>
-            <artifactId>linq-in-java</artifactId>
-            <version>1.0.2</version>
-        </dependency>
-
-        <!-- Source: https://mvnrepository.com/artifact/org.openjdk.jmh/jmh-core -->
-        <dependency>
-            <groupId>org.openjdk.jmh</groupId>
-            <artifactId>jmh-core</artifactId>
-            <version>1.37</version>
-        </dependency>
-
-        <!-- Source: https://mvnrepository.com/artifact/org.openjdk.jmh/jmh-generator-annprocess -->
-        <dependency>
-            <groupId>org.openjdk.jmh</groupId>
-            <artifactId>jmh-generator-annprocess</artifactId>
-            <version>1.37</version>
-            <scope>provided</scope>
-        </dependency>
     </dependencies>
 
+    <!-- ============================================================ -->
+    <!-- Build                                                        -->
+    <!-- ============================================================ -->
     <build>
-        <plugins>
 
-            <!-- Java Compiler -->
+        <plugins>
+            <!-- ==================================================== -->
+            <!-- Java Compiler                                        -->
+            <!-- ==================================================== -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.14.1</version>
-
-                <configuration>
-                    <annotationProcessorPaths>
-                        <path>
-                            <groupId>org.openjdk.jmh</groupId>
-                            <artifactId>jmh-generator-annprocess</artifactId>
-                            <version>1.37</version>
-                        </path>
-                    </annotationProcessorPaths>
-                </configuration>
+                <version>${maven-compiler-plugin.version}</version>
             </plugin>
 
-            <!-- Source JAR -->
+            <!-- ==================================================== -->
+            <!-- Source JAR                                           -->
+            <!-- ==================================================== -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-source-plugin</artifactId>
-                <version>3.4.0</version>
+                <version>${maven-source-plugin.version}</version>
                 <executions>
                     <execution>
                         <id>attach-sources</id>
@@ -127,11 +180,13 @@
                 </executions>
             </plugin>
 
-            <!-- Javadoc JAR -->
+            <!-- ==================================================== -->
+            <!-- Javadoc JAR                                          -->
+            <!-- ==================================================== -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
-                <version>3.12.0</version>
+                <version>${maven-javadoc-plugin.version}</version>
                 <executions>
                     <execution>
                         <id>attach-javadocs</id>
@@ -143,24 +198,26 @@
 
                 <configuration>
                     <locale>en_US</locale>
-
                     <encoding>UTF-8</encoding>
                     <docencoding>UTF-8</docencoding>
                     <charset>UTF-8</charset>
-
                     <doclint>none</doclint>
                 </configuration>
             </plugin>
 
-            <!-- GPG Signing -->
+
+            <!-- ==================================================== -->
+            <!-- GPG Signing                                          -->
+            <!-- ==================================================== -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-gpg-plugin</artifactId>
-                <version>3.2.8</version>
+                <version>${maven-gpg-plugin.version}</version>
 
                 <executions>
                     <execution>
                         <id>sign-artifacts</id>
+
                         <phase>verify</phase>
 
                         <goals>
@@ -170,73 +227,178 @@
                 </executions>
             </plugin>
 
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>build-helper-maven-plugin</artifactId>
-                <version>3.6.1</version>
-                <executions>
-                    <execution>
-                        <id>add-jmh-source</id>
-                        <phase>generate-sources</phase>
-                        <goals>
-                            <goal>add-source</goal>
-                        </goals>
-                        <configuration>
-                            <sources>
-                                <source>src/jmh/java</source>
-                            </sources>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-shade-plugin</artifactId>
-                <version>3.6.0</version>
-
-                <executions>
-                    <execution>
-                        <phase>package</phase>
-
-                        <goals>
-                            <goal>shade</goal>
-                        </goals>
-
-                        <configuration>
-                            <finalName>benchmarks</finalName>
-
-                            <transformers>
-                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                    <mainClass>org.openjdk.jmh.Main</mainClass>
-                                </transformer>
-                            </transformers>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-
-            <!-- Maven Central -->
+            <!-- ==================================================== -->
+            <!-- Maven Central                                        -->
+            <!-- ==================================================== -->
             <plugin>
                 <groupId>org.sonatype.central</groupId>
                 <artifactId>central-publishing-maven-plugin</artifactId>
-                <version>0.11.0</version>
-
+                <version>
+                    ${central-publishing-maven-plugin.version}
+                </version>
                 <extensions>true</extensions>
-
                 <configuration>
                     <publishingServerId>central</publishingServerId>
-
                     <!--
                         false:
-                        Upload and validate, then manually publish
-                        from Central Portal.
+                            Upload and validate the deployment bundle,
+                            then manually publish it from Central Portal.
                     -->
                     <autoPublish>false</autoPublish>
                 </configuration>
             </plugin>
-
         </plugins>
     </build>
+
+    <!-- ============================================================ -->
+    <!-- Profiles                                                     -->
+    <!-- ============================================================ -->
+    <profiles>
+        <!-- ======================================================== -->
+        <!-- Benchmark Profile                                        -->
+        <!--                                                         -->
+        <!-- Enable with:                                             -->
+        <!--                                                          -->
+        <!--     mvn clean package -Pbenchmark                        -->
+        <!--                                                          -->
+        <!-- JMH and linq-in-java are completely excluded from        -->
+        <!-- normal builds.                                           -->
+        <!-- ======================================================== -->
+        <profile>
+            <id>benchmark</id>
+            <!-- ==================================================== -->
+            <!-- Benchmark Dependencies                               -->
+            <!-- ==================================================== -->
+            <dependencies>
+                <!-- LINQ implementation used only for performance comparison. -->
+                <dependency>
+                    <groupId>io.github.piscescup</groupId>
+                    <artifactId>linq-in-java</artifactId>
+                    <version>${linq-in-java.version}</version>
+                </dependency>
+
+                <!-- JMH Core -->
+                <dependency>
+                    <groupId>org.openjdk.jmh</groupId>
+                    <artifactId>jmh-core</artifactId>
+                    <version>${jmh.version}</version>
+                </dependency>
+
+                <!-- JMH Annotation Processor -->
+                <dependency>
+                    <groupId>org.openjdk.jmh</groupId>
+                    <artifactId>jmh-generator-annprocess</artifactId>
+                    <version>${jmh.version}</version>
+                    <scope>provided</scope>
+                </dependency>
+            </dependencies>
+
+            <!-- ==================================================== -->
+            <!-- Benchmark Build                                      -->
+            <!-- ==================================================== -->
+
+            <build>
+                <plugins>
+                    <!-- ============================================ -->
+                    <!-- Add src/jmh/java as benchmark source          -->
+                    <!-- ============================================ -->
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>build-helper-maven-plugin</artifactId>
+                        <version>
+                            ${build-helper-maven-plugin.version}
+                        </version>
+                        <executions>
+                            <execution>
+                                <id>add-jmh-source</id>
+                                <phase>generate-sources</phase>
+                                <goals>
+                                    <goal>add-source</goal>
+                                </goals>
+                                <configuration>
+                                    <sources>
+                                        <source>${project.basedir}/src/jmh/java</source>
+                                    </sources>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+
+                    <!-- ============================================ -->
+                    <!-- JMH Annotation Processor                      -->
+                    <!-- ============================================ -->
+
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-compiler-plugin</artifactId>
+                        <version>
+                            ${maven-compiler-plugin.version}
+                        </version>
+
+                        <configuration>
+                            <!-- Explicitly enable annotation processing.Especially important for modern JDKs. -->
+                            <proc>full</proc>
+                            <annotationProcessorPaths>
+                                <path>
+                                    <groupId>org.openjdk.jmh</groupId>
+                                    <artifactId>
+                                        jmh-generator-annprocess
+                                    </artifactId>
+                                    <version>
+                                        ${jmh.version}
+                                    </version>
+                                </path>
+                            </annotationProcessorPaths>
+                        </configuration>
+                    </plugin>
+
+
+                    <!-- ============================================ -->
+                    <!-- Benchmark executable JAR                      -->
+                    <!-- ============================================ -->
+
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-shade-plugin</artifactId>
+                        <version>
+                            ${maven-shade-plugin.version}
+                        </version>
+
+                        <executions>
+                            <execution>
+                                <id>benchmark-jar</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>shade</goal>
+                                </goals>
+                                <configuration>
+                                    <!-- Keep the normal linq-for-java JAR. Benchmark is attached as another artifact instead of replacing the main JAR. -->
+                                    <shadedArtifactAttached>
+                                        true
+                                    </shadedArtifactAttached>
+
+                                    <shadedClassifierName>
+                                        benchmarks
+                                    </shadedClassifierName>
+                                    <!-- Prevent Maven Shade Plugin from generating a modified dependency-reduced POM. -->
+                                    <createDependencyReducedPom>
+                                        false
+                                    </createDependencyReducedPom>
+
+                                    <!-- JMH executable entry point. -->
+                                    <transformers>
+                                        <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                            <mainClass>org.openjdk.jmh.Main</mainClass>
+                                        </transformer>
+                                    </transformers>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 
 </project>
