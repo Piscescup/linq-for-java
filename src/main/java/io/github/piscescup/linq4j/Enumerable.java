@@ -387,6 +387,112 @@ public interface Enumerable<T>
 
     /**
      * <p>
+     * Applies an accumulator function to the elements of this sequence grouped
+     * according to a specified key selector. The specified seed value is used as
+     * the initial accumulator value for each key, and the specified hash equality
+     * function is used to compare and hash keys.
+     * </p>
+     *
+     * <p>
+     * The returned sequence contains one {@link Pair} for each distinct key,
+     * where the key is the group key and the value is the final accumulated value.
+     * This operation uses deferred execution.
+     * </p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * record Order(String category, int quantity) {}
+     *
+     * Enumerable<Order> orders = Linq.of(
+     *     new Order("fruit", 2),
+     *     new Order("book", 1),
+     *     new Order("fruit", 3)
+     * );
+     *
+     * Enumerable<Pair<String, Integer>> totals = orders.aggregateBy(
+     *     Order::category,
+     *     0,
+     *     (total, order) -> total + order.quantity(),
+     *     HashEqualator.defaultHashEqualator()
+     * );
+     *
+     * totals.forEach(System.out::println);
+     *
+     * // This code produces values equivalent to:
+     * //
+     * // fruit=5
+     * // book=1
+     * }</pre>
+     *
+     * @param keySelector The function used to extract a key from each element.
+     * @param seed The initial accumulator value for each distinct key.
+     * @param aggregator The accumulator function to be invoked on each element.
+     * @param keyEqualator The hash equality function used to compare and hash keys.
+     * @return An {@code Enumerable<Pair<K, A>>} containing each distinct key
+     *     and its final accumulated value.
+     * @param <K> The type of the key.
+     * @param <A> The type of the accumulator value.
+     */
+    <K, A> @NotNull Enumerable<Pair<K, A>> aggregateByInHash(
+        @NotNull Function<? super T, ? extends K> keySelector,
+        @NotNull A seed,
+        @NotNull BinFunction<? super A, ? super T, ? extends A> aggregator,
+        @NotNull HashEqualator<? super K> keyEqualator
+    );
+
+    /**
+     * <p>
+     * Applies an accumulator function to the elements of this sequence grouped
+     * according to a specified key selector. The initial accumulator value for
+     * each key is produced by the specified seed selector, and the specified hash
+     * equality function is used to compare and hash keys.
+     * </p>
+     *
+     * <p>
+     * The returned sequence contains one {@link Pair} for each distinct key,
+     * where the key is the group key and the value is the final accumulated value.
+     * This operation uses deferred execution.
+     * </p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * record Order(String category, int quantity) {}
+     *
+     * Enumerable<Order> orders = Linq.of(
+     *     new Order("fruit", 2),
+     *     new Order("book", 1),
+     *     new Order("fruit", 3)
+     * );
+     *
+     * Enumerable<Pair<String, Integer>> totals = orders.aggregateBy(
+     *     Order::category,
+     *     key -> 0,
+     *     (total, order) -> total + order.quantity(),
+     *     HashEqualator.defaultHashEqualator()
+     * );
+     *
+     * totals.forEach(System.out::println);
+     * }</pre>
+     *
+     * @param keySelector The function used to extract a key from each element.
+     * @param seedSelector The function used to produce the initial accumulator
+     *     value for each distinct key.
+     * @param aggregator The accumulator function to be invoked on each element.
+     * @param keyEqualator The hash equality function used to compare and hash keys.
+     * @return An {@code Enumerable<Pair<K, A>>} containing each distinct key
+     *     and its final accumulated value.
+     * @param <K> The type of the key.
+     * @param <A> The type of the accumulator value.
+     */
+    <K, A> @NotNull Enumerable<Pair<K, A>> aggregateByInHash(
+        @NotNull Function<? super T, ? extends K> keySelector,
+        @NotNull Function<? super K, ? extends A> seedSelector,
+        @NotNull BinFunction<? super A, ? super T, ? extends A> aggregator,
+        @NotNull HashEqualator<? super K> keyEqualator
+    );
+
+    /**
+     * <p>
      * Determines whether all elements of a sequence satisfy a specified condition.
      * </p>
      *
@@ -1045,6 +1151,53 @@ public interface Enumerable<T>
 
     /**
      * <p>
+     * Counts the number of elements in this sequence associated with each
+     * distinct key. The specified hash equality function is used to compare
+     * and hash keys.
+     * </p>
+     *
+     * <p>
+     * The returned sequence contains one {@link Pair} for each distinct key,
+     * where the value represents the number of elements associated with that key.
+     * This operation uses deferred execution.
+     * </p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<String> fruits = Linq.of(
+     *     "apple",
+     *     "apricot",
+     *     "banana",
+     *     "blueberry",
+     *     "cherry"
+     * );
+     *
+     * Enumerable<Pair<Character, Integer>> counts = fruits.countBy(
+     *     fruit -> fruit.charAt(0),
+     *     HashEqualator.defaultHashEqualator()
+     * );
+     *
+     * counts.forEach(System.out::println);
+     *
+     * // a=2
+     * // b=2
+     * // c=1
+     * }</pre>
+     *
+     * @param keySelector The function used to extract a key from each element.
+     * @param keyEqualator The hash equality function used to compare and hash keys.
+     * @return An {@code Enumerable<Pair<K, Integer>>} containing each distinct
+     *     key and the number of elements associated with it.
+     * @param <K> The type of the key.
+     */
+    <K> @NotNull Enumerable<Pair<K, Integer>> countByInHash(
+        @NotNull Function<? super T, ? extends K> keySelector,
+        @NotNull HashEqualator<? super K> keyEqualator
+    );
+
+
+    /**
+     * <p>
      * Returns the elements of this sequence, or a singleton sequence containing
      * the specified default value if the sequence is empty.
      * </p>
@@ -1142,6 +1295,45 @@ public interface Enumerable<T>
 
     /**
      * <p>
+     * Returns distinct elements from this sequence by using the specified hash
+     * equality function to compare and hash values.
+     * </p>
+     *
+     * <p>
+     * The resulting sequence contains no duplicate elements according to the
+     * specified {@link HashEqualator}. This operation uses deferred execution.
+     * </p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * record Product(String name, int code) {}
+     *
+     * Enumerable<Product> products = Linq.of(
+     *     new Product("apple", 9),
+     *     new Product("orange", 4),
+     *     new Product("apple", 9),
+     *     new Product("lemon", 12)
+     * );
+     *
+     * Enumerable<Product> distinctProducts = products.distinct(
+     *     HashEqualator.comparing(Product::name)
+     * );
+     *
+     * distinctProducts.forEach(System.out::println);
+     *
+     * // Products with the same name are considered equal.
+     * }</pre>
+     *
+     * @param equalator The hash equality function used to compare and hash elements.
+     * @return An {@code Enumerable<T>} that contains the distinct elements
+     *     from this sequence.
+     */
+    @NotNull Enumerable<T> distinctInHash(
+        @NotNull HashEqualator<? super T> equalator
+    );
+
+    /**
+     * <p>
      * Returns distinct elements from this sequence according to the specified
      * key selector function.
      * </p>
@@ -1235,6 +1427,50 @@ public interface Enumerable<T>
         @NotNull Function<? super T, ? extends K> keySelector,
         @Nullable Equalator<? super K> keyEqualator
     );
+
+    /**
+     * <p>
+     * Returns distinct elements from this sequence according to a specified key
+     * selector and hash equality function.
+     * </p>
+     *
+     * <p>
+     * The key selector is used to extract a key from each element, and the
+     * specified {@link HashEqualator} is used to compare and hash those keys.
+     * Only the first element associated with each distinct key is returned.
+     * This operation uses deferred execution.
+     * </p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * record Product(String name, int code) {}
+     *
+     * Enumerable<Product> products = Linq.of(
+     *     new Product("apple", 1),
+     *     new Product("orange", 2),
+     *     new Product("apple", 3),
+     *     new Product("lemon", 4)
+     * );
+     *
+     * Enumerable<Product> result = products.distinctBy(
+     *     Product::name,
+     *     HashEqualator.defaultHashEqualator()
+     * );
+     *
+     * result.forEach(System.out::println);
+     * }</pre>
+     *
+     * @param keySelector The function used to extract the comparison key from
+     *     each element.
+     * @param keyEqualator The hash equality function used to compare and hash keys.
+     * @return An {@code Enumerable<T>} containing elements with distinct keys.
+     * @param <K> The type of the key.
+     */
+    <K> @NotNull Enumerable<T> distinctByInHash(
+        @NotNull Function<? super T, ? extends K> keySelector,
+        @NotNull HashEqualator<? super K> keyEqualator
+    );
+
 
 
     /**
@@ -1471,6 +1707,46 @@ public interface Enumerable<T>
 
     /**
      * <p>
+     * Produces the set difference of this sequence and another sequence by using
+     * the specified hash equality function to compare and hash values.
+     * </p>
+     *
+     * <p>
+     * The resulting sequence contains distinct elements from this sequence that
+     * do not occur in {@code other}. This operation uses deferred execution.
+     * </p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<String> first =
+     *     Linq.of("apple", "orange", "lemon");
+     *
+     * Enumerable<String> second =
+     *     Linq.of("orange");
+     *
+     * Enumerable<String> result = first.except(
+     *     second,
+     *     StringEqualators.ORDINAL_IGNORE_CASE
+     * );
+     *
+     * result.forEach(System.out::println);
+     *
+     * // apple
+     * // lemon
+     * }</pre>
+     *
+     * @param other The sequence whose elements are excluded from this sequence.
+     * @param equalator The hash equality function used to compare and hash elements.
+     * @return An {@code Enumerable<T>} containing the set difference of the two
+     *     sequences.
+     */
+    @NotNull Enumerable<T> exceptInHash(
+        @NotNull Enumerable<? extends T> other,
+        @NotNull HashEqualator<? super T> equalator
+    );
+
+    /**
+     * <p>
      * Produces the set difference of two sequences according to a specified
      * key selector function.
      * </p>
@@ -1588,6 +1864,53 @@ public interface Enumerable<T>
         @NotNull Function<? super T, ? extends K> keySelector,
         @Nullable Equalator<? super K> equalator
     );
+
+    /**
+     * <p>
+     * Produces the set difference of this sequence and a sequence of keys
+     * according to a specified key selector and hash equality function.
+     * </p>
+     *
+     * <p>
+     * Elements whose selected keys occur in {@code other} are excluded from the
+     * result. Duplicate result keys are also removed according to the specified
+     * {@link HashEqualator}. This operation uses deferred execution.
+     * </p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * record Product(String name, int code) {}
+     *
+     * Enumerable<Product> products = Linq.of(
+     *     new Product("apple", 1),
+     *     new Product("orange", 2),
+     *     new Product("lemon", 3)
+     * );
+     *
+     * Enumerable<Integer> excludedCodes = Linq.of(2);
+     *
+     * Enumerable<Product> result = products.exceptBy(
+     *     excludedCodes,
+     *     Product::code,
+     *     HashEqualator.defaultHashEqualator()
+     * );
+     *
+     * result.forEach(System.out::println);
+     * }</pre>
+     *
+     * @param other The sequence of keys to exclude.
+     * @param keySelector The function used to extract a key from each element.
+     * @param equalator The hash equality function used to compare and hash keys.
+     * @return An {@code Enumerable<T>} containing elements whose keys do not
+     *     occur in {@code other}.
+     * @param <K> The type of the key.
+     */
+    <K> @NotNull Enumerable<T> exceptByInHash(
+        @NotNull Enumerable<? extends K> other,
+        @NotNull Function<? super T, ? extends K> keySelector,
+        @NotNull HashEqualator<? super K> equalator
+    );
+
 
     /**
      * <p>Returns the first element in the sequence.</p>
@@ -1916,6 +2239,97 @@ public interface Enumerable<T>
     );
 
     /**
+     * <p>
+     * Groups the elements of this sequence according to a specified key selector
+     * and hash equality function.
+     * </p>
+     *
+     * <p>
+     * The specified {@link HashEqualator} is used to compare and hash group keys.
+     * The elements in each group retain their order in the source sequence.
+     * This operation uses deferred execution.
+     * </p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * record Product(String name, String category) {}
+     *
+     * Enumerable<Product> products = Linq.of(
+     *     new Product("apple", "fruit"),
+     *     new Product("orange", "fruit"),
+     *     new Product("book", "other")
+     * );
+     *
+     * Enumerable<Groupable<String, Product>> groups = products.groupBy(
+     *     Product::category,
+     *     HashEqualator.defaultHashEqualator()
+     * );
+     *
+     * groups.forEach(group ->
+     *     System.out.println(
+     *         group.getGroupKey() + ": " + group.getGroupElements()
+     *     )
+     * );
+     * }</pre>
+     *
+     * @param keySelector The function used to extract the key for each element.
+     * @param equalator The hash equality function used to compare and hash group keys.
+     * @return An {@code Enumerable<Groupable<K, T>>} containing the groups
+     *     produced from this sequence.
+     * @param <K> The type of the key.
+     */
+    <K> @NotNull Enumerable<Groupable<K, T>> groupByInHash(
+        @NotNull Function<? super T, ? extends K> keySelector,
+        @NotNull HashEqualator<? super K> equalator
+    );
+
+    /**
+     * <p>
+     * Groups the elements of this sequence according to a specified key selector
+     * and projects the elements of each group by using a specified element
+     * selector.
+     * </p>
+     *
+     * <p>
+     * The specified {@link HashEqualator} is used to compare and hash group keys.
+     * The elements in each group retain their order in the source sequence.
+     * This operation uses deferred execution.
+     * </p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * record Product(String name, String category) {}
+     *
+     * Enumerable<Product> products = Linq.of(
+     *     new Product("apple", "fruit"),
+     *     new Product("orange", "fruit"),
+     *     new Product("book", "other")
+     * );
+     *
+     * Enumerable<Groupable<String, String>> groups = products.groupBy(
+     *     Product::category,
+     *     Product::name,
+     *     HashEqualator.defaultHashEqualator()
+     * );
+     * }</pre>
+     *
+     * @param keySelector The function used to extract the key for each element.
+     * @param elementSelector The function used to transform each source element
+     *     into an element of its group.
+     * @param equalator The hash equality function used to compare and hash group keys.
+     * @return An {@code Enumerable<Groupable<K, E>>} containing the groups
+     *     produced from this sequence.
+     * @param <K> The type of the key.
+     * @param <E> The type of the elements contained in each group.
+     */
+    <K, E> @NotNull Enumerable<Groupable<K, E>> groupByInHash(
+        @NotNull Function<? super T, ? extends K> keySelector,
+        @NotNull Function<? super T, ? extends E> elementSelector,
+        @NotNull HashEqualator<? super K> equalator
+    );
+
+
+    /**
      * <p>Groups the elements of the sequence according to a specified
      * key selector function and creates a result value from each group
      * and its key.</p>
@@ -1936,7 +2350,7 @@ public interface Enumerable<T>
      */
     <K, R> Enumerable<R> groupToResult(
         @NotNull Function<? super T, ? extends K> keySelector,
-        @Nullable BinFunction<? super K, ? super Enumerable<T>, ? extends R> resultSelector
+        @NotNull BinFunction<? super K, ? super Enumerable<T>, ? extends R> resultSelector
     );
 
     /**
@@ -2030,6 +2444,99 @@ public interface Enumerable<T>
         @NotNull Function<? super T, ? extends E> elementSelector,
         @NotNull BinFunction<? super K, ? super Enumerable<E>, ? extends R> resultSelector,
         @Nullable Equalator<? super K> equalator
+    );
+
+    /**
+     * <p>
+     * Groups the elements of this sequence according to a specified key selector
+     * and creates a result value from each group.
+     * </p>
+     *
+     * <p>
+     * The specified {@link HashEqualator} is used to compare and hash group keys.
+     * The result selector receives each distinct key and the sequence of elements
+     * associated with that key. This operation uses deferred execution.
+     * </p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * record Product(String name, String category) {}
+     *
+     * Enumerable<Product> products = Linq.of(
+     *     new Product("apple", "fruit"),
+     *     new Product("orange", "fruit"),
+     *     new Product("book", "other")
+     * );
+     *
+     * Enumerable<String> result = products.groupToResult(
+     *     Product::category,
+     *     (category, group) ->
+     *         category + ": " + group.count(),
+     *     HashEqualator.defaultHashEqualator()
+     * );
+     * }</pre>
+     *
+     * @param keySelector The function used to extract the key for each element.
+     * @param resultSelector The function used to create a result value from each
+     *     key and group.
+     * @param equalator The hash equality function used to compare and hash group keys.
+     * @return An {@code Enumerable<R>} containing one result for each group.
+     * @param <K> The type of the key.
+     * @param <R> The type of the resulting value.
+     */
+    <K, R> @NotNull Enumerable<R> groupToResultInHash(
+        @NotNull Function<? super T, ? extends K> keySelector,
+        @NotNull BinFunction<? super K, ? super Enumerable<T>, ? extends R> resultSelector,
+        @NotNull HashEqualator<? super K> equalator
+    );
+
+    /**
+     * <p>
+     * Groups the elements of this sequence according to a specified key selector,
+     * projects each source element by using an element selector, and creates a
+     * result value from each group.
+     * </p>
+     *
+     * <p>
+     * The specified {@link HashEqualator} is used to compare and hash group keys.
+     * This operation uses deferred execution.
+     * </p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * record Product(String name, String category) {}
+     *
+     * Enumerable<Product> products = Linq.of(
+     *     new Product("apple", "fruit"),
+     *     new Product("orange", "fruit"),
+     *     new Product("book", "other")
+     * );
+     *
+     * Enumerable<String> result = products.groupToResult(
+     *     Product::category,
+     *     Product::name,
+     *     (category, names) ->
+     *         category + ": " + names.toList(),
+     *     HashEqualator.defaultHashEqualator()
+     * );
+     * }</pre>
+     *
+     * @param keySelector The function used to extract the key for each element.
+     * @param elementSelector The function used to transform each source element
+     *     into an element of its group.
+     * @param resultSelector The function used to create a result value from each
+     *     key and group.
+     * @param equalator The hash equality function used to compare and hash group keys.
+     * @return An {@code Enumerable<R>} containing one result for each group.
+     * @param <K> The type of the key.
+     * @param <E> The type of the elements contained in each group.
+     * @param <R> The type of the resulting value.
+     */
+    <K, E, R> @NotNull Enumerable<R> groupToResultInHash(
+        @NotNull Function<? super T, ? extends K> keySelector,
+        @NotNull Function<? super T, ? extends E> elementSelector,
+        @NotNull BinFunction<? super K, ? super Enumerable<E>, ? extends R> resultSelector,
+        @NotNull HashEqualator<? super K> equalator
     );
 
     /**
@@ -2154,6 +2661,66 @@ public interface Enumerable<T>
     );
 
     /**
+     * <p>
+     * Correlates the elements of this sequence with groups of matching elements
+     * from another sequence according to specified key selector functions.
+     * </p>
+     *
+     * <p>
+     * The specified {@link HashEqualator} is used to compare and hash keys.
+     * For every element in this sequence, the result selector receives that
+     * element and an enumerable containing all matching elements from the inner
+     * sequence. This operation uses deferred execution.
+     * </p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * record Department(int id, String name) {}
+     * record Employee(int departmentId, String name) {}
+     *
+     * Enumerable<Department> departments = Linq.of(
+     *     new Department(1, "Development"),
+     *     new Department(2, "Sales")
+     * );
+     *
+     * Enumerable<Employee> employees = Linq.of(
+     *     new Employee(1, "Alice"),
+     *     new Employee(1, "Bob"),
+     *     new Employee(2, "Charlie")
+     * );
+     *
+     * Enumerable<String> result = departments.groupJoin(
+     *     employees,
+     *     Department::id,
+     *     Employee::departmentId,
+     *     (department, members) ->
+     *         department.name() + ": " + members.count(),
+     *     HashEqualator.defaultHashEqualator()
+     * );
+     * }</pre>
+     *
+     * @param inner The sequence to join with this sequence.
+     * @param outerKeySelector The function used to extract a key from an element
+     *     of this sequence.
+     * @param innerKeySelector The function used to extract a key from an element
+     *     of the inner sequence.
+     * @param resultSelector The function used to create a result from each outer
+     *     element and its matching inner elements.
+     * @param equalator The hash equality function used to compare and hash keys.
+     * @return An {@code Enumerable<R>} containing the results of the grouped join.
+     * @param <K> The type of the key.
+     * @param <I> The type of the elements in the inner sequence.
+     * @param <R> The type of the resulting value.
+     */
+    <K, I, R> @NotNull Enumerable<R> groupJoinInHash(
+        @NotNull Enumerable<? extends I> inner,
+        @NotNull Function<? super T, ? extends K> outerKeySelector,
+        @NotNull Function<? super I, ? extends K> innerKeySelector,
+        @NotNull BinFunction<? super T, ? super Enumerable<I>, ? extends R> resultSelector,
+        @NotNull HashEqualator<? super K> equalator
+    );
+
+    /**
      * <p>Produces the set intersection of this sequence and another sequence
      * by using the default equality semantics to compare elements.</p>
      *
@@ -2220,6 +2787,46 @@ public interface Enumerable<T>
         @NotNull Enumerable<? extends T> second,
         @Nullable Equalator<? super T> equalator
     );
+
+    /**
+     * <p>
+     * Produces the set intersection of this sequence and another sequence by using
+     * the specified hash equality function to compare and hash values.
+     * </p>
+     *
+     * <p>
+     * The resulting sequence contains distinct elements that occur in both
+     * sequences. This operation uses deferred execution.
+     * </p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<String> first =
+     *     Linq.of("apple", "orange", "lemon");
+     *
+     * Enumerable<String> second =
+     *     Linq.of("ORANGE", "pear");
+     *
+     * Enumerable<String> result = first.intersect(
+     *     second,
+     *     StringEqualators.ORDINAL_IGNORE_CASE
+     * );
+     *
+     * result.forEach(System.out::println);
+     *
+     * // orange
+     * }</pre>
+     *
+     * @param other The sequence whose common elements are selected.
+     * @param equalator The hash equality function used to compare and hash elements.
+     * @return An {@code Enumerable<T>} containing the distinct elements that
+     *     occur in both sequences.
+     */
+    @NotNull Enumerable<T> intersectInHash(
+        @NotNull Enumerable<? extends T> other,
+        @NotNull HashEqualator<? super T> equalator
+    );
+
 
     /**
      * <p>Produces the set intersection of this sequence and another sequence
@@ -2321,6 +2928,50 @@ public interface Enumerable<T>
         @NotNull Enumerable<? extends K> second,
         @NotNull Function<? super T, ? extends K> keySelector,
         @Nullable Equalator<? super K> equalator
+    );
+
+    /**
+     * <p>
+     * Produces the set intersection of this sequence and a sequence of keys
+     * according to a specified key selector and hash equality function.
+     * </p>
+     *
+     * <p>
+     * Elements are returned when their selected keys occur in {@code other}.
+     * Each matching key is returned at most once according to the specified
+     * {@link HashEqualator}. This operation uses deferred execution.
+     * </p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * record Product(String name, int code) {}
+     *
+     * Enumerable<Product> products = Linq.of(
+     *     new Product("apple", 1),
+     *     new Product("orange", 2),
+     *     new Product("lemon", 3)
+     * );
+     *
+     * Enumerable<Integer> codes = Linq.of(1, 3);
+     *
+     * Enumerable<Product> result = products.intersectBy(
+     *     codes,
+     *     Product::code,
+     *     HashEqualator.defaultHashEqualator()
+     * );
+     * }</pre>
+     *
+     * @param other The sequence of keys used to determine the intersection.
+     * @param keySelector The function used to extract a key from each element.
+     * @param equalator The hash equality function used to compare and hash keys.
+     * @return An {@code Enumerable<T>} containing elements whose keys occur in
+     *     {@code other}.
+     * @param <K> The type of the key.
+     */
+    <K> @NotNull Enumerable<T> intersectByInHash(
+        @NotNull Enumerable<? extends K> other,
+        @NotNull Function<? super T, ? extends K> keySelector,
+        @NotNull HashEqualator<? super K> equalator
     );
 
     /**
@@ -2441,6 +3092,66 @@ public interface Enumerable<T>
         @NotNull BinFunction<? super T, ? super I, ? extends R> resultSelector,
         @Nullable Equalator<? super K> equalator
     );
+
+    /**
+     * <p>
+     * Correlates the elements of this sequence with the elements of another
+     * sequence according to matching keys.
+     * </p>
+     *
+     * <p>
+     * Keys are extracted using the specified key selector functions and are
+     * compared and hashed using the supplied {@link HashEqualator}. For every
+     * pair of elements whose keys are considered equal, the result selector is
+     * invoked to produce a result value. This operation uses deferred execution.
+     * </p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * record Person(int departmentId, String name) {}
+     * record Department(int id, String name) {}
+     *
+     * Enumerable<Person> people = Linq.of(
+     *     new Person(1, "Alice"),
+     *     new Person(2, "Bob")
+     * );
+     *
+     * Enumerable<Department> departments = Linq.of(
+     *     new Department(1, "Development"),
+     *     new Department(2, "Sales")
+     * );
+     *
+     * Enumerable<String> result = people.join(
+     *     departments,
+     *     Person::departmentId,
+     *     Department::id,
+     *     (person, department) ->
+     *         person.name() + " - " + department.name(),
+     *     HashEqualator.defaultHashEqualator()
+     * );
+     * }</pre>
+     *
+     * @param inner The sequence to join with this sequence.
+     * @param outerKeySelector The function used to extract a key from an element
+     *     of this sequence.
+     * @param innerKeySelector The function used to extract a key from an element
+     *     of the inner sequence.
+     * @param resultSelector The function used to create a result from each pair
+     *     of matching elements.
+     * @param equalator The hash equality function used to compare and hash keys.
+     * @return An {@code Enumerable<R>} containing the results of the join.
+     * @param <K> The type of the key.
+     * @param <I> The type of the elements in the inner sequence.
+     * @param <R> The type of the resulting value.
+     */
+    <K, I, R> @NotNull Enumerable<R> joinInhash(
+        @NotNull Enumerable<? extends I> inner,
+        @NotNull Function<? super T, ? extends K> outerKeySelector,
+        @NotNull Function<? super I, ? extends K> innerKeySelector,
+        @NotNull BinFunction<? super T, ? super I, ? extends R> resultSelector,
+        @NotNull HashEqualator<? super K> equalator
+    );
+
 
     /**
      * <p>Returns the last element of a sequence.</p>
@@ -2911,6 +3622,109 @@ public interface Enumerable<T>
         @NotNull Function<? super T, ? extends K> outerKeySelector,
         @NotNull Function<? super I, ? extends K> innerKeySelector,
         @NotNull Equalator<? super K> equalator
+    );
+
+    /**
+     * <p>
+     * Performs a left outer join between this sequence and another sequence
+     * according to specified key selector functions.
+     * </p>
+     *
+     * <p>
+     * Keys are compared and hashed using the specified {@link HashEqualator}.
+     * Every element from this sequence is represented in the result. If no
+     * matching inner element exists, the result selector is invoked with a
+     * {@code null} inner element. This operation uses deferred execution.
+     * </p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * record Person(int departmentId, String name) {}
+     * record Department(int id, String name) {}
+     *
+     * Enumerable<Person> people = Linq.of(
+     *     new Person(1, "Alice"),
+     *     new Person(3, "Bob")
+     * );
+     *
+     * Enumerable<Department> departments = Linq.of(
+     *     new Department(1, "Development")
+     * );
+     *
+     * Enumerable<String> result = people.leftJoin(
+     *     departments,
+     *     Person::departmentId,
+     *     Department::id,
+     *     (person, department) ->
+     *         person.name() + " - "
+     *             + (department == null ? "None" : department.name()),
+     *     HashEqualator.defaultHashEqualator()
+     * );
+     * }</pre>
+     *
+     * @param inner The inner sequence to join with this sequence.
+     * @param outerKeySelector The function used to extract a key from an element
+     *     of this sequence.
+     * @param innerKeySelector The function used to extract a key from an element
+     *     of the inner sequence.
+     * @param resultSelector The function used to create each result value.
+     * @param equalator The hash equality function used to compare and hash keys.
+     * @return An {@code Enumerable<R>} containing the results of the left join.
+     * @param <K> The type of the key.
+     * @param <I> The type of the elements in the inner sequence.
+     * @param <R> The type of the resulting value.
+     */
+    <K, I, R> @NotNull Enumerable<R> leftJoinInHash(
+        @NotNull Enumerable<? extends I> inner,
+        @NotNull Function<? super T, ? extends K> outerKeySelector,
+        @NotNull Function<? super I, ? extends K> innerKeySelector,
+        @NotNull BinFunction<? super T, @Nullable I, ? extends R> resultSelector,
+        @NotNull HashEqualator<? super K> equalator
+    );
+
+    /**
+     * <p>
+     * Performs a left outer join between this sequence and another sequence
+     * according to specified key selector functions.
+     * </p>
+     *
+     * <p>
+     * Keys are compared and hashed using the specified {@link HashEqualator}.
+     * Each result is represented as a {@link Pair} containing the outer element
+     * and a matching inner element. If no matching inner element exists, the
+     * second value of the pair is {@code null}. This operation uses deferred
+     * execution.
+     * </p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * record Person(int departmentId, String name) {}
+     * record Department(int id, String name) {}
+     *
+     * Enumerable<Pair<Person, @Nullable Department>> result = people.leftJoin(
+     *     departments,
+     *     Person::departmentId,
+     *     Department::id,
+     *     HashEqualator.defaultHashEqualator()
+     * );
+     * }</pre>
+     *
+     * @param inner The inner sequence to join with this sequence.
+     * @param outerKeySelector The function used to extract a key from an element
+     *     of this sequence.
+     * @param innerKeySelector The function used to extract a key from an element
+     *     of the inner sequence.
+     * @param equalator The hash equality function used to compare and hash keys.
+     * @return An enumerable containing pairs of outer elements and their matching
+     *     inner elements.
+     * @param <K> The type of the key.
+     * @param <I> The type of the elements in the inner sequence.
+     */
+    <K, I> @NotNull Enumerable<Pair<T, @Nullable I>> leftJoinInHash(
+        @NotNull Enumerable<? extends I> inner,
+        @NotNull Function<? super T, ? extends K> outerKeySelector,
+        @NotNull Function<? super I, ? extends K> innerKeySelector,
+        @NotNull HashEqualator<? super K> equalator
     );
 
     /**
@@ -4254,7 +5068,7 @@ public interface Enumerable<T>
      */
     @NotNull
     <I, K, R> Enumerable<R> rightJoin(
-        @NotNull Iterable<? extends I> inner,
+        @NotNull Enumerable<? extends I> inner,
         @NotNull Function<? super T, ? extends K> outerKeySelector,
         @NotNull Function<? super I, ? extends K> innerKeySelector,
         @NotNull BinFunction<? super T, ? super I, ? extends R> resultSelector
@@ -4325,11 +5139,69 @@ public interface Enumerable<T>
      */
     @NotNull
     <I, K, R> Enumerable<R> rightJoin(
-        @NotNull Iterable<? extends I> inner,
+        @NotNull Enumerable<? extends I> inner,
         @NotNull Function<? super T, ? extends K> outerKeySelector,
         @NotNull Function<? super I, ? extends K> innerKeySelector,
         @NotNull BinFunction<? super T, ? super I, ? extends R> resultSelector,
         @NotNull Equalator<? super K> equalator
+    );
+
+    /**
+     * <p>
+     * Performs a right outer join between this sequence and another sequence
+     * according to specified key selector functions.
+     * </p>
+     *
+     * <p>
+     * Keys are compared and hashed using the specified {@link HashEqualator}.
+     * Every element from the inner sequence is represented in the result. If no
+     * matching element from this sequence exists, the result selector is invoked
+     * with a {@code null} outer element. This operation uses deferred execution.
+     * </p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * record Person(int departmentId, String name) {}
+     * record Department(int id, String name) {}
+     *
+     * Enumerable<Person> people = Linq.of(
+     *     new Person(1, "Alice")
+     * );
+     *
+     * List<Department> departments = List.of(
+     *     new Department(1, "Development"),
+     *     new Department(2, "Sales")
+     * );
+     *
+     * Enumerable<String> result = people.rightJoin(
+     *     departments,
+     *     Person::departmentId,
+     *     Department::id,
+     *     (person, department) ->
+     *         (person == null ? "None" : person.name())
+     *             + " - " + department.name(),
+     *     HashEqualator.defaultHashEqualator()
+     * );
+     * }</pre>
+     *
+     * @param inner The inner sequence participating in the join.
+     * @param outerKeySelector The function used to extract a key from an element
+     *     of this sequence.
+     * @param innerKeySelector The function used to extract a key from an element
+     *     of the inner sequence.
+     * @param resultSelector The function used to create each result value.
+     * @param equalator The hash equality function used to compare and hash keys.
+     * @return An {@code Enumerable<R>} containing the results of the right join.
+     * @param <I> The type of the elements in the inner sequence.
+     * @param <K> The type of the key.
+     * @param <R> The type of the resulting value.
+     */
+    <I, K, R> @NotNull Enumerable<R> rightJoinInHash(
+        @NotNull Enumerable<? extends I> inner,
+        @NotNull Function<? super T, ? extends K> outerKeySelector,
+        @NotNull Function<? super I, ? extends K> innerKeySelector,
+        @NotNull BinFunction<? super T, ? super I, ? extends R> resultSelector,
+        @NotNull HashEqualator<? super K> equalator
     );
 
     /**
@@ -5285,6 +6157,95 @@ public interface Enumerable<T>
     );
 
     /**
+     * <p>
+     * Produces the set union of this sequence and another sequence by using the
+     * specified hash equality function to compare and hash values.
+     * </p>
+     *
+     * <p>
+     * The resulting sequence contains the distinct elements from this sequence
+     * followed by distinct elements from {@code other} that have not already
+     * occurred. This operation uses deferred execution.
+     * </p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<String> first =
+     *     Linq.of("apple", "orange");
+     *
+     * Enumerable<String> second =
+     *     Linq.of("ORANGE", "lemon");
+     *
+     * Enumerable<String> result = first.union(
+     *     second,
+     *     StringEqualators.ORDINAL_IGNORE_CASE
+     * );
+     *
+     * result.forEach(System.out::println);
+     *
+     * // apple
+     * // orange
+     * // lemon
+     * }</pre>
+     *
+     * @param other The sequence whose elements are combined with this sequence.
+     * @param comparer The hash equality function used to compare and hash elements.
+     * @return An {@code Enumerable<T>} containing the distinct elements from both
+     *     sequences.
+     */
+    @NotNull Enumerable<T> unionInHash(
+        @NotNull Enumerable<? extends T> other,
+        @NotNull HashEqualator<? super T> comparer
+    );
+
+    /**
+     * <p>
+     * Produces the set union of this sequence and another sequence according to a
+     * specified key selector and hash equality function.
+     * </p>
+     *
+     * <p>
+     * Elements are considered duplicates when the keys produced by
+     * {@code keySelector} are considered equal by the specified
+     * {@link HashEqualator}. The first element associated with each distinct key
+     * is retained. This operation uses deferred execution.
+     * </p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * record Product(String name, int code) {}
+     *
+     * Enumerable<Product> first = Linq.of(
+     *     new Product("apple", 1),
+     *     new Product("orange", 2)
+     * );
+     *
+     * Enumerable<Product> second = Linq.of(
+     *     new Product("another orange", 2),
+     *     new Product("lemon", 3)
+     * );
+     *
+     * Enumerable<Product> result = first.unionBy(
+     *     second,
+     *     Product::code,
+     *     HashEqualator.defaultHashEqualator()
+     * );
+     * }</pre>
+     *
+     * @param second The sequence whose elements are combined with this sequence.
+     * @param keySelector The function used to extract a key from each element.
+     * @param comparer The hash equality function used to compare and hash keys.
+     * @return An {@code Enumerable<T>} containing elements with distinct keys
+     *     from both sequences.
+     * @param <K> The type of the key.
+     */
+    <K> @NotNull Enumerable<T> unionByInHash(
+        @NotNull Enumerable<? extends T> second,
+        @NotNull Function<? super T, ? extends K> keySelector,
+        @NotNull HashEqualator<? super K> comparer
+    );
+
+    /**
      * <p>Produces the set union of two sequences according to a specified key selector function.</p>
      * <b>Usage:</b>
      * <pre>{@code
@@ -5522,7 +6483,6 @@ public interface Enumerable<T>
      * }</pre>
      *
      * @param generator A function which produces a new array of the desired type and the provided length.
-     * @param <A> The element type of the resulting array.
      * @return An array that contains the elements from the input sequence.
      * @see #toArray()
      */
@@ -5611,7 +6571,7 @@ public interface Enumerable<T>
      *
      * @see #toMap(Function, Function)
      * @see #toMap(Function, Equalator)
-     * @see #toMap(Function, HashEqualator)
+     * @see #toMapInHash(Function, HashEqualator)
      */
     @NotNull
     default <K> Map<K, T> toMap(
@@ -5696,7 +6656,7 @@ public interface Enumerable<T>
      *
      * @see #toMap(Function)
      * @see #toMap(Function, Function, Equalator)
-     * @see #toMap(Function, Function, HashEqualator)
+     * @see #toMapInHash(Function, Function, HashEqualator)
      */
     @NotNull
     default <K, V> Map<K, V> toMap(
@@ -5785,7 +6745,7 @@ public interface Enumerable<T>
      *                               keys according to {@code comparer}
      *
      * @see #toMap(Function)
-     * @see #toMap(Function, HashEqualator)
+     * @see #toMapInHash(Function, HashEqualator)
      * @see #toMap(Function, Function, Equalator)
      */
     @NotNull
@@ -5878,7 +6838,7 @@ public interface Enumerable<T>
      *                               keys according to {@code comparer}
      *
      * @see #toMap(Function, Function)
-     * @see #toMap(Function, Function, HashEqualator)
+     * @see #toMapInHash(Function, Function, HashEqualator)
      * @see #toMap(Function, Equalator)
      */
     @NotNull
@@ -5974,10 +6934,10 @@ public interface Enumerable<T>
      *
      * @see #toMap(Function)
      * @see #toMap(Function, Equalator)
-     * @see #toMap(Function, Function, HashEqualator)
+     * @see #toMapInHash(Function, Function, HashEqualator)
      */
     @NotNull
-    default <K> Map<K, T> toMap(
+    default <K> Map<K, T> toMapInHash(
         @NotNull final Function<? super T, ? extends K> keySelector,
         @NotNull final HashEqualator<? super K> comparer
     ) {
@@ -6070,10 +7030,10 @@ public interface Enumerable<T>
      *
      * @see #toMap(Function, Function)
      * @see #toMap(Function, Function, Equalator)
-     * @see #toMap(Function, HashEqualator)
+     * @see #toMapInHash(Function, HashEqualator)
      */
     @NotNull
-    default <K, V> Map<K, V> toMap(
+    default <K, V> Map<K, V> toMapInHash(
         @NotNull final Function<? super T, ? extends K> keySelector,
         @NotNull final Function<? super T, ? extends V> elementSelector,
         @NotNull final HashEqualator<? super K> comparer
@@ -6506,7 +7466,6 @@ public interface Enumerable<T>
      * }</pre>
      *
      * @return A {@link Set} that contains elements from the input sequence.
-     * @see #toHashSet(Equalator)
      * @see #toUnmodifiableHashSet()
      */
     @NotNull
