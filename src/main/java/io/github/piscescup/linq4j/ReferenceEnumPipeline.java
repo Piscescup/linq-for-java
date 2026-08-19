@@ -157,12 +157,12 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
                 ? keyEqualator
                 : HashEqualator.defaultHashEqualator();
 
-        return new StatefulOp<T_OUT, Pair<K, A>>(this) {
+        return new StatefulOp<>(this) {
             @Override
             protected @NotNull Enumerator<Pair<K, A>> opWrapEnumerator(
                 @NotNull Enumerator<T_OUT> upstream
             ) {
-                return new PipelineEnumerator<T_OUT, Pair<K, A>>(upstream) {
+                return new PipelineEnumerator<>(upstream) {
                     private final Map<K, A> aggregates =
                         newOrderedEqualityMap(effectiveEqualator);
                     private Iterator<Map.Entry<K, A>> iterator;
@@ -231,12 +231,12 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
                 ? keyEqualator
                 : HashEqualator.defaultHashEqualator();
 
-        return new StatefulOp<T_OUT, Pair<K, A>>(this) {
+        return new StatefulOp<>(this) {
             @Override
             protected @NotNull Enumerator<Pair<K, A>> opWrapEnumerator(
                 @NotNull Enumerator<T_OUT> upstream
             ) {
-                return new PipelineEnumerator<T_OUT, Pair<K, A>>(upstream) {
+                return new PipelineEnumerator<>(upstream) {
                     private final Map<K, A> aggregates =
                         newOrderedEqualityMap(effectiveEqualator);
                     private Iterator<Map.Entry<K, A>> iterator;
@@ -302,12 +302,12 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
     /** {@inheritDoc} */
     @Override
     public final @NotNull Enumerable<T_OUT> append(T_OUT element) {
-        return new StatelessOp<T_OUT, T_OUT>(this) {
+        return new StatelessOp<>(this) {
             @Override
             protected @NotNull Enumerator<T_OUT> opWrapEnumerator(
                 @NotNull Enumerator<T_OUT> upstream
             ) {
-                return new PipelineEnumerator<T_OUT, T_OUT>(upstream) {
+                return new PipelineEnumerator<>(upstream) {
                     private boolean appended;
 
                     @Override
@@ -332,12 +332,12 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
     @Override
     public final <R> @NotNull Enumerable<R> cast(@NotNull Class<R> targetType) {
         NullCheck.requireNonNull(targetType, "targetType");
-        return new StatelessOp<T_OUT, R>(this) {
+        return new StatelessOp<>(this) {
             @Override
             protected @NotNull Enumerator<R> opWrapEnumerator(
                 @NotNull Enumerator<T_OUT> upstream
             ) {
-                return new PipelineEnumerator<T_OUT, R>(upstream) {
+                return new PipelineEnumerator<>(upstream) {
                     @Override
                     protected boolean moveNextCore() {
                         if (!upstream.moveNext()) {
@@ -358,12 +358,12 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
             throw new IllegalArgumentException("size must be greater than zero.");
         }
 
-        return new StatelessOp<T_OUT, Enumerable<T_OUT>>(this) {
+        return new StatelessOp<>(this) {
             @Override
             protected @NotNull Enumerator<Enumerable<T_OUT>> opWrapEnumerator(
                 @NotNull Enumerator<T_OUT> upstream
             ) {
-                return new PipelineEnumerator<T_OUT, Enumerable<T_OUT>>(upstream) {
+                return new PipelineEnumerator<>(upstream) {
                     @Override
                     protected boolean moveNextCore() {
                         List<T_OUT> chunk = new ArrayList<>(size);
@@ -388,12 +388,12 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
     ) {
         NullCheck.requireNonNull(after, "after");
 
-        return new StatelessOp<T_OUT, T_OUT>(this) {
+        return new StatelessOp<>(this) {
             @Override
             protected @NotNull Enumerator<T_OUT> opWrapEnumerator(
                 @NotNull Enumerator<T_OUT> upstream
             ) {
-                return new PipelineEnumerator<T_OUT, T_OUT>(upstream) {
+                return new PipelineEnumerator<>(upstream) {
                     private Enumerator<? extends T_OUT> second;
                     private boolean firstDone;
 
@@ -452,12 +452,12 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
                 ? keyEqualator
                 : HashEqualator.defaultHashEqualator();
 
-        return new StatefulOp<T_OUT, Pair<K, Integer>>(this) {
+        return new StatefulOp<>(this) {
             @Override
             protected @NotNull Enumerator<Pair<K, Integer>> opWrapEnumerator(
                 @NotNull Enumerator<T_OUT> upstream
             ) {
-                return new PipelineEnumerator<T_OUT, Pair<K, Integer>>(upstream) {
+                return new PipelineEnumerator<>(upstream) {
                     private final Map<K, Integer> counts =
                         newOrderedEqualityMap(effectiveEqualator);
                     private Iterator<Map.Entry<K, Integer>> iterator;
@@ -502,12 +502,12 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
     /** {@inheritDoc} */
     @Override
     public final @NotNull Enumerable<T_OUT> defaultIfEmpty(T_OUT defaultValue) {
-        return new StatelessOp<T_OUT, T_OUT>(this) {
+        return new StatelessOp<>(this) {
             @Override
             protected @NotNull Enumerator<T_OUT> opWrapEnumerator(
                 @NotNull Enumerator<T_OUT> upstream
             ) {
-                return new PipelineEnumerator<T_OUT, T_OUT>(upstream) {
+                return new PipelineEnumerator<>(upstream) {
                     private boolean checked;
                     private boolean yieldedDefault;
 
@@ -546,12 +546,12 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
     /** {@inheritDoc} */
     @Override
     public final @NotNull Enumerable<T_OUT> distinct() {
-        return new StatefulOp<T_OUT, T_OUT>(this) {
+        return new StatefulOp<>(this) {
             @Override
             protected @NotNull Enumerator<T_OUT> opWrapEnumerator(
                 @NotNull Enumerator<T_OUT> upstream
             ) {
-                return new PipelineEnumerator<T_OUT, T_OUT>(upstream) {
+                return new PipelineEnumerator<>(upstream) {
 
                     private final Set<T_OUT> seen = new HashSet<>();
 
@@ -583,12 +583,12 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
                 ? equalator
                 : HashEqualator.defaultHashEqualator();
 
-        return new StatefulOp<T_OUT, T_OUT>(this) {
+        return new StatefulOp<>(this) {
             @Override
             protected @NotNull Enumerator<T_OUT> opWrapEnumerator(
                 @NotNull Enumerator<T_OUT> upstream
             ) {
-                return new PipelineEnumerator<T_OUT, T_OUT>(upstream) {
+                return new PipelineEnumerator<>(upstream) {
                     private final Set<T_OUT> seen =
                         newEqualitySet(effectiveEqualator);
 
@@ -631,12 +631,12 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
                 ? keyEqualator
                 : HashEqualator.defaultHashEqualator();
 
-        return new StatefulOp<T_OUT, T_OUT>(this) {
+        return new StatefulOp<>(this) {
             @Override
             protected @NotNull Enumerator<T_OUT> opWrapEnumerator(
                 @NotNull Enumerator<T_OUT> upstream
             ) {
-                return new PipelineEnumerator<T_OUT, T_OUT>(upstream) {
+                return new PipelineEnumerator<>(upstream) {
                     private final Set<K> seenKeys =
                         newEqualitySet(effectiveEqualator);
 
@@ -679,12 +679,12 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
                 ? equalator
                 : HashEqualator.defaultHashEqualator();
 
-        return new StatefulOp<T_OUT, T_OUT>(this) {
+        return new StatefulOp<>(this) {
             @Override
             protected @NotNull Enumerator<T_OUT> opWrapEnumerator(
                 @NotNull Enumerator<T_OUT> upstream
             ) {
-                return new PipelineEnumerator<T_OUT, T_OUT>(upstream) {
+                return new PipelineEnumerator<>(upstream) {
                     private final Set<T_OUT> seen =
                         newEqualitySet(effectiveEqualator);
                     private boolean initialized;
@@ -746,12 +746,12 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
                 ? equalator
                 : HashEqualator.defaultHashEqualator();
 
-        return new StatefulOp<T_OUT, T_OUT>(this) {
+        return new StatefulOp<>(this) {
             @Override
             protected @NotNull Enumerator<T_OUT> opWrapEnumerator(
                 @NotNull Enumerator<T_OUT> upstream
             ) {
-                return new PipelineEnumerator<T_OUT, T_OUT>(upstream) {
+                return new PipelineEnumerator<>(upstream) {
                     private final Set<K> seenKeys =
                         newEqualitySet(effectiveEqualator);
                     private boolean initialized;
@@ -834,12 +834,12 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
                 ? equalator
                 : HashEqualator.defaultHashEqualator();
 
-        return new StatefulOp<T_OUT, Groupable<K, E>>(this) {
+        return new StatefulOp<>(this) {
             @Override
             protected @NotNull Enumerator<Groupable<K, E>> opWrapEnumerator(
                 @NotNull Enumerator<T_OUT> upstream
             ) {
-                return new PipelineEnumerator<T_OUT, Groupable<K, E>>(upstream) {
+                return new PipelineEnumerator<>(upstream) {
                     private final Map<K, List<E>> groups =
                         newOrderedEqualityMap(effectiveEqualator);
                     private Iterator<Map.Entry<K, List<E>>> iterator;
@@ -980,12 +980,12 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
                 ? equalator
                 : HashEqualator.defaultHashEqualator();
 
-        return new StatefulOp<T_OUT, R>(this) {
+        return new StatefulOp<>(this) {
             @Override
             protected @NotNull Enumerator<R> opWrapEnumerator(
                 @NotNull Enumerator<T_OUT> upstream
             ) {
-                return new PipelineEnumerator<T_OUT, R>(upstream) {
+                return new PipelineEnumerator<>(upstream) {
                     private final Map<K, List<I>> lookup =
                         newEqualityMap(effectiveEqualator);
                     private boolean initialized;
@@ -1055,12 +1055,12 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
                 ? equalator
                 : HashEqualator.defaultHashEqualator();
 
-        return new StatefulOp<T_OUT, T_OUT>(this) {
+        return new StatefulOp<>(this) {
             @Override
             protected @NotNull Enumerator<T_OUT> opWrapEnumerator(
                 @NotNull Enumerator<T_OUT> upstream
             ) {
-                return new PipelineEnumerator<T_OUT, T_OUT>(upstream) {
+                return new PipelineEnumerator<>(upstream) {
                     private final Set<T_OUT> remaining =
                         newEqualitySet(effectiveEqualator);
                     private boolean initialized;
@@ -1122,12 +1122,12 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
                 ? equalator
                 : HashEqualator.defaultHashEqualator();
 
-        return new StatefulOp<T_OUT, T_OUT>(this) {
+        return new StatefulOp<>(this) {
             @Override
             protected @NotNull Enumerator<T_OUT> opWrapEnumerator(
                 @NotNull Enumerator<T_OUT> upstream
             ) {
-                return new PipelineEnumerator<T_OUT, T_OUT>(upstream) {
+                return new PipelineEnumerator<>(upstream) {
                     private final Set<K> remainingKeys =
                         newEqualitySet(effectiveEqualator);
                     private boolean initialized;
@@ -1195,12 +1195,12 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
                 ? equalator
                 : HashEqualator.defaultHashEqualator();
 
-        return new StatefulOp<T_OUT, R>(this) {
+        return new StatefulOp<>(this) {
             @Override
             protected @NotNull Enumerator<R> opWrapEnumerator(
                 @NotNull Enumerator<T_OUT> upstream
             ) {
-                return new PipelineEnumerator<T_OUT, R>(upstream) {
+                return new PipelineEnumerator<>(upstream) {
                     private final Map<K, List<I>> lookup =
                         newEqualityMap(effectiveEqualator);
                     private List<I> matches = Collections.emptyList();
@@ -1289,12 +1289,12 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         NullCheck.requireNonNull(resultSelector, "resultSelector");
         NullCheck.requireNonNull(equalator, "equalator");
 
-        return new StatefulOp<T_OUT, R>(this) {
+        return new StatefulOp<>(this) {
             @Override
             protected @NotNull Enumerator<R> opWrapEnumerator(
                 @NotNull Enumerator<T_OUT> upstream
             ) {
-                return new PipelineEnumerator<T_OUT, R>(upstream) {
+                return new PipelineEnumerator<>(upstream) {
                     private final Map<K, List<I>> lookup =
                         newEqualityMap(equalator);
                     private List<I> matches = Collections.emptyList();
@@ -1392,6 +1392,7 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
     public final @NotNull OrderedEnumerable<T_OUT> order() {
         Comparator<T_OUT> comparator = (left, right) ->
             ((Comparable<Object>) left).compareTo(right);
+
         return new OrderedOp<>(this, comparator);
     }
 
@@ -1410,7 +1411,15 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         @NotNull Function<? super T_OUT, ? extends K> keySelector
     ) {
         NullCheck.requireNonNull(keySelector, "keySelector");
-        return new OrderedOp<>(this, Comparator.comparing(keySelector));
+
+        return new OrderedOp<>(
+            this,
+            new OrderCriterion.ReferenceOrderCriterion<>(
+                keySelector,
+                Comparator.naturalOrder(),
+                false
+            )
+        );
     }
 
     /** {@inheritDoc} */
@@ -1421,7 +1430,15 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
     ) {
         NullCheck.requireNonNull(keySelector, "keySelector");
         NullCheck.requireNonNull(comparator, "comparator");
-        return new OrderedOp<>(this, Comparator.comparing(keySelector, comparator));
+
+        return new OrderedOp<>(
+            this,
+            new OrderCriterion.ReferenceOrderCriterion<>(
+                keySelector,
+                comparator,
+                false
+            )
+        );
     }
 
     /** {@inheritDoc} */
@@ -1430,7 +1447,15 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         @NotNull Function<? super T_OUT, ? extends K> keySelector
     ) {
         NullCheck.requireNonNull(keySelector, "keySelector");
-        return new OrderedOp<>(this, Comparator.comparing(keySelector).reversed());
+
+        return new OrderedOp<>(
+            this,
+            new OrderCriterion.ReferenceOrderCriterion<>(
+                keySelector,
+                Comparator.naturalOrder(),
+                true
+            )
+        );
     }
 
     /** {@inheritDoc} */
@@ -1441,7 +1466,15 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
     ) {
         NullCheck.requireNonNull(keySelector, "keySelector");
         NullCheck.requireNonNull(comparator, "comparator");
-        return new OrderedOp<>(this, Comparator.comparing(keySelector, comparator).reversed());
+
+        return new OrderedOp<>(
+            this,
+            new OrderCriterion.ReferenceOrderCriterion<>(
+                keySelector,
+                comparator,
+                true
+            )
+        );
     }
 
     /** {@inheritDoc} */
@@ -1450,7 +1483,7 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         @NotNull ToIntFunction<? super T_OUT> keySelector
     ) {
         NullCheck.requireNonNull(keySelector, "keySelector");
-        return new OrderedOp<>(this, Comparator.comparingInt(keySelector));
+        return new OrderedOp<>(this, new OrderCriterion.IntOrderCriterion<>(keySelector, false));
     }
 
     /** {@inheritDoc} */
@@ -1459,7 +1492,7 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         @NotNull ToIntFunction<? super T_OUT> keySelector
     ) {
         NullCheck.requireNonNull(keySelector, "keySelector");
-        return new OrderedOp<>(this, Comparator.comparingInt(keySelector).reversed());
+        return new OrderedOp<>(this, new OrderCriterion.IntOrderCriterion<>(keySelector, true));
     }
 
     /** {@inheritDoc} */
@@ -1468,7 +1501,7 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         @NotNull ToLongFunction<? super T_OUT> keySelector
     ) {
         NullCheck.requireNonNull(keySelector, "keySelector");
-        return new OrderedOp<>(this, Comparator.comparingLong(keySelector));
+        return new OrderedOp<>(this, new OrderCriterion.LongOrderCriterion<>(keySelector, false));
     }
 
     /** {@inheritDoc} */
@@ -1477,7 +1510,7 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         @NotNull ToLongFunction<? super T_OUT> keySelector
     ) {
         NullCheck.requireNonNull(keySelector, "keySelector");
-        return new OrderedOp<>(this, Comparator.comparingLong(keySelector).reversed());
+        return new OrderedOp<>(this, new OrderCriterion.LongOrderCriterion<>(keySelector, true));
     }
 
     /** {@inheritDoc} */
@@ -1486,7 +1519,7 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         @NotNull ToDoubleFunction<? super T_OUT> keySelector
     ) {
         NullCheck.requireNonNull(keySelector, "keySelector");
-        return new OrderedOp<>(this, Comparator.comparingDouble(keySelector));
+        return new OrderedOp<>(this, new OrderCriterion.DoubleOrderCriterion<>(keySelector, false));
     }
 
     /** {@inheritDoc} */
@@ -1495,18 +1528,18 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         @NotNull ToDoubleFunction<? super T_OUT> keySelector
     ) {
         NullCheck.requireNonNull(keySelector, "keySelector");
-        return new OrderedOp<>(this, Comparator.comparingDouble(keySelector).reversed());
+        return new OrderedOp<>(this, new OrderCriterion.DoubleOrderCriterion<>(keySelector, true));
     }
 
     /** {@inheritDoc} */
     @Override
     public final @NotNull Enumerable<T_OUT> prepend(@Nullable T_OUT element) {
-        return new StatelessOp<T_OUT, T_OUT>(this) {
+        return new StatelessOp<>(this) {
             @Override
             protected @NotNull Enumerator<T_OUT> opWrapEnumerator(
                 @NotNull Enumerator<T_OUT> upstream
             ) {
-                return new PipelineEnumerator<T_OUT, T_OUT>(upstream) {
+                return new PipelineEnumerator<>(upstream) {
                     private boolean prepended;
 
                     @Override
@@ -1530,12 +1563,12 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
     /** {@inheritDoc} */
     @Override
     public final @NotNull Enumerable<T_OUT> reverse() {
-        return new StatefulOp<T_OUT, T_OUT>(this) {
+        return new StatefulOp<>(this) {
             @Override
             protected @NotNull Enumerator<T_OUT> opWrapEnumerator(
                 @NotNull Enumerator<T_OUT> upstream
             ) {
-                return new PipelineEnumerator<T_OUT, T_OUT>(upstream) {
+                return new PipelineEnumerator<>(upstream) {
                     private final List<T_OUT> buffer = new ArrayList<>();
                     private boolean initialized;
                     private int index;
@@ -1592,12 +1625,12 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         NullCheck.requireNonNull(resultSelector, "resultSelector");
         NullCheck.requireNonNull(equalator, "equalator");
 
-        return new StatefulOp<T_OUT, R>(this) {
+        return new StatefulOp<>(this) {
             @Override
             protected @NotNull Enumerator<R> opWrapEnumerator(
                 @NotNull Enumerator<T_OUT> upstream
             ) {
-                return new PipelineEnumerator<T_OUT, R>(upstream) {
+                return new PipelineEnumerator<>(upstream) {
                     private final Map<K, List<T_OUT>> lookup =
                         newEqualityMap(equalator);
                     private Iterator<? extends I> innerIterator;
@@ -1673,12 +1706,12 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         @NotNull Function<? super T_OUT, ? extends R> selector
     ) {
         NullCheck.requireNonNull(selector, "selector");
-        return new StatelessOp<T_OUT, R>(this) {
+        return new StatelessOp<>(this) {
             @Override
             protected @NotNull Enumerator<R> opWrapEnumerator(
                 @NotNull Enumerator<T_OUT> upstream
             ) {
-                return new PipelineEnumerator<T_OUT, R>(upstream) {
+                return new PipelineEnumerator<>(upstream) {
                     @Override
                     protected boolean moveNextCore() {
                         if (!upstream.moveNext()) return false;
@@ -1696,12 +1729,12 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         @NotNull BinFunction<? super T_OUT, Integer, ? extends R> selector
     ) {
         NullCheck.requireNonNull(selector, "selector");
-        return new StatelessOp<T_OUT, R>(this) {
+        return new StatelessOp<>(this) {
             @Override
             protected @NotNull Enumerator<R> opWrapEnumerator(
                 @NotNull Enumerator<T_OUT> upstream
             ) {
-                return new PipelineEnumerator<T_OUT, R>(upstream) {
+                return new PipelineEnumerator<>(upstream) {
                     private int index;
 
                     @Override
@@ -1721,12 +1754,12 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         @NotNull Function<? super T_OUT, ? extends Enumerable<? extends R>> selector
     ) {
         NullCheck.requireNonNull(selector, "selector");
-        return new StatelessOp<T_OUT, R>(this) {
+        return new StatelessOp<>(this) {
             @Override
             protected @NotNull Enumerator<R> opWrapEnumerator(
                 @NotNull Enumerator<T_OUT> upstream
             ) {
-                return new PipelineEnumerator<T_OUT, R>(upstream) {
+                return new PipelineEnumerator<>(upstream) {
                     private Enumerator<? extends R> inner;
 
                     @Override
@@ -1772,12 +1805,12 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         @NotNull BinFunction<? super T_OUT, Integer, ? extends Enumerable<? extends R>> selector
     ) {
         NullCheck.requireNonNull(selector, "selector");
-        return new StatelessOp<T_OUT, R>(this) {
+        return new StatelessOp<>(this) {
             @Override
             protected @NotNull Enumerator<R> opWrapEnumerator(
                 @NotNull Enumerator<T_OUT> upstream
             ) {
-                return new PipelineEnumerator<T_OUT, R>(upstream) {
+                return new PipelineEnumerator<>(upstream) {
                     private int index;
                     private Enumerator<? extends R> inner;
 
@@ -1827,12 +1860,12 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         NullCheck.requireNonNull(collectionSelector, "collectionSelector");
         NullCheck.requireNonNull(resultSelector, "resultSelector");
 
-        return new StatelessOp<T_OUT, R>(this) {
+        return new StatelessOp<>(this) {
             @Override
             protected @NotNull Enumerator<R> opWrapEnumerator(
                 @NotNull Enumerator<T_OUT> upstream
             ) {
-                return new PipelineEnumerator<T_OUT, R>(upstream) {
+                return new PipelineEnumerator<>(upstream) {
                     private T_OUT outer;
                     private Iterator<? extends C> inner;
 
@@ -1867,12 +1900,12 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         NullCheck.requireNonNull(collectionSelector, "collectionSelector");
         NullCheck.requireNonNull(resultSelector, "resultSelector");
 
-        return new StatelessOp<T_OUT, R>(this) {
+        return new StatelessOp<>(this) {
             @Override
             protected @NotNull Enumerator<R> opWrapEnumerator(
                 @NotNull Enumerator<T_OUT> upstream
             ) {
-                return new PipelineEnumerator<T_OUT, R>(upstream) {
+                return new PipelineEnumerator<>(upstream) {
                     private int index;
                     private T_OUT outer;
                     private Iterator<? extends C> inner;
@@ -1937,12 +1970,12 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
     /** {@inheritDoc} */
     @Override
     public final @NotNull Enumerable<T_OUT> shuffle() {
-        return new StatefulOp<T_OUT, T_OUT>(this) {
+        return new StatefulOp<>(this) {
             @Override
             protected @NotNull Enumerator<T_OUT> opWrapEnumerator(
                 @NotNull Enumerator<T_OUT> upstream
             ) {
-                return new PipelineEnumerator<T_OUT, T_OUT>(upstream) {
+                return new PipelineEnumerator<>(upstream) {
                     private final List<T_OUT> buffer = new ArrayList<>();
                     private boolean initialized;
                     private int index;
@@ -1968,12 +2001,12 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
     /** {@inheritDoc} */
     @Override
     public final @NotNull Enumerable<T_OUT> skip(int count) {
-        return new StatelessOp<T_OUT, T_OUT>(this) {
+        return new StatelessOp<>(this) {
             @Override
             protected @NotNull Enumerator<T_OUT> opWrapEnumerator(
                 @NotNull Enumerator<T_OUT> upstream
             ) {
-                return new PipelineEnumerator<T_OUT, T_OUT>(upstream) {
+                return new PipelineEnumerator<>(upstream) {
                     private int remaining = Math.max(0, count);
 
                     @Override
@@ -1995,12 +2028,12 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
     @Override
     public final @NotNull Enumerable<T_OUT> skipLast(int count) {
         final int skipCount = Math.max(0, count);
-        return new StatefulOp<T_OUT, T_OUT>(this) {
+        return new StatefulOp<>(this) {
             @Override
             protected @NotNull Enumerator<T_OUT> opWrapEnumerator(
                 @NotNull Enumerator<T_OUT> upstream
             ) {
-                return new PipelineEnumerator<T_OUT, T_OUT>(upstream) {
+                return new PipelineEnumerator<>(upstream) {
                     private final Deque<T_OUT> queue = new LinkedList<>();
 
                     @Override
@@ -2031,12 +2064,12 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         @NotNull Predicate<? super T_OUT> predicate
     ) {
         NullCheck.requireNonNull(predicate, "predicate");
-        return new StatelessOp<T_OUT, T_OUT>(this) {
+        return new StatelessOp<>(this) {
             @Override
             protected @NotNull Enumerator<T_OUT> opWrapEnumerator(
                 @NotNull Enumerator<T_OUT> upstream
             ) {
-                return new PipelineEnumerator<T_OUT, T_OUT>(upstream) {
+                return new PipelineEnumerator<>(upstream) {
                     private boolean skipping = true;
 
                     @Override
@@ -2061,12 +2094,12 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         @NotNull BinPredicate<? super T_OUT, Integer> predicate
     ) {
         NullCheck.requireNonNull(predicate, "predicate");
-        return new StatelessOp<T_OUT, T_OUT>(this) {
+        return new StatelessOp<>(this) {
             @Override
             protected @NotNull Enumerator<T_OUT> opWrapEnumerator(
                 @NotNull Enumerator<T_OUT> upstream
             ) {
-                return new PipelineEnumerator<T_OUT, T_OUT>(upstream) {
+                return new PipelineEnumerator<>(upstream) {
                     private int index;
                     private boolean skipping = true;
 
@@ -2089,12 +2122,12 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
     /** {@inheritDoc} */
     @Override
     public final @NotNull Enumerable<T_OUT> take(int count) {
-        return new StatelessOp<T_OUT, T_OUT>(this) {
+        return new StatelessOp<>(this) {
             @Override
             protected @NotNull Enumerator<T_OUT> opWrapEnumerator(
                 @NotNull Enumerator<T_OUT> upstream
             ) {
-                return new PipelineEnumerator<T_OUT, T_OUT>(upstream) {
+                return new PipelineEnumerator<>(upstream) {
                     private int remaining = Math.max(0, count);
 
                     @Override
@@ -2113,12 +2146,12 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
     @Override
     public final @NotNull Enumerable<T_OUT> takeLast(int count) {
         final int takeCount = Math.max(0, count);
-        return new StatefulOp<T_OUT, T_OUT>(this) {
+        return new StatefulOp<>(this) {
             @Override
             protected @NotNull Enumerator<T_OUT> opWrapEnumerator(
                 @NotNull Enumerator<T_OUT> upstream
             ) {
-                return new PipelineEnumerator<T_OUT, T_OUT>(upstream) {
+                return new PipelineEnumerator<>(upstream) {
                     private final Deque<T_OUT> queue = new LinkedList<>();
                     private boolean initialized;
                     private Iterator<T_OUT> iterator;
@@ -2149,12 +2182,12 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         @NotNull Predicate<? super T_OUT> predicate
     ) {
         NullCheck.requireNonNull(predicate, "predicate");
-        return new StatelessOp<T_OUT, T_OUT>(this) {
+        return new StatelessOp<>(this) {
             @Override
             protected @NotNull Enumerator<T_OUT> opWrapEnumerator(
                 @NotNull Enumerator<T_OUT> upstream
             ) {
-                return new PipelineEnumerator<T_OUT, T_OUT>(upstream) {
+                return new PipelineEnumerator<>(upstream) {
                     private boolean taking = true;
 
                     @Override
@@ -2179,12 +2212,12 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         @NotNull BinPredicate<? super T_OUT, Integer> predicate
     ) {
         NullCheck.requireNonNull(predicate, "predicate");
-        return new StatelessOp<T_OUT, T_OUT>(this) {
+        return new StatelessOp<>(this) {
             @Override
             protected @NotNull Enumerator<T_OUT> opWrapEnumerator(
                 @NotNull Enumerator<T_OUT> upstream
             ) {
-                return new PipelineEnumerator<T_OUT, T_OUT>(upstream) {
+                return new PipelineEnumerator<>(upstream) {
                     private int index;
                     private boolean taking = true;
 
@@ -2225,12 +2258,12 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         NullCheck.requireNonNull(other, "other");
         NullCheck.requireNonNull(comparer, "comparer");
 
-        return new StatefulOp<T_OUT, T_OUT>(this) {
+        return new StatefulOp<>(this) {
             @Override
             protected @NotNull Enumerator<T_OUT> opWrapEnumerator(
                 @NotNull Enumerator<T_OUT> upstream
             ) {
-                return new PipelineEnumerator<T_OUT, T_OUT>(upstream) {
+                return new PipelineEnumerator<>(upstream) {
                     private final Set<T_OUT> seen =
                         newEqualitySet(comparer);
                     private Enumerator<? extends T_OUT> second;
@@ -2300,12 +2333,12 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         NullCheck.requireNonNull(keySelector, "keySelector");
         NullCheck.requireNonNull(comparer, "comparer");
 
-        return new StatefulOp<T_OUT, T_OUT>(this) {
+        return new StatefulOp<>(this) {
             @Override
             protected @NotNull Enumerator<T_OUT> opWrapEnumerator(
                 @NotNull Enumerator<T_OUT> upstream
             ) {
-                return new PipelineEnumerator<T_OUT, T_OUT>(upstream) {
+                return new PipelineEnumerator<>(upstream) {
                     private final Set<K> seenKeys =
                         newEqualitySet(comparer);
                     private Enumerator<? extends T_OUT> secondEnumerator;
@@ -2361,12 +2394,12 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         @NotNull Predicate<? super T_OUT> predicate
     ) {
         NullCheck.requireNonNull(predicate, "predicate");
-        return new StatelessOp<T_OUT, T_OUT>(this) {
+        return new StatelessOp<>(this) {
             @Override
             protected @NotNull Enumerator<T_OUT> opWrapEnumerator(
                 @NotNull Enumerator<T_OUT> upstream
             ) {
-                return new PipelineEnumerator<T_OUT, T_OUT>(upstream) {
+                return new PipelineEnumerator<>(upstream) {
                     @Override
                     protected boolean moveNextCore() {
                         while (upstream.moveNext()) {
@@ -2389,12 +2422,12 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         @NotNull BinPredicate<? super T_OUT, Integer> predicate
     ) {
         NullCheck.requireNonNull(predicate, "predicate");
-        return new StatelessOp<T_OUT, T_OUT>(this) {
+        return new StatelessOp<>(this) {
             @Override
             protected @NotNull Enumerator<T_OUT> opWrapEnumerator(
                 @NotNull Enumerator<T_OUT> upstream
             ) {
-                return new PipelineEnumerator<T_OUT, T_OUT>(upstream) {
+                return new PipelineEnumerator<>(upstream) {
                     private int index;
 
                     @Override
@@ -2430,12 +2463,12 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         NullCheck.requireNonNull(second, "second");
         NullCheck.requireNonNull(resultSelector, "resultSelector");
 
-        return new StatelessOp<T_OUT, R>(this) {
+        return new StatelessOp<>(this) {
             @Override
             protected @NotNull Enumerator<R> opWrapEnumerator(
                 @NotNull Enumerator<T_OUT> upstream
             ) {
-                return new PipelineEnumerator<T_OUT, R>(upstream) {
+                return new PipelineEnumerator<>(upstream) {
                     private Enumerator<? extends U> secondEnumerator;
 
                     @Override
@@ -3125,10 +3158,20 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         }
     }
 
+
     /**
-     * Stateful ordered stage. The comparator describes the complete ordering
-     * chain. Enumeration buffers the upstream sequence, performs a stable sort,
-     * and then exposes the sorted elements.
+     * Stateful ordered stage.
+     *
+     * <p>Single-level ordering keeps the JDK's optimized list sort path. Once a
+     * secondary ordering criterion is added, the stage switches to a cached-key
+     * stable index sort. This avoids repeatedly invoking key selectors during
+     * comparison and also preserves primitive keys in primitive arrays.</p>
+     *
+     * <p>The complete ordering description is immutable. Every
+     * {@code ThenBy}-style operation creates a new ordered stage that refers to
+     * the original ordering source instead of wrapping the previous ordered
+     * stage. Consequently, the upstream sequence is buffered and sorted only
+     * once when the resulting ordered enumerable is traversed.</p>
      *
      * @param <T> the element type
      */
@@ -3136,54 +3179,212 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         extends StatefulOp<T, T>
         implements OrderedEnumerable<T> {
 
+        @NotNull
         private final AbstractEnumPipeline<?, T, ?> orderingSource;
-        private final Comparator<T> comparator;
 
-        OrderedOp(
+        /**
+         * Direct element comparator used by {@link #order()} and
+         * {@link #order(Comparator)}. It is retained as a fast path for
+         * single-level ordering and as the primary comparison when secondary
+         * cached-key criteria are appended.
+         */
+        @Nullable
+        private final Comparator<? super T> directComparator;
+
+        /**
+         * Key-based ordering criteria created by {@code OrderBy} and
+         * {@code ThenBy}-style operations.
+         */
+        @NotNull
+        private final List<OrderCriterion<T>> criteria;
+
+        private OrderedOp(
             @NotNull AbstractEnumPipeline<?, T, ?> orderingSource,
             @NotNull Comparator<? super T> comparator
         ) {
             super(orderingSource);
             this.orderingSource = orderingSource;
-            this.comparator = comparator::compare;
+            this.directComparator = comparator;
+            this.criteria = Collections.emptyList();
+        }
+
+        private OrderedOp(
+            @NotNull AbstractEnumPipeline<?, T, ?> orderingSource,
+            @NotNull OrderCriterion<T> criterion
+        ) {
+            super(orderingSource);
+            this.orderingSource = orderingSource;
+            this.directComparator = null;
+            this.criteria = List.of(criterion);
+        }
+
+        private OrderedOp(
+            @NotNull AbstractEnumPipeline<?, T, ?> orderingSource,
+            @Nullable Comparator<? super T> directComparator,
+            @NotNull List<OrderCriterion<T>> criteria
+        ) {
+            super(orderingSource);
+            this.orderingSource = orderingSource;
+            this.directComparator = directComparator;
+            this.criteria = criteria;
         }
 
         @Override
         protected @NotNull Enumerator<T> opWrapEnumerator(
             @NotNull Enumerator<T> upstream
         ) {
-            return new PipelineEnumerator<T, T>(upstream) {
+            return new PipelineEnumerator<>(upstream) {
                 private final List<T> buffer = new ArrayList<>();
+                private int[] sortedIndexes;
                 private boolean initialized;
                 private int index;
 
+                /**
+                 * Buffers the upstream sequence and performs the appropriate
+                 * sorting strategy exactly once for this enumeration.
+                 */
+                private void initialize() {
+                    if (initialized) {
+                        return;
+                    }
+
+                    initialized = true;
+
+                    while (upstream.moveNext()) {
+                        buffer.add(upstream.current());
+                    }
+
+                    if (buffer.size() < 2) {
+                        return;
+                    }
+
+                    /*
+                     * Keep direct comparator ordering on ArrayList.sort().
+                     * Benchmark results show that the single-level path is
+                     * already competitive, so allocating key caches and index
+                     * buffers here would only add unnecessary overhead.
+                     */
+                    if (directComparator != null && criteria.isEmpty()) {
+                        buffer.sort(directComparator);
+                        return;
+                    }
+
+                    /*
+                     * Keep a single OrderBy criterion on ArrayList.sort() for
+                     * the same reason. Cached keys become beneficial primarily
+                     * when secondary ordering levels are present.
+                     */
+                    if (directComparator == null && criteria.size() == 1) {
+                        buffer.sort(criteria.getFirst().elementComparator());
+                        return;
+                    }
+
+                    sortByCachedKeys();
+                }
+
+                /**
+                 * Precomputes all extractable keys and performs a stable sort
+                 * over source indexes.
+                 */
+                private void sortByCachedKeys() {
+                    int size = buffer.size();
+                    int criterionCount =
+                        criteria.size() + (directComparator == null ? 0 : 1);
+
+                    OrderKeyCache[] caches =
+                        new OrderKeyCache[criterionCount];
+
+                    int cacheIndex = 0;
+
+                    if (directComparator != null) {
+                        caches[cacheIndex++] =
+                            new OrderKeyCache.ElementOrderKeyCache<>(
+                                buffer,
+                                directComparator
+                            );
+                    }
+
+                    for (OrderCriterion<T> criterion : criteria) {
+                        caches[cacheIndex++] = criterion.prepare(buffer);
+                    }
+
+                    int[] indexes = new int[size];
+                    for (int i = 0; i < size; i++) {
+                        indexes[i] = i;
+                    }
+
+                    int[] workspace = new int[size];
+
+                    mergeSort(
+                        indexes,
+                        workspace,
+                        0,
+                        size,
+                        caches
+                    );
+
+                    sortedIndexes = indexes;
+                }
+
                 @Override
                 protected boolean moveNextCore() {
-                    if (!initialized) {
-                        initialized = true;
-                        while (upstream.moveNext()) {
-                            buffer.add(upstream.current());
-                        }
-                        buffer.sort(comparator);
+                    initialize();
+
+                    if (index >= buffer.size()) {
+                        return false;
                     }
-                    if (index >= buffer.size()) return false;
-                    setCurrent(buffer.get(index++));
+
+                    if (sortedIndexes == null) {
+                        setCurrent(buffer.get(index++));
+                    } else {
+                        setCurrent(buffer.get(sortedIndexes[index++]));
+                    }
+
                     return true;
                 }
             };
         }
 
+        /**
+         * Creates a new ordered stage with one additional key-based criterion.
+         *
+         * @param criterion the criterion to append
+         * @return the new ordered stage
+         */
+        @NotNull
+        private OrderedOp<T> appendCriterion(
+            @NotNull OrderCriterion<T> criterion
+        ) {
+            List<OrderCriterion<T>> newCriteria =
+                new ArrayList<>(criteria.size() + 1);
+
+            newCriteria.addAll(criteria);
+            newCriteria.add(criterion);
+
+            return new OrderedOp<>(
+                orderingSource,
+                directComparator,
+                List.copyOf(newCriteria)
+            );
+        }
+
+        /** {@inheritDoc} */
         @Override
         public final <K extends Comparable<? super K>> @NotNull OrderedEnumerable<T> thenBy(
             @NotNull Function<? super T, ? extends K> keySelector
         ) {
             NullCheck.requireNonNull(keySelector, "keySelector");
-            return new OrderedOp<>(
-                orderingSource,
-                comparator.thenComparing(keySelector)
+
+            return appendCriterion(
+                new OrderCriterion.ReferenceOrderCriterion<>(
+                    keySelector,
+                    Comparator.naturalOrder(),
+                    false
+                )
             );
         }
 
+        /** {@inheritDoc} */
         @Override
         public final <K> @NotNull OrderedEnumerable<T> thenBy(
             @NotNull Function<? super T, ? extends K> keySelector,
@@ -3191,23 +3392,33 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         ) {
             NullCheck.requireNonNull(keySelector, "keySelector");
             NullCheck.requireNonNull(keyComparator, "comparator");
-            return new OrderedOp<>(
-                orderingSource,
-                comparator.thenComparing(keySelector, keyComparator)
+
+            return appendCriterion(
+                new OrderCriterion.ReferenceOrderCriterion<>(
+                    keySelector,
+                    keyComparator,
+                    false
+                )
             );
         }
 
+        /** {@inheritDoc} */
         @Override
         public final <K extends Comparable<? super K>> @NotNull OrderedEnumerable<T> thenByDescending(
             @NotNull Function<? super T, ? extends K> keySelector
         ) {
             NullCheck.requireNonNull(keySelector, "keySelector");
-            return new OrderedOp<>(
-                orderingSource,
-                comparator.thenComparing(keySelector, Comparator.reverseOrder())
+
+            return appendCriterion(
+                new OrderCriterion.ReferenceOrderCriterion<>(
+                    keySelector,
+                    Comparator.naturalOrder(),
+                    true
+                )
             );
         }
 
+        /** {@inheritDoc} */
         @Override
         public final <K> @NotNull OrderedEnumerable<T> thenByDescending(
             @NotNull Function<? super T, ? extends K> keySelector,
@@ -3215,65 +3426,189 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         ) {
             NullCheck.requireNonNull(keySelector, "keySelector");
             NullCheck.requireNonNull(keyComparator, "comparator");
-            return new OrderedOp<>(
-                orderingSource,
-                comparator.thenComparing(keySelector, keyComparator.reversed())
+
+            return appendCriterion(
+                new OrderCriterion.ReferenceOrderCriterion<>(
+                    keySelector,
+                    keyComparator,
+                    true
+                )
             );
         }
 
+        /** {@inheritDoc} */
         @Override
         public final @NotNull OrderedEnumerable<T> thenByInt(
             @NotNull ToIntFunction<? super T> keySelector
         ) {
             NullCheck.requireNonNull(keySelector, "keySelector");
-            return new OrderedOp<>(orderingSource, comparator.thenComparingInt(keySelector));
+
+            return appendCriterion(
+                new OrderCriterion.IntOrderCriterion<>(keySelector, false)
+            );
         }
 
+        /** {@inheritDoc} */
         @Override
         public final @NotNull OrderedEnumerable<T> thenByIntDescending(
             @NotNull ToIntFunction<? super T> keySelector
         ) {
             NullCheck.requireNonNull(keySelector, "keySelector");
-            Comparator<T> secondary = (left, right) ->
-                Integer.compare(keySelector.applyAsInt(right), keySelector.applyAsInt(left));
-            return new OrderedOp<>(orderingSource, comparator.thenComparing(secondary));
+
+            return appendCriterion(
+                new OrderCriterion.IntOrderCriterion<>(keySelector, true)
+            );
         }
 
+        /** {@inheritDoc} */
         @Override
         public final @NotNull OrderedEnumerable<T> thenByLong(
             @NotNull ToLongFunction<? super T> keySelector
         ) {
             NullCheck.requireNonNull(keySelector, "keySelector");
-            return new OrderedOp<>(orderingSource, comparator.thenComparingLong(keySelector));
+
+            return appendCriterion(
+                new OrderCriterion.LongOrderCriterion<>(keySelector, false)
+            );
         }
 
+        /** {@inheritDoc} */
         @Override
         public final @NotNull OrderedEnumerable<T> thenByLongDescending(
             @NotNull ToLongFunction<? super T> keySelector
         ) {
             NullCheck.requireNonNull(keySelector, "keySelector");
-            Comparator<T> secondary = (left, right) ->
-                Long.compare(keySelector.applyAsLong(right), keySelector.applyAsLong(left));
-            return new OrderedOp<>(orderingSource, comparator.thenComparing(secondary));
+
+            return appendCriterion(
+                new OrderCriterion.LongOrderCriterion<>(keySelector, true)
+            );
         }
 
+        /** {@inheritDoc} */
         @Override
         public final @NotNull OrderedEnumerable<T> thenByDouble(
             @NotNull ToDoubleFunction<? super T> keySelector
         ) {
             NullCheck.requireNonNull(keySelector, "keySelector");
-            return new OrderedOp<>(orderingSource, comparator.thenComparingDouble(keySelector));
+
+            return appendCriterion(
+                new OrderCriterion.DoubleOrderCriterion<>(keySelector, false)
+            );
         }
 
+        /** {@inheritDoc} */
         @Override
         public final @NotNull OrderedEnumerable<T> thenByDoubleDescending(
             @NotNull ToDoubleFunction<? super T> keySelector
         ) {
             NullCheck.requireNonNull(keySelector, "keySelector");
-            Comparator<T> secondary = (left, right) ->
-                Double.compare(keySelector.applyAsDouble(right), keySelector.applyAsDouble(left));
-            return new OrderedOp<>(orderingSource, comparator.thenComparing(secondary));
+
+            return appendCriterion(
+                new OrderCriterion.DoubleOrderCriterion<>(keySelector, true)
+            );
         }
+    }
+
+    /**
+     * Performs a stable merge sort over an array of source indexes.
+     *
+     * <p>The sort compares indexes through precomputed key caches. Equal
+     * elements are always taken from the left half first, preserving the
+     * original source order when all ordering criteria compare equal.</p>
+     *
+     * @param indexes the indexes being sorted
+     * @param workspace reusable merge workspace
+     * @param from inclusive start index
+     * @param to exclusive end index
+     * @param caches the ordering levels in priority order
+     */
+    private static void mergeSort(
+        int[] indexes,
+        int[] workspace,
+        int from,
+        int to,
+        OrderKeyCache[] caches
+    ) {
+        int length = to - from;
+
+        if (length < 2) {
+            return;
+        }
+
+        int middle = (from + to) >>> 1;
+
+        mergeSort(indexes, workspace, from, middle, caches);
+        mergeSort(indexes, workspace, middle, to, caches);
+
+        /*
+         * Skip the merge when both sorted halves are already in the correct
+         * relative order. This is especially helpful for partially ordered
+         * input.
+         */
+        if (compareIndexes(
+            indexes[middle - 1],
+            indexes[middle],
+            caches
+        ) <= 0) {
+            return;
+        }
+
+        System.arraycopy(
+            indexes,
+            from,
+            workspace,
+            from,
+            length
+        );
+
+        int left = from;
+        int right = middle;
+        int target = from;
+
+        while (left < middle && right < to) {
+            if (compareIndexes(
+                workspace[left],
+                workspace[right],
+                caches
+            ) <= 0) {
+                indexes[target++] = workspace[left++];
+            } else {
+                indexes[target++] = workspace[right++];
+            }
+        }
+
+        while (left < middle) {
+            indexes[target++] = workspace[left++];
+        }
+
+        while (right < to) {
+            indexes[target++] = workspace[right++];
+        }
+    }
+
+    /**
+     * Compares two buffered source indexes using all ordering levels.
+     *
+     * @param leftIndex the index of the left source element
+     * @param rightIndex the index of the right source element
+     * @param caches the ordering levels in priority order
+     * @return the first non-zero comparison result, or zero if all criteria
+     *         consider both elements equal
+     */
+    private static int compareIndexes(
+        int leftIndex,
+        int rightIndex,
+        OrderKeyCache[] caches
+    ) {
+        for (OrderKeyCache cache : caches) {
+            int result = cache.compare(leftIndex, rightIndex);
+
+            if (result != 0) {
+                return result;
+            }
+        }
+
+        return 0;
     }
 
     // ---------------------------------------------------------------------
@@ -3281,7 +3616,7 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
     // ---------------------------------------------------------------------
 
     private static <E> @NotNull Enumerable<E> enumerableOfList(List<E> values) {
-        List<E> snapshot = Collections.unmodifiableList(new ArrayList<>(values));
+        List<E> snapshot = List.copyOf(values);
         return new Head<>(() -> new CollectionEnumerator<>(snapshot), false);
     }
 
