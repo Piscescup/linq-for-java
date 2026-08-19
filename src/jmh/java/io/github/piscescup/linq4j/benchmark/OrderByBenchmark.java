@@ -14,11 +14,11 @@ import io.github.piscescup.linq4j.Linq;
 @OutputTimeUnit(TimeUnit.MICROSECONDS)
 @Warmup(iterations = 5, time = 1)
 @Measurement(iterations = 5, time = 1)
-@Fork(2)
+@Fork(3)
 @State(Scope.Benchmark)
 public class OrderByBenchmark {
 
-    @Param({"10", "10000"})
+    @Param({"10",  "100", "10000"})
     private int size;
 
     private Enumerable<Person> mine;
