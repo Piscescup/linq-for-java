@@ -13,17 +13,7 @@ import java.util.Iterator;
  * @param <SUB_BE> the type of the {@code Enumerable} implementing {@link BaseEnumerable}
  */
 public interface BaseEnumerable<T, SUB_BE extends BaseEnumerable<T, SUB_BE> >
-    extends InternalEnumerable<T>, AutoCloseable {
-
-    /**
-     * Returns an iterator for the elements of this enumerable.
-     *
-     * @return the element iterator for this enumerable
-     */
-    @Override
-    default @NotNull Iterator<T> iterator() {
-        return InternalEnumerable.super.iterator();
-    }
+    extends AutoCloseable {
 
     /**
      * Returns whether this Enumerable, if a terminal operation were to be executed,

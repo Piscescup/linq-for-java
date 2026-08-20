@@ -353,7 +353,7 @@ import java.util.function.*;
  *     Language Integrated Query (LINQ)</a>
  */
 public interface Enumerable<T>
-    extends BaseEnumerable<T, Enumerable<T>>
+    extends InternalEnumerable<T>, BaseEnumerable<T, Enumerable<T>>
 {
     /**
      * <p>Applies an accumulator function over a sequence.
