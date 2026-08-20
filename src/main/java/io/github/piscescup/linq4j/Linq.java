@@ -9,7 +9,7 @@ import java.util.Iterator;
 import java.util.function.Supplier;
 
 /**
- * The main class for the LINQ for Java library.
+ * The factory class for the LINQ in java.
  *
  * @author REN YuanTong
  * @since 1.0.0
