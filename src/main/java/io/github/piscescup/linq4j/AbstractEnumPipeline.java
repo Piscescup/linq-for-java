@@ -381,7 +381,7 @@ abstract class AbstractEnumPipeline<T_IN, T_OUT, ENUM_OUT extends BaseEnumerable
 
     @Override
     @SuppressWarnings("unchecked")
-    public ENUM_OUT onClose(Runnable closeHandler) {
+    public ENUM_OUT onClose(@NotNull Runnable closeHandler) {
         Objects.requireNonNull(closeHandler);
         Runnable existingHandler = sourceStage.sourceCloseAction;
         sourceStage.sourceCloseAction =
@@ -392,24 +392,21 @@ abstract class AbstractEnumPipeline<T_IN, T_OUT, ENUM_OUT extends BaseEnumerable
     }
 
     static Runnable composeWithExceptions(Runnable first, Runnable second) {
-        return new Runnable() {
-            @Override
-            public void run() {
+        return () -> {
+            try {
+                first.run();
+            } catch (Throwable e1) {
                 try {
-                    first.run();
-                } catch (Throwable e1) {
-                    try {
-                        second.run();
-                    }
-                    catch (Throwable e2) {
-                        try {
-                            e1.addSuppressed(e2);
-                        } catch (Throwable ignore) {}
-                    }
-                    throw e1;
+                    second.run();
                 }
-                second.run();
+                catch (Throwable e2) {
+                    try {
+                        e1.addSuppressed(e2);
+                    } catch (Throwable ignore) {}
+                }
+                throw e1;
             }
+            second.run();
         };
     }
 
