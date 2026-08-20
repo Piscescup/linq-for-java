@@ -30,10 +30,8 @@ import java.util.Arrays;
  * @author REN YuanTong
  * @since 1.0.0
  */
-public abstract class AbstractBaseEnumPipeline<
-    T,
-    SUB_BE extends BaseEnumerable<T, SUB_BE>
-    > implements BaseEnumerable<T, SUB_BE> {
+public abstract class AbstractBaseEnumPipeline<T, SUB_BE extends BaseEnumerable<T, SUB_BE>>
+    implements BaseEnumerable<T, SUB_BE> {
 
     /**
      * Shared configuration of all stages belonging to this pipeline.
