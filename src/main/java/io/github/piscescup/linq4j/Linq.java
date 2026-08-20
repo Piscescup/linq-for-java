@@ -17,6 +17,32 @@ import java.util.function.Supplier;
 public final class Linq {
     private Linq() {}
 
+    /**
+     * Creates an {@link Enumerable} sequence from the specified elements.
+     *
+     * <p>The elements are enumerated in the same order in which they are supplied.
+     * The returned enumerable does not copy the specified array; enumeration is
+     * performed over the supplied array.</p>
+     *
+     * <p>All elements in {@code elements} must be non-null.</p>
+     *
+     * <p><b>Usage:</b></p>
+     * <pre>{@code
+     * Enumerable<Integer> numbers = Linq.of(1, 2, 3, 4, 5);
+     *
+     * Enumerable<Integer> result = numbers
+     *     .where(n -> n % 2 == 0)
+     *     .select(n -> n * 10);
+     *
+     * // result: 20, 40
+     * }</pre>
+     *
+     * @param elements the elements used to create the enumerable sequence
+     * @param <T> the type of the elements in the sequence
+     * @return an {@link Enumerable} that enumerates the specified elements
+     * @throws NullPointerException if {@code elements} or any element contained
+     *                              in {@code elements} is {@code null}
+     */
     @SafeVarargs
     @NotNull
     public static <T> Enumerable<T> of(@NotNull T... elements) {
@@ -25,6 +51,38 @@ public final class Linq {
         return new ReferenceEnumPipeline.Head<>(() -> new ArrayEnumerator<>(elements));
     }
 
+    /**
+     * Creates an {@link Enumerable} sequence from the specified collection.
+     *
+     * <p>The elements are enumerated according to the iteration order defined by
+     * the supplied {@link Collection}.</p>
+     *
+     * <p>The collection is not copied when this method is called. The returned
+     * enumerable creates an enumerator over the supplied collection when the
+     * sequence is enumerated. Consequently, changes made to the collection before
+     * enumeration may be reflected in the resulting sequence.</p>
+     *
+     * <p>All elements in {@code elements} must be non-null.</p>
+     *
+     * <p><b>Usage:</b></p>
+     * <pre>{@code
+     * List<String> names = List.of("Alice", "Bob", "Charlie");
+     *
+     * Enumerable<String> enumerable = Linq.of(names);
+     *
+     * Enumerable<String> result = enumerable
+     *     .where(name -> name.length() > 3)
+     *     .order();
+     *
+     * // result: Alice, Charlie
+     * }</pre>
+     *
+     * @param elements the collection whose elements form the enumerable sequence
+     * @param <T> the type of the elements in the sequence
+     * @return an {@link Enumerable} that enumerates the elements of the specified collection
+     * @throws NullPointerException if {@code elements} or any element contained
+     *                              in {@code elements} is {@code null}
+     */
     @NotNull
     public static <T> Enumerable<T> of(@NotNull Collection<T> elements) {
         NullCheck.requireAllNonNull(elements);
@@ -32,14 +90,83 @@ public final class Linq {
         return new ReferenceEnumPipeline.Head<>(() -> new CollectionEnumerator<>(elements));
     }
 
+    /**
+     * Creates an {@link Enumerable} whose elements are obtained from an
+     * {@link Iterator} supplied by the specified supplier.
+     *
+     * <p>The {@code iteratorSupplier} is invoked each time a new enumeration of
+     * the returned sequence begins. Therefore, the supplier should normally return
+     * a new and independent {@link Iterator} for each invocation.</p>
+     *
+     * <p>This method is useful for adapting iterator-based APIs to the
+     * {@link Enumerable} abstraction.</p>
+     *
+     * <p><b>Usage:</b></p>
+     * <pre>{@code
+     * List<Integer> numbers = List.of(1, 2, 3, 4, 5);
+     *
+     * Enumerable<Integer> enumerable =
+     *     Linq.fromIterator(numbers::iterator);
+     *
+     * int sum = enumerable
+     *     .where(n -> n > 2)
+     *     .aggregate(0, Integer::sum);
+     *
+     * // sum == 12
+     * }</pre>
+     *
+     * @param iteratorSupplier a supplier that provides an iterator when enumeration begins
+     * @param <T> the type of the elements in the sequence
+     * @return an {@link Enumerable} backed by iterators produced by the specified supplier
+     * @throws NullPointerException if {@code iteratorSupplier} is {@code null}
+     */
     @NotNull
-    public static <T> Enumerable<T> fromIterator(@NotNull Supplier<? extends Iterator<? extends T>> iteratorSupplier) {
+    public static <T> Enumerable<T> fromIterator(
+        @NotNull Supplier<? extends Iterator<? extends T>> iteratorSupplier
+    ) {
         NullCheck.requireNonNull(iteratorSupplier);
 
-        return new ReferenceEnumPipeline.Head<>(() -> new IteratorEnumerator<>(iteratorSupplier.get()));
+        return new ReferenceEnumPipeline.Head<>(
+            () -> new IteratorEnumerator<>(iteratorSupplier.get())
+        );
     }
 
-    public static <T> Enumerable<T> fromEnumerator(@NotNull Supplier<? extends Enumerator<T>> enumeratorSupplier) {
+    /**
+     * Creates an {@link Enumerable} whose elements are obtained from an
+     * {@link Enumerator} supplied by the specified supplier.
+     *
+     * <p>The {@code enumeratorSupplier} is invoked each time a new enumeration of
+     * the returned sequence begins. Therefore, the supplier should normally create
+     * a new and independent {@link Enumerator} for each invocation.</p>
+     *
+     * <p>This method provides the lowest-level factory for integrating a custom
+     * {@link Enumerator} implementation directly with the enumerable pipeline.</p>
+     *
+     * <p><b>Usage:</b></p>
+     * <pre>{@code
+     * Integer[] numbers = {1, 2, 3, 4, 5};
+     *
+     * Enumerable<Integer> enumerable = Linq.fromEnumerator(
+     *     () -> new ArrayEnumerator<>(numbers)
+     * );
+     *
+     * List<Integer> result = enumerable
+     *     .where(n -> n % 2 != 0)
+     *     .select(n -> n * n)
+     *     .toList();
+     *
+     * // result: [1, 9, 25]
+     * }</pre>
+     *
+     * @param enumeratorSupplier a supplier that provides an enumerator when enumeration begins
+     * @param <T> the type of the elements in the sequence
+     * @return an {@link Enumerable} backed by enumerators produced by the specified supplier
+     * @throws NullPointerException if {@code enumeratorSupplier} is {@code null}
+     */
+    @NotNull
+    public static <T> Enumerable<T> fromEnumerator(
+        @NotNull Supplier<? extends Enumerator<T>> enumeratorSupplier
+    ) {
         NullCheck.requireNonNull(enumeratorSupplier);
 
         return new ReferenceEnumPipeline.Head<>(enumeratorSupplier);
