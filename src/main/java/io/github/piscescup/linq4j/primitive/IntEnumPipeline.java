@@ -1,0 +1,2063 @@
+package io.github.piscescup.linq4j.primitive;
+
+import io.github.piscescup.linq4j.AbstractBaseEnumPipeline;
+import io.github.piscescup.linq4j.Enumerable;
+import io.github.piscescup.linq4j.Enumerator;
+import io.github.piscescup.linq4j.Linq;
+import io.github.piscescup.util.validation.NullCheck;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
+import java.util.Arrays;
+import java.util.NoSuchElementException;
+import java.util.OptionalInt;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.IntBinaryOperator;
+import java.util.function.IntFunction;
+import java.util.function.IntPredicate;
+import java.util.function.IntUnaryOperator;
+import java.util.function.Supplier;
+
+/**
+ * Abstract base class for primitive {@code int} enumerable pipeline stages.
+ *
+ * <p>An {@code IntEnumPipeline} represents either the source stage of an
+ * {@link IntEnumerable} query or an intermediate operation that consumes and
+ * produces primitive {@code int} values. Values remain primitive throughout
+ * the pipeline and therefore do not require boxing into {@link Integer}
+ * objects.</p>
+ *
+ * <p>Pipeline construction uses deferred execution. Invoking an intermediate
+ * operation creates a new pipeline stage but does not enumerate the source.
+ * Each call to {@link #enumerator()} creates an independent enumeration
+ * chain.</p>
+ *
+ * <p>Pipeline stages contain only query-description state. Mutable state that
+ * belongs to a traversal, such as indexes, primitive buffers, distinct-value
+ * sets, and secondary enumerators, is created independently for each
+ * enumeration.</p>
+ *
+ * <p>Pipeline-wide configuration such as sequential or parallel execution
+ * mode and close handlers is managed by {@link AbstractBaseEnumPipeline}.
+ * All stages belonging to the same pipeline share the same configuration
+ * context.</p>
+ *
+ * <p>Operations that explicitly transition to a reference-type pipeline, such
+ * as {@link #boxed()} and {@link #selectToObj(IntFunction)}, create a
+ * reference {@link Enumerable}. Boxing therefore occurs only at an explicit
+ * primitive-to-reference boundary.</p>
+ *
+ * @author REN YuanTong
+ * @since 1.0.0
+ */
+abstract class IntEnumPipeline
+    extends AbstractBaseEnumPipeline<Integer, IntEnumerable>
+    implements IntEnumerable {
+
+    /**
+     * The immediately preceding pipeline stage.
+     *
+     * <p>This field is {@code null} only for the source stage.</p>
+     */
+    private final @Nullable IntEnumPipeline upstream;
+
+    /**
+     * Factory used by the source stage to create fresh source enumerators.
+     *
+     * <p>This field is non-null only for the source stage.</p>
+     */
+    private final @Nullable Supplier<? extends IntEnumerator> sourceSupplier;
+
+    /**
+     * Creates a source stage.
+     *
+     * <p>The supplied source factory is retained and invoked whenever a new
+     * enumeration is requested. It should therefore create a new independent
+     * {@link IntEnumerator} for every invocation.</p>
+     *
+     * @param sourceSupplier the factory used to create source enumerators
+     * @param parallel whether the source is configured for parallel evaluation
+     */
+    protected IntEnumPipeline(
+        @NotNull Supplier<? extends IntEnumerator> sourceSupplier,
+        boolean parallel
+    ) {
+        super(parallel);
+
+        this.upstream = null;
+        this.sourceSupplier = NullCheck.requireNonNull(
+            sourceSupplier,
+            "sourceSupplier"
+        );
+    }
+
+    /**
+     * Creates an intermediate stage appended to the specified upstream
+     * pipeline.
+     *
+     * <p>The newly created stage shares the common execution configuration
+     * of the upstream pipeline through {@link AbstractBaseEnumPipeline}.</p>
+     *
+     * @param upstream the immediately preceding pipeline stage
+     */
+    protected IntEnumPipeline(
+        @NotNull IntEnumPipeline upstream
+    ) {
+        super(upstream);
+
+        this.upstream = NullCheck.requireNonNull(
+            upstream,
+            "upstream"
+        );
+
+        this.sourceSupplier = null;
+    }
+
+    /**
+     * Returns whether this pipeline operation is stateful.
+     *
+     * <p>Stateless operations can normally produce each result without
+     * retaining information about previously processed elements. Stateful
+     * operations may require primitive buffers, sets, or other state during
+     * an enumeration.</p>
+     *
+     * @return {@code true} if the operation requires traversal-specific state;
+     *         otherwise {@code false}
+     */
+    protected abstract boolean opIsStateful();
+
+    /**
+     * Wraps an upstream enumerator with the behavior represented by this
+     * pipeline stage.
+     *
+     * <p>The supplied enumerator represents the output of the immediately
+     * preceding stage. Mutable state required by this operation should be
+     * stored in the returned enumerator rather than in the pipeline stage
+     * itself.</p>
+     *
+     * @param upstream the upstream primitive enumerator
+     * @return an enumerator applying this stage to the upstream sequence
+     */
+    protected abstract @NotNull IntEnumerator opWrapEnumerator(
+        @NotNull IntEnumerator upstream
+    );
+
+    // ---------------------------------------------------------------------
+    // Enumeration
+    // ---------------------------------------------------------------------
+
+    /**
+     * Creates a new primitive enumerator for this pipeline.
+     *
+     * <p>For a source stage, the configured source supplier is invoked.
+     * For an intermediate stage, an upstream enumerator is created and then
+     * wrapped by this stage.</p>
+     *
+     * @return a new primitive enumerator for this pipeline
+     */
+    @Override
+    public final @NotNull IntEnumerator enumerator() {
+        if (sourceSupplier != null) {
+            return NullCheck.requireNonNull(
+                sourceSupplier.get(),
+                "sourceSupplier returned null"
+            );
+        }
+
+        IntEnumPipeline upstream = this.upstream;
+
+        if (upstream == null) {
+            throw new IllegalStateException(
+                "Non-source pipeline stage does not have an upstream stage."
+            );
+        }
+
+        return opWrapEnumerator(
+            upstream.enumerator()
+        );
+    }
+
+    // ---------------------------------------------------------------------
+    // Aggregation
+    // ---------------------------------------------------------------------
+
+    /** {@inheritDoc} */
+    @Override
+    public final int aggregateToResult(
+        int seed,
+        @NotNull IntBinaryOperator aggregator
+    ) {
+        NullCheck.requireNonNull(
+            aggregator,
+            "aggregator"
+        );
+
+        int accumulator = seed;
+
+        try (IntEnumerator enumerator = enumerator()) {
+            while (enumerator.moveNext()) {
+                accumulator = aggregator.applyAsInt(
+                    accumulator,
+                    enumerator.current()
+                );
+            }
+        }
+
+        return accumulator;
+    }
+
+    // ---------------------------------------------------------------------
+    // Quantifiers
+    // ---------------------------------------------------------------------
+
+    /** {@inheritDoc} */
+    @Override
+    public final boolean all(
+        @NotNull IntPredicate predicate
+    ) {
+        NullCheck.requireNonNull(
+            predicate,
+            "predicate"
+        );
+
+        try (IntEnumerator enumerator = enumerator()) {
+            while (enumerator.moveNext()) {
+                if (!predicate.test(enumerator.current())) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public final boolean any() {
+        try (IntEnumerator enumerator = enumerator()) {
+            return enumerator.moveNext();
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public final boolean any(
+        @NotNull IntPredicate predicate
+    ) {
+        NullCheck.requireNonNull(
+            predicate,
+            "predicate"
+        );
+
+        try (IntEnumerator enumerator = enumerator()) {
+            while (enumerator.moveNext()) {
+                if (predicate.test(enumerator.current())) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public final boolean contains(int value) {
+        try (IntEnumerator enumerator = enumerator()) {
+            while (enumerator.moveNext()) {
+                if (enumerator.current() == value) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    // ---------------------------------------------------------------------
+    // Append / prepend / concat
+    // ---------------------------------------------------------------------
+
+    /** {@inheritDoc} */
+    @Override
+    public final @NotNull IntEnumerable append(int element) {
+        return new StatelessOp(this) {
+
+            @Override
+            protected @NotNull IntEnumerator opWrapEnumerator(
+                @NotNull IntEnumerator upstream
+            ) {
+                return new IntPipelineEnumerator(upstream) {
+
+                    private boolean appended;
+
+                    @Override
+                    protected boolean moveNextCore() {
+                        if (upstream.moveNext()) {
+                            setCurrent(
+                                upstream.current()
+                            );
+                            return true;
+                        }
+
+                        if (!appended) {
+                            appended = true;
+                            setCurrent(element);
+                            return true;
+                        }
+
+                        return false;
+                    }
+                };
+            }
+        };
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public final @NotNull IntEnumerable prepend(int element) {
+        return new StatelessOp(this) {
+
+            @Override
+            protected @NotNull IntEnumerator opWrapEnumerator(
+                @NotNull IntEnumerator upstream
+            ) {
+                return new IntPipelineEnumerator(upstream) {
+
+                    private boolean prepended;
+
+                    @Override
+                    protected boolean moveNextCore() {
+                        if (!prepended) {
+                            prepended = true;
+                            setCurrent(element);
+                            return true;
+                        }
+
+                        if (!upstream.moveNext()) {
+                            return false;
+                        }
+
+                        setCurrent(
+                            upstream.current()
+                        );
+
+                        return true;
+                    }
+                };
+            }
+        };
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public final @NotNull IntEnumerable concat(
+        @NotNull IntEnumerable after
+    ) {
+        NullCheck.requireNonNull(
+            after,
+            "after"
+        );
+
+        return new StatelessOp(this) {
+
+            @Override
+            protected @NotNull IntEnumerator opWrapEnumerator(
+                @NotNull IntEnumerator upstream
+            ) {
+                return new IntPipelineEnumerator(upstream) {
+
+                    private @Nullable IntEnumerator second;
+
+                    private boolean firstCompleted;
+
+                    @Override
+                    protected boolean moveNextCore() {
+                        if (!firstCompleted) {
+                            if (upstream.moveNext()) {
+                                setCurrent(
+                                    upstream.current()
+                                );
+
+                                return true;
+                            }
+
+                            firstCompleted = true;
+                            second = after.enumerator();
+                        }
+
+                        IntEnumerator second = this.second;
+
+                        if (
+                            second != null
+                                && second.moveNext()
+                        ) {
+                            setCurrent(
+                                second.current()
+                            );
+
+                            return true;
+                        }
+
+                        return false;
+                    }
+
+                    @Override
+                    public void close() {
+                        try {
+                            IntEnumerator second =
+                                this.second;
+
+                            if (second != null) {
+                                second.close();
+                                this.second = null;
+                            }
+                        } finally {
+                            super.close();
+                        }
+                    }
+                };
+            }
+        };
+    }
+
+    // ---------------------------------------------------------------------
+    // Default
+    // ---------------------------------------------------------------------
+
+    /** {@inheritDoc} */
+    @Override
+    public final @NotNull IntEnumerable defaultIfEmpty(
+        int defaultValue
+    ) {
+        return new StatelessOp(this) {
+
+            @Override
+            protected @NotNull IntEnumerator opWrapEnumerator(
+                @NotNull IntEnumerator upstream
+            ) {
+                return new IntPipelineEnumerator(upstream) {
+
+                    private boolean checked;
+                    private boolean yieldedDefault;
+
+                    @Override
+                    protected boolean moveNextCore() {
+                        if (!checked) {
+                            checked = true;
+
+                            if (upstream.moveNext()) {
+                                setCurrent(
+                                    upstream.current()
+                                );
+
+                                return true;
+                            }
+
+                            yieldedDefault = true;
+                            setCurrent(defaultValue);
+
+                            return true;
+                        }
+
+                        if (yieldedDefault) {
+                            return false;
+                        }
+
+                        if (!upstream.moveNext()) {
+                            return false;
+                        }
+
+                        setCurrent(
+                            upstream.current()
+                        );
+
+                        return true;
+                    }
+                };
+            }
+        };
+    }
+
+    // ---------------------------------------------------------------------
+    // Element access
+    // ---------------------------------------------------------------------
+
+    /** {@inheritDoc} */
+    @Override
+    public final int elementAt(int index) {
+        if (index < 0) {
+            throw new IndexOutOfBoundsException(
+                "Index cannot be negative: " + index
+            );
+        }
+
+        try (IntEnumerator enumerator = enumerator()) {
+            int currentIndex = 0;
+
+            while (enumerator.moveNext()) {
+                if (currentIndex == index) {
+                    return enumerator.current();
+                }
+
+                currentIndex++;
+            }
+
+            throw new IndexOutOfBoundsException(
+                "Index "
+                    + index
+                    + " is out of bounds for a sequence of length "
+                    + currentIndex
+            );
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public final @NotNull OptionalInt elementAtOrEmpty(
+        int index
+    ) {
+        if (index < 0) {
+            return OptionalInt.empty();
+        }
+
+        try (IntEnumerator enumerator = enumerator()) {
+            int currentIndex = 0;
+
+            while (enumerator.moveNext()) {
+                if (currentIndex == index) {
+                    return OptionalInt.of(
+                        enumerator.current()
+                    );
+                }
+
+                currentIndex++;
+            }
+        }
+
+        return OptionalInt.empty();
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public final int elementAtOrDefault(
+        int index,
+        int defaultValue
+    ) {
+        if (index < 0) {
+            return defaultValue;
+        }
+
+        try (IntEnumerator enumerator = enumerator()) {
+            int currentIndex = 0;
+
+            while (enumerator.moveNext()) {
+                if (currentIndex == index) {
+                    return enumerator.current();
+                }
+
+                currentIndex++;
+            }
+        }
+
+        return defaultValue;
+    }
+
+    // ---------------------------------------------------------------------
+    // First
+    // ---------------------------------------------------------------------
+
+    /** {@inheritDoc} */
+    @Override
+    public final int first() {
+        try (IntEnumerator enumerator = enumerator()) {
+            if (!enumerator.moveNext()) {
+                throw new NoSuchElementException(
+                    "Sequence contains no elements."
+                );
+            }
+
+            return enumerator.current();
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public final int first(
+        @NotNull IntPredicate predicate
+    ) {
+        NullCheck.requireNonNull(
+            predicate,
+            "predicate"
+        );
+
+        try (IntEnumerator enumerator = enumerator()) {
+            while (enumerator.moveNext()) {
+                int value =
+                    enumerator.current();
+
+                if (predicate.test(value)) {
+                    return value;
+                }
+            }
+        }
+
+        throw new NoSuchElementException(
+            "No element satisfies the condition."
+        );
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public final @NotNull OptionalInt firstOrEmpty() {
+        try (IntEnumerator enumerator = enumerator()) {
+            if (enumerator.moveNext()) {
+                return OptionalInt.of(
+                    enumerator.current()
+                );
+            }
+        }
+
+        return OptionalInt.empty();
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public final @NotNull OptionalInt firstOrEmpty(
+        @NotNull IntPredicate predicate
+    ) {
+        NullCheck.requireNonNull(
+            predicate,
+            "predicate"
+        );
+
+        try (IntEnumerator enumerator = enumerator()) {
+            while (enumerator.moveNext()) {
+                int value =
+                    enumerator.current();
+
+                if (predicate.test(value)) {
+                    return OptionalInt.of(value);
+                }
+            }
+        }
+
+        return OptionalInt.empty();
+    }
+
+    // ---------------------------------------------------------------------
+    // Numeric aggregation
+    // ---------------------------------------------------------------------
+
+    /** {@inheritDoc} */
+    @Override
+    public final long count() {
+        long count = 0L;
+
+        try (IntEnumerator enumerator = enumerator()) {
+            while (enumerator.moveNext()) {
+                if (count == Long.MAX_VALUE) {
+                    throw new ArithmeticException(
+                        "The number of elements exceeds Long.MAX_VALUE."
+                    );
+                }
+
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public final long count(
+        @NotNull IntPredicate predicate
+    ) {
+        NullCheck.requireNonNull(
+            predicate,
+            "predicate"
+        );
+
+        long count = 0L;
+
+        try (IntEnumerator enumerator = enumerator()) {
+            while (enumerator.moveNext()) {
+                if (predicate.test(enumerator.current())) {
+                    if (count == Long.MAX_VALUE) {
+                        throw new ArithmeticException(
+                            "The number of matching elements exceeds Long.MAX_VALUE."
+                        );
+                    }
+
+                    count++;
+                }
+            }
+        }
+
+        return count;
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public final long sum() {
+        long sum = 0L;
+
+        try (IntEnumerator enumerator = enumerator()) {
+            while (enumerator.moveNext()) {
+                sum = Math.addExact(
+                    sum,
+                    enumerator.current()
+                );
+            }
+        }
+
+        return sum;
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public final int min() {
+        try (IntEnumerator enumerator = enumerator()) {
+            if (!enumerator.moveNext()) {
+                throw new NoSuchElementException(
+                    "Sequence contains no elements."
+                );
+            }
+
+            int minimum =
+                enumerator.current();
+
+            while (enumerator.moveNext()) {
+                int value =
+                    enumerator.current();
+
+                if (value < minimum) {
+                    minimum = value;
+                }
+            }
+
+            return minimum;
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public final int max() {
+        try (IntEnumerator enumerator = enumerator()) {
+            if (!enumerator.moveNext()) {
+                throw new NoSuchElementException(
+                    "Sequence contains no elements."
+                );
+            }
+
+            int maximum =
+                enumerator.current();
+
+            while (enumerator.moveNext()) {
+                int value =
+                    enumerator.current();
+
+                if (value > maximum) {
+                    maximum = value;
+                }
+            }
+
+            return maximum;
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public final double average() {
+        long sum = 0L;
+        long count = 0L;
+
+        try (IntEnumerator enumerator = enumerator()) {
+            while (enumerator.moveNext()) {
+                sum = Math.addExact(
+                    sum,
+                    enumerator.current()
+                );
+
+                if (count == Long.MAX_VALUE) {
+                    throw new ArithmeticException(
+                        "The number of elements exceeds Long.MAX_VALUE."
+                    );
+                }
+
+                count++;
+            }
+        }
+
+        if (count == 0L) {
+            throw new ArithmeticException(
+                "Cannot compute average of an empty sequence."
+            );
+        }
+
+        return (double) sum / count;
+    }
+
+    // ---------------------------------------------------------------------
+    // Filtering
+    // ---------------------------------------------------------------------
+
+    /** {@inheritDoc} */
+    @Override
+    public final @NotNull IntEnumerable where(
+        @NotNull IntPredicate predicate
+    ) {
+        NullCheck.requireNonNull(
+            predicate,
+            "predicate"
+        );
+
+        return new StatelessOp(this) {
+
+            @Override
+            protected @NotNull IntEnumerator opWrapEnumerator(
+                @NotNull IntEnumerator upstream
+            ) {
+                return new IntPipelineEnumerator(upstream) {
+
+                    @Override
+                    protected boolean moveNextCore() {
+                        while (upstream.moveNext()) {
+                            int value =
+                                upstream.current();
+
+                            if (predicate.test(value)) {
+                                setCurrent(value);
+                                return true;
+                            }
+                        }
+
+                        return false;
+                    }
+                };
+            }
+        };
+    }
+
+    // ---------------------------------------------------------------------
+    // Projection
+    // ---------------------------------------------------------------------
+
+    /** {@inheritDoc} */
+    @Override
+    public final @NotNull IntEnumerable select(
+        @NotNull IntUnaryOperator selector
+    ) {
+        NullCheck.requireNonNull(
+            selector,
+            "selector"
+        );
+
+        return new StatelessOp(this) {
+
+            @Override
+            protected @NotNull IntEnumerator opWrapEnumerator(
+                @NotNull IntEnumerator upstream
+            ) {
+                return new IntPipelineEnumerator(upstream) {
+
+                    @Override
+                    protected boolean moveNextCore() {
+                        if (!upstream.moveNext()) {
+                            return false;
+                        }
+
+                        setCurrent(
+                            selector.applyAsInt(
+                                upstream.current()
+                            )
+                        );
+
+                        return true;
+                    }
+                };
+            }
+        };
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public final <R> @NotNull Enumerable<R> selectToObj(
+        @NotNull IntFunction<? extends R> selector
+    ) {
+        NullCheck.requireNonNull(
+            selector,
+            "selector"
+        );
+
+        return Linq.fromEnumerator(
+            () -> new ReferenceBridgeEnumerator<>(
+                enumerator(),
+                selector
+            )
+        );
+    }
+
+    // ---------------------------------------------------------------------
+    // Slicing
+    // ---------------------------------------------------------------------
+
+    /** {@inheritDoc} */
+    @Override
+    public final @NotNull IntEnumerable skip(int count) {
+        final int skipCount =
+            Math.max(0, count);
+
+        if (skipCount == 0) {
+            return this;
+        }
+
+        return new StatelessOp(this) {
+
+            @Override
+            protected @NotNull IntEnumerator opWrapEnumerator(
+                @NotNull IntEnumerator upstream
+            ) {
+                return new IntPipelineEnumerator(upstream) {
+
+                    private int remaining =
+                        skipCount;
+
+                    @Override
+                    protected boolean moveNextCore() {
+                        while (remaining > 0) {
+                            if (!upstream.moveNext()) {
+                                return false;
+                            }
+
+                            remaining--;
+                        }
+
+                        if (!upstream.moveNext()) {
+                            return false;
+                        }
+
+                        setCurrent(
+                            upstream.current()
+                        );
+
+                        return true;
+                    }
+                };
+            }
+        };
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public final @NotNull IntEnumerable take(int count) {
+        final int takeCount =
+            Math.max(0, count);
+
+        return new StatelessOp(this) {
+
+            @Override
+            protected @NotNull IntEnumerator opWrapEnumerator(
+                @NotNull IntEnumerator upstream
+            ) {
+                return new IntPipelineEnumerator(upstream) {
+
+                    private int remaining =
+                        takeCount;
+
+                    @Override
+                    protected boolean moveNextCore() {
+                        if (
+                            remaining <= 0
+                                || !upstream.moveNext()
+                        ) {
+                            return false;
+                        }
+
+                        remaining--;
+
+                        setCurrent(
+                            upstream.current()
+                        );
+
+                        return true;
+                    }
+                };
+            }
+        };
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public final @NotNull IntEnumerable skipWhile(
+        @NotNull IntPredicate predicate
+    ) {
+        NullCheck.requireNonNull(
+            predicate,
+            "predicate"
+        );
+
+        return new StatelessOp(this) {
+
+            @Override
+            protected @NotNull IntEnumerator opWrapEnumerator(
+                @NotNull IntEnumerator upstream
+            ) {
+                return new IntPipelineEnumerator(upstream) {
+
+                    private boolean skipping =
+                        true;
+
+                    @Override
+                    protected boolean moveNextCore() {
+                        while (upstream.moveNext()) {
+                            int value =
+                                upstream.current();
+
+                            if (
+                                skipping
+                                    && predicate.test(value)
+                            ) {
+                                continue;
+                            }
+
+                            skipping = false;
+
+                            setCurrent(value);
+                            return true;
+                        }
+
+                        return false;
+                    }
+                };
+            }
+        };
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public final @NotNull IntEnumerable takeWhile(
+        @NotNull IntPredicate predicate
+    ) {
+        NullCheck.requireNonNull(
+            predicate,
+            "predicate"
+        );
+
+        return new StatelessOp(this) {
+
+            @Override
+            protected @NotNull IntEnumerator opWrapEnumerator(
+                @NotNull IntEnumerator upstream
+            ) {
+                return new IntPipelineEnumerator(upstream) {
+
+                    private boolean taking =
+                        true;
+
+                    @Override
+                    protected boolean moveNextCore() {
+                        if (
+                            !taking
+                                || !upstream.moveNext()
+                        ) {
+                            return false;
+                        }
+
+                        int value =
+                            upstream.current();
+
+                        if (!predicate.test(value)) {
+                            taking = false;
+                            return false;
+                        }
+
+                        setCurrent(value);
+                        return true;
+                    }
+                };
+            }
+        };
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public final @NotNull IntEnumerable skipLast(int count) {
+        final int skipCount =
+            Math.max(0, count);
+
+        if (skipCount == 0) {
+            return this;
+        }
+
+        return new StatefulOp(this) {
+
+            @Override
+            protected @NotNull IntEnumerator opWrapEnumerator(
+                @NotNull IntEnumerator upstream
+            ) {
+                return new IntPipelineEnumerator(upstream) {
+
+                    private final int[] queue =
+                        new int[skipCount];
+
+                    private int head;
+                    private int size;
+
+                    @Override
+                    protected boolean moveNextCore() {
+                        while (size < skipCount) {
+                            if (!upstream.moveNext()) {
+                                return false;
+                            }
+
+                            queue[
+                                (head + size)
+                                    % skipCount
+                                ] = upstream.current();
+
+                            size++;
+                        }
+
+                        if (!upstream.moveNext()) {
+                            return false;
+                        }
+
+                        int result =
+                            queue[head];
+
+                        queue[head] =
+                            upstream.current();
+
+                        head =
+                            (head + 1)
+                                % skipCount;
+
+                        setCurrent(result);
+                        return true;
+                    }
+                };
+            }
+        };
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public final @NotNull IntEnumerable takeLast(int count) {
+        final int takeCount =
+            Math.max(0, count);
+
+        return new StatefulOp(this) {
+
+            @Override
+            protected @NotNull IntEnumerator opWrapEnumerator(
+                @NotNull IntEnumerator upstream
+            ) {
+                return new IntPipelineEnumerator(upstream) {
+
+                    private int[] values;
+
+                    private int size;
+                    private int index;
+
+                    private boolean initialized;
+
+                    private void initialize() {
+                        if (initialized) {
+                            return;
+                        }
+
+                        initialized = true;
+
+                        if (takeCount == 0) {
+                            values = new int[0];
+                            return;
+                        }
+
+                        int[] ring =
+                            new int[takeCount];
+
+                        int total = 0;
+
+                        while (upstream.moveNext()) {
+                            ring[
+                                total % takeCount
+                                ] = upstream.current();
+
+                            total++;
+                        }
+
+                        size =
+                            Math.min(
+                                total,
+                                takeCount
+                            );
+
+                        values =
+                            new int[size];
+
+                        int start =
+                            total <= takeCount
+                                ? 0
+                                : total % takeCount;
+
+                        for (int i = 0; i < size; i++) {
+                            values[i] =
+                                ring[
+                                    (start + i)
+                                        % takeCount
+                                    ];
+                        }
+                    }
+
+                    @Override
+                    protected boolean moveNextCore() {
+                        initialize();
+
+                        if (index >= size) {
+                            return false;
+                        }
+
+                        setCurrent(
+                            values[index++]
+                        );
+
+                        return true;
+                    }
+                };
+            }
+        };
+    }
+
+    // ---------------------------------------------------------------------
+    // Reverse / shuffle
+    // ---------------------------------------------------------------------
+
+    /** {@inheritDoc} */
+    @Override
+    public final @NotNull IntEnumerable reverse() {
+        return new StatefulOp(this) {
+
+            @Override
+            protected @NotNull IntEnumerator opWrapEnumerator(
+                @NotNull IntEnumerator upstream
+            ) {
+                return new IntPipelineEnumerator(upstream) {
+
+                    private int[] values;
+                    private int index;
+
+                    private boolean initialized;
+
+                    private void initialize() {
+                        if (initialized) {
+                            return;
+                        }
+
+                        initialized = true;
+
+                        values =
+                            collectToArray(upstream);
+
+                        index =
+                            values.length - 1;
+                    }
+
+                    @Override
+                    protected boolean moveNextCore() {
+                        initialize();
+
+                        if (index < 0) {
+                            return false;
+                        }
+
+                        setCurrent(
+                            values[index--]
+                        );
+
+                        return true;
+                    }
+                };
+            }
+        };
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public final @NotNull IntEnumerable shuffle() {
+        return new StatefulOp(this) {
+
+            @Override
+            protected @NotNull IntEnumerator opWrapEnumerator(
+                @NotNull IntEnumerator upstream
+            ) {
+                return new IntPipelineEnumerator(upstream) {
+
+                    private int[] values;
+
+                    private int index;
+
+                    private boolean initialized;
+
+                    private void initialize() {
+                        if (initialized) {
+                            return;
+                        }
+
+                        initialized = true;
+
+                        values =
+                            collectToArray(upstream);
+
+                        ThreadLocalRandom random =
+                            ThreadLocalRandom.current();
+
+                        for (
+                            int i = values.length - 1;
+                            i > 0;
+                            i--
+                        ) {
+                            int j =
+                                random.nextInt(i + 1);
+
+                            int temporary =
+                                values[i];
+
+                            values[i] =
+                                values[j];
+
+                            values[j] =
+                                temporary;
+                        }
+                    }
+
+                    @Override
+                    protected boolean moveNextCore() {
+                        initialize();
+
+                        if (index >= values.length) {
+                            return false;
+                        }
+
+                        setCurrent(
+                            values[index++]
+                        );
+
+                        return true;
+                    }
+                };
+            }
+        };
+    }
+
+    // ---------------------------------------------------------------------
+    // Sequence equality
+    // ---------------------------------------------------------------------
+
+    /** {@inheritDoc} */
+    @Override
+    public final boolean sequenceEqual(
+        @NotNull IntEnumerable other
+    ) {
+        NullCheck.requireNonNull(
+            other,
+            "other"
+        );
+
+        try (
+            IntEnumerator first = enumerator();
+            IntEnumerator second = other.enumerator()
+        ) {
+            while (true) {
+                boolean firstHas =
+                    first.moveNext();
+
+                boolean secondHas =
+                    second.moveNext();
+
+                if (firstHas != secondHas) {
+                    return false;
+                }
+
+                if (!firstHas) {
+                    return true;
+                }
+
+                if (
+                    first.current()
+                        != second.current()
+                ) {
+                    return false;
+                }
+            }
+        }
+    }
+
+    // ---------------------------------------------------------------------
+    // Set operations
+    // ---------------------------------------------------------------------
+
+    /** {@inheritDoc} */
+    @Override
+    public final @NotNull IntEnumerable distinct() {
+        return new StatefulOp(this) {
+
+            @Override
+            protected @NotNull IntEnumerator opWrapEnumerator(
+                @NotNull IntEnumerator upstream
+            ) {
+                return new IntPipelineEnumerator(upstream) {
+
+                    private final IntHashSet seen =
+                        new IntHashSet();
+
+                    @Override
+                    protected boolean moveNextCore() {
+                        while (upstream.moveNext()) {
+                            int value =
+                                upstream.current();
+
+                            if (seen.add(value)) {
+                                setCurrent(value);
+                                return true;
+                            }
+                        }
+
+                        return false;
+                    }
+                };
+            }
+        };
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public final @NotNull IntEnumerable except(
+        @NotNull IntEnumerable other
+    ) {
+        NullCheck.requireNonNull(
+            other,
+            "other"
+        );
+
+        return new StatefulOp(this) {
+
+            @Override
+            protected @NotNull IntEnumerator opWrapEnumerator(
+                @NotNull IntEnumerator upstream
+            ) {
+                return new IntPipelineEnumerator(upstream) {
+
+                    private final IntHashSet seen =
+                        new IntHashSet();
+
+                    private boolean initialized;
+
+                    private void initialize() {
+                        if (initialized) {
+                            return;
+                        }
+
+                        initialized = true;
+
+                        try (
+                            IntEnumerator enumerator =
+                                other.enumerator()
+                        ) {
+                            while (enumerator.moveNext()) {
+                                seen.add(
+                                    enumerator.current()
+                                );
+                            }
+                        }
+                    }
+
+                    @Override
+                    protected boolean moveNextCore() {
+                        initialize();
+
+                        while (upstream.moveNext()) {
+                            int value =
+                                upstream.current();
+
+                            /*
+                             * Values from the second sequence are inserted
+                             * before this sequence is traversed. If add()
+                             * succeeds, the value is neither excluded nor
+                             * previously emitted.
+                             */
+                            if (seen.add(value)) {
+                                setCurrent(value);
+                                return true;
+                            }
+                        }
+
+                        return false;
+                    }
+                };
+            }
+        };
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public final @NotNull IntEnumerable intersect(
+        @NotNull IntEnumerable other
+    ) {
+        NullCheck.requireNonNull(
+            other,
+            "other"
+        );
+
+        return new StatefulOp(this) {
+
+            @Override
+            protected @NotNull IntEnumerator opWrapEnumerator(
+                @NotNull IntEnumerator upstream
+            ) {
+                return new IntPipelineEnumerator(upstream) {
+
+                    private final IntHashSet remaining =
+                        new IntHashSet();
+
+                    private boolean initialized;
+
+                    private void initialize() {
+                        if (initialized) {
+                            return;
+                        }
+
+                        initialized = true;
+
+                        try (
+                            IntEnumerator enumerator =
+                                other.enumerator()
+                        ) {
+                            while (enumerator.moveNext()) {
+                                remaining.add(
+                                    enumerator.current()
+                                );
+                            }
+                        }
+                    }
+
+                    @Override
+                    protected boolean moveNextCore() {
+                        initialize();
+
+                        while (upstream.moveNext()) {
+                            int value =
+                                upstream.current();
+
+                            /*
+                             * Removing the value after the first successful
+                             * match ensures that every intersection value is
+                             * emitted at most once.
+                             */
+                            if (remaining.remove(value)) {
+                                setCurrent(value);
+                                return true;
+                            }
+                        }
+
+                        return false;
+                    }
+                };
+            }
+        };
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public final @NotNull IntEnumerable union(
+        @NotNull IntEnumerable other
+    ) {
+        NullCheck.requireNonNull(
+            other,
+            "other"
+        );
+
+        return new StatefulOp(this) {
+
+            @Override
+            protected @NotNull IntEnumerator opWrapEnumerator(
+                @NotNull IntEnumerator upstream
+            ) {
+                return new IntPipelineEnumerator(upstream) {
+
+                    private final IntHashSet seen =
+                        new IntHashSet();
+
+                    private @Nullable IntEnumerator second;
+
+                    private boolean firstCompleted;
+
+                    @Override
+                    protected boolean moveNextCore() {
+                        if (!firstCompleted) {
+                            while (upstream.moveNext()) {
+                                int value =
+                                    upstream.current();
+
+                                if (seen.add(value)) {
+                                    setCurrent(value);
+                                    return true;
+                                }
+                            }
+
+                            firstCompleted = true;
+                            second =
+                                other.enumerator();
+                        }
+
+                        IntEnumerator second =
+                            this.second;
+
+                        while (
+                            second != null
+                                && second.moveNext()
+                        ) {
+                            int value =
+                                second.current();
+
+                            if (seen.add(value)) {
+                                setCurrent(value);
+                                return true;
+                            }
+                        }
+
+                        return false;
+                    }
+
+                    @Override
+                    public void close() {
+                        try {
+                            IntEnumerator second =
+                                this.second;
+
+                            if (second != null) {
+                                second.close();
+                                this.second = null;
+                            }
+                        } finally {
+                            super.close();
+                        }
+                    }
+                };
+            }
+        };
+    }
+
+    // ---------------------------------------------------------------------
+    // Materialization
+    // ---------------------------------------------------------------------
+
+    /** {@inheritDoc} */
+    @Override
+    public final int @NotNull [] toArray() {
+        try (IntEnumerator enumerator = enumerator()) {
+            return collectToArray(enumerator);
+        }
+    }
+
+    // ---------------------------------------------------------------------
+    // Reference bridge
+    // ---------------------------------------------------------------------
+
+    /** {@inheritDoc} */
+    @Override
+    public final @NotNull Enumerable<Integer> boxed() {
+        return Linq.fromEnumerator(
+            () -> new ReferenceBridgeEnumerator<>(
+                enumerator(),
+                Integer::valueOf
+            )
+        );
+    }
+
+    // ---------------------------------------------------------------------
+    // Internal primitive buffer support
+    // ---------------------------------------------------------------------
+
+    /**
+     * Collects all remaining values from the specified enumerator into a
+     * primitive {@code int} array.
+     *
+     * <p>The backing array grows geometrically and stores primitive values
+     * directly, avoiding intermediate {@link Integer} objects.</p>
+     *
+     * @param enumerator the enumerator to consume
+     * @return the collected primitive array
+     */
+    private static int @NotNull [] collectToArray(
+        @NotNull IntEnumerator enumerator
+    ) {
+        int[] values =
+            new int[16];
+
+        int size = 0;
+
+        while (enumerator.moveNext()) {
+            if (size == values.length) {
+                int oldCapacity =
+                    values.length;
+
+                int newCapacity =
+                    oldCapacity
+                        + (oldCapacity >> 1)
+                        + 1;
+
+                if (newCapacity < 0) {
+                    throw new OutOfMemoryError(
+                        "Required array size too large."
+                    );
+                }
+
+                values =
+                    Arrays.copyOf(
+                        values,
+                        newCapacity
+                    );
+            }
+
+            values[size++] =
+                enumerator.current();
+        }
+
+        return Arrays.copyOf(
+            values,
+            size
+        );
+    }
+
+    // ---------------------------------------------------------------------
+    // Pipeline stage classes
+    // ---------------------------------------------------------------------
+
+    /**
+     * Source stage of a primitive {@code int} pipeline.
+     *
+     * <p>A head stage owns the source enumerator factory and creates a fresh
+     * primitive enumerator for every enumeration.</p>
+     */
+    static final class Head
+        extends IntEnumPipeline {
+
+        /**
+         * Creates a source stage.
+         *
+         * @param sourceSupplier the source-enumerator factory
+         * @param parallel whether the pipeline is initially parallel
+         */
+        Head(
+            @NotNull Supplier<? extends IntEnumerator> sourceSupplier,
+            boolean parallel
+        ) {
+            super(
+                sourceSupplier,
+                parallel
+            );
+        }
+
+        /**
+         * Creates a sequential source stage.
+         *
+         * @param sourceSupplier the source-enumerator factory
+         */
+        Head(
+            @NotNull Supplier<? extends IntEnumerator> sourceSupplier
+        ) {
+            this(
+                sourceSupplier,
+                false
+            );
+        }
+
+        @Override
+        protected boolean opIsStateful() {
+            throw new UnsupportedOperationException(
+                "The source stage does not represent an operation."
+            );
+        }
+
+        @Override
+        protected @NotNull IntEnumerator opWrapEnumerator(
+            @NotNull IntEnumerator upstream
+        ) {
+            throw new UnsupportedOperationException(
+                "The source stage has no upstream enumerator."
+            );
+        }
+    }
+
+    /**
+     * Base class for stateless primitive {@code int} pipeline stages.
+     *
+     * <p>A stateless stage does not need to retain information about
+     * previously processed elements in order to produce its next output
+     * value.</p>
+     */
+    abstract static class StatelessOp
+        extends IntEnumPipeline {
+
+        /**
+         * Creates a stateless operation appended to the specified upstream
+         * pipeline.
+         *
+         * @param upstream the immediately preceding pipeline stage
+         */
+        protected StatelessOp(
+            @NotNull IntEnumPipeline upstream
+        ) {
+            super(upstream);
+        }
+
+        @Override
+        protected final boolean opIsStateful() {
+            return false;
+        }
+    }
+
+    /**
+     * Base class for stateful primitive {@code int} pipeline stages.
+     *
+     * <p>Traversal-specific state must be created by the enumerator returned
+     * from {@link #opWrapEnumerator(IntEnumerator)} rather than stored in the
+     * pipeline stage itself.</p>
+     */
+    abstract static class StatefulOp
+        extends IntEnumPipeline {
+
+        /**
+         * Creates a stateful operation appended to the specified upstream
+         * pipeline.
+         *
+         * @param upstream the immediately preceding pipeline stage
+         */
+        protected StatefulOp(
+            @NotNull IntEnumPipeline upstream
+        ) {
+            super(upstream);
+        }
+
+        @Override
+        protected final boolean opIsStateful() {
+            return true;
+        }
+    }
+
+    // ---------------------------------------------------------------------
+    // Primitive -> reference bridge
+    // ---------------------------------------------------------------------
+
+    /**
+     * Adapts an {@link IntEnumerator} to a reference-type
+     * {@link Enumerator} through a specified mapping function.
+     *
+     * <p>This adapter is used only when an operation explicitly crosses from
+     * the primitive {@code int} pipeline into a reference-type pipeline.</p>
+     *
+     * @param <R> the resulting reference element type
+     */
+    private static final class ReferenceBridgeEnumerator<R>
+        implements Enumerator<R> {
+
+        /**
+         * Primitive upstream enumerator.
+         */
+        private final IntEnumerator upstream;
+
+        /**
+         * Mapping function that converts primitive values into reference
+         * values.
+         */
+        private final IntFunction<? extends R> selector;
+
+        /**
+         * Current mapped value.
+         */
+        private @Nullable R current;
+
+        /**
+         * Whether {@link #current()} currently represents a valid value.
+         */
+        private boolean hasCurrent;
+
+        /**
+         * Whether a value has already been fetched by {@link #hasNext()}.
+         */
+        private boolean buffered;
+
+        /**
+         * Whether the upstream sequence has been exhausted.
+         */
+        private boolean finished;
+
+        /**
+         * Whether this enumerator has been closed.
+         */
+        private boolean closed;
+
+        /**
+         * Creates a primitive-to-reference enumerator adapter.
+         *
+         * @param upstream the primitive upstream enumerator
+         * @param selector the function used to map primitive values
+         */
+        private ReferenceBridgeEnumerator(
+            @NotNull IntEnumerator upstream,
+            @NotNull IntFunction<? extends R> selector
+        ) {
+            this.upstream =
+                NullCheck.requireNonNull(
+                    upstream,
+                    "upstream"
+                );
+
+            this.selector =
+                NullCheck.requireNonNull(
+                    selector,
+                    "selector"
+                );
+        }
+
+        @Override
+        public boolean moveNext() {
+            ensureOpen();
+
+            if (buffered) {
+                buffered = false;
+                hasCurrent = true;
+                return true;
+            }
+
+            if (finished) {
+                hasCurrent = false;
+                return false;
+            }
+
+            hasCurrent = false;
+
+            if (!upstream.moveNext()) {
+                finished = true;
+                current = null;
+                return false;
+            }
+
+            current =
+                selector.apply(
+                    upstream.current()
+                );
+
+            hasCurrent = true;
+
+            return true;
+        }
+
+        @Override
+        public R current() {
+            ensureOpen();
+
+            if (!hasCurrent) {
+                throw new IllegalStateException(
+                    "The enumerator is not positioned on an element."
+                );
+            }
+
+            return current;
+        }
+
+        @Override
+        public boolean hasNext() {
+            ensureOpen();
+
+            if (buffered) {
+                return true;
+            }
+
+            if (finished) {
+                return false;
+            }
+
+            if (!upstream.moveNext()) {
+                finished = true;
+                hasCurrent = false;
+                current = null;
+                return false;
+            }
+
+            current =
+                selector.apply(
+                    upstream.current()
+                );
+
+            buffered = true;
+            hasCurrent = false;
+
+            return true;
+        }
+
+        @Override
+        public R next() {
+            ensureOpen();
+
+            if (buffered) {
+                buffered = false;
+                hasCurrent = true;
+                return current;
+            }
+
+            if (!moveNext()) {
+                throw new NoSuchElementException();
+            }
+
+            return current;
+        }
+
+        @Override
+        public void remove() {
+            upstream.remove();
+        }
+
+        @Override
+        public void reset() {
+            upstream.reset();
+
+            current = null;
+            hasCurrent = false;
+            buffered = false;
+            finished = false;
+        }
+
+        @Override
+        public void close() {
+            if (closed) {
+                return;
+            }
+
+            closed = true;
+
+            current = null;
+            hasCurrent = false;
+            buffered = false;
+            finished = true;
+
+            upstream.close();
+        }
+
+        /**
+         * Ensures that this enumerator has not been closed.
+         *
+         * @throws IllegalStateException if this enumerator has already been
+         *         closed
+         */
+        private void ensureOpen() {
+            if (closed) {
+                throw new IllegalStateException(
+                    "The enumerator has already been closed."
+                );
+            }
+        }
+    }
+}
