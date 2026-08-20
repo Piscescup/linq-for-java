@@ -2,6 +2,7 @@ package io.github.piscescup.linq4j.primitive;
 
 import io.github.piscescup.linq4j.BaseEnumerable;
 import io.github.piscescup.linq4j.Enumerable;
+import io.github.piscescup.util.validation.NullCheck;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.NoSuchElementException;
@@ -28,7 +29,7 @@ import java.util.function.IntUnaryOperator;
  * them, and computes their sum:</p>
  *
  * <pre>{@code
- * IntEnumerable numbers = Linq.of(
+ * IntEnumerable numbers = Linq.ofInts(
  *     1, 2, 3, 4, 5, 6
  * );
  *
@@ -54,7 +55,7 @@ import java.util.function.IntUnaryOperator;
  * primitive {@code int} values:</p>
  *
  * <pre>{@code
- * IntEnumerable result = Linq.of(1, 2, 3, 4, 5)
+ * IntEnumerable result = Linq.ofInts(1, 2, 3, 4, 5)
  *     .where(value -> value > 2)
  *     .select(value -> value * 10);
  *
@@ -83,7 +84,7 @@ import java.util.function.IntUnaryOperator;
  * {@link #first()}, or {@link #toArray()} is invoked.</p>
  *
  * <pre>{@code
- * IntEnumerable numbers = Linq.of(1, 2, 3, 4, 5, 6);
+ * IntEnumerable numbers = Linq.ofInts(1, 2, 3, 4, 5, 6);
  *
  * // Defines the query. The source is not enumerated here.
  * IntEnumerable query = numbers
@@ -133,7 +134,7 @@ import java.util.function.IntUnaryOperator;
  * general-purpose primitive integer aggregation operation.</p>
  *
  * <pre>{@code
- * IntEnumerable numbers = Linq.of(1, 2, 3, 4, 5);
+ * IntEnumerable numbers = Linq.ofInts(1, 2, 3, 4, 5);
  *
  * int sum = numbers.aggregateToResult(
  *     0,
@@ -146,7 +147,7 @@ import java.util.function.IntUnaryOperator;
  * <p>Common numeric aggregations are also provided directly:</p>
  *
  * <pre>{@code
- * IntEnumerable numbers = Linq.of(4, 8, 15, 16, 23, 42);
+ * IntEnumerable numbers = Linq.ofInts(4, 8, 15, 16, 23, 42);
  *
  * int sum = numbers.sum();
  * int min = numbers.min();
@@ -163,7 +164,7 @@ import java.util.function.IntUnaryOperator;
  *
  * <pre>{@code
  * IntEnumerable numbers =
- *     Linq.of(1, 2, 3, 4, 5, 6, 7, 8);
+ *     Linq.ofInts(1, 2, 3, 4, 5, 6, 7, 8);
  *
  * IntEnumerable evenNumbers = numbers.where(
  *     number -> number % 2 == 0
@@ -180,7 +181,7 @@ import java.util.function.IntUnaryOperator;
  * into another {@code int} value while preserving the primitive pipeline.</p>
  *
  * <pre>{@code
- * IntEnumerable numbers = Linq.of(1, 2, 3, 4);
+ * IntEnumerable numbers = Linq.ofInts(1, 2, 3, 4);
  *
  * IntEnumerable squares = numbers.select(
  *     number -> number * number
@@ -197,7 +198,7 @@ import java.util.function.IntUnaryOperator;
  * {@link Enumerable}.</p>
  *
  * <pre>{@code
- * Enumerable<String> labels = Linq.of(10, 20, 30)
+ * Enumerable<String> labels = Linq.ofInts(10, 20, 30)
  *     .selectToObj(value -> "Value: " + value);
  *
  * // labels: ["Value: 10", "Value: 20", "Value: 30"]
@@ -211,7 +212,7 @@ import java.util.function.IntUnaryOperator;
  * when an explicit projection requires it.</p>
  *
  * <pre>{@code
- * double result = Linq.of(1, 2, 3, 4, 5, 6)
+ * double result = Linq.ofInts(1, 2, 3, 4, 5, 6)
  *     .where(value -> value % 2 == 0)
  *     .select(value -> value * value)
  *     .selectToDouble(value -> value / 2.0)
@@ -252,7 +253,7 @@ public interface IntEnumerable
      *
      * <b>Usage:</b>
      * <pre>{@code
-     * IntEnumerable numbers = Linq.of(1, 2, 3, 4, 5);
+     * IntEnumerable numbers = Linq.ofInts(1, 2, 3, 4, 5);
      *
      * int sum = numbers.aggregateToResult(
      *     0,
@@ -285,7 +286,7 @@ public interface IntEnumerable
      *
      * <b>Usage:</b>
      * <pre>{@code
-     * IntEnumerable numbers = Linq.of(2, 4, 6, 8);
+     * IntEnumerable numbers = Linq.ofInts(2, 4, 6, 8);
      *
      * boolean allEven = numbers.all(
      *     value -> value % 2 == 0
@@ -314,7 +315,7 @@ public interface IntEnumerable
      *
      * <b>Usage:</b>
      * <pre>{@code
-     * IntEnumerable numbers = Linq.of(1, 2, 3);
+     * IntEnumerable numbers = Linq.ofInts(1, 2, 3);
      *
      * boolean hasElements = numbers.any();
      *
@@ -339,7 +340,7 @@ public interface IntEnumerable
      *
      * <b>Usage:</b>
      * <pre>{@code
-     * IntEnumerable numbers = Linq.of(1, 3, 5, 8);
+     * IntEnumerable numbers = Linq.ofInts(1, 3, 5, 8);
      *
      * boolean containsEven = numbers.any(
      *     value -> value % 2 == 0
@@ -378,7 +379,7 @@ public interface IntEnumerable
      *
      * <b>Usage:</b>
      * <pre>{@code
-     * IntEnumerable numbers = Linq.of(1, 2, 3);
+     * IntEnumerable numbers = Linq.ofInts(1, 2, 3);
      *
      * IntEnumerable result = numbers.append(4);
      *
@@ -403,7 +404,7 @@ public interface IntEnumerable
      *
      * <b>Usage:</b>
      * <pre>{@code
-     * IntEnumerable numbers = Linq.of(2, 4, 6, 8);
+     * IntEnumerable numbers = Linq.ofInts(2, 4, 6, 8);
      *
      * double average = numbers.average();
      *
@@ -431,8 +432,8 @@ public interface IntEnumerable
      *
      * <b>Usage:</b>
      * <pre>{@code
-     * IntEnumerable first = Linq.of(1, 2, 3);
-     * IntEnumerable second = Linq.of(4, 5, 6);
+     * IntEnumerable first = Linq.ofInts(1, 2, 3);
+     * IntEnumerable second = Linq.ofInts(4, 5, 6);
      *
      * IntEnumerable result = first.concat(second);
      *
@@ -464,7 +465,7 @@ public interface IntEnumerable
      *
      * <b>Usage:</b>
      * <pre>{@code
-     * IntEnumerable numbers = Linq.of(1, 2, 3, 4);
+     * IntEnumerable numbers = Linq.ofInts(1, 2, 3, 4);
      *
      * boolean contains = numbers.contains(3);
      *
@@ -486,7 +487,7 @@ public interface IntEnumerable
      *
      * <b>Usage:</b>
      * <pre>{@code
-     * IntEnumerable numbers = Linq.of(10, 20, 30, 40);
+     * IntEnumerable numbers = Linq.ofInts(10, 20, 30, 40);
      *
      * long count = numbers.count();
      *
@@ -502,6 +503,41 @@ public interface IntEnumerable
     long count();
 
     /**
+     * <p>Returns the number of elements in this sequence that satisfy the
+     * specified condition.</p>
+     *
+     * <p>Each element is tested using {@code predicate}. Only elements for which
+     * the predicate returns {@code true} are included in the count.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * IntEnumerable numbers = Linq.ofInts(
+     *     1, 2, 3, 4, 5, 6
+     * );
+     *
+     * long count = numbers.count(
+     *     value -> value % 2 == 0
+     * );
+     *
+     * System.out.println(count);
+     *
+     * // This code produces the following output:
+     * //
+     * // 3
+     * }</pre>
+     *
+     * @param predicate A function to test each element for a condition.
+     * @return The number of elements in this sequence that satisfy
+     *         {@code predicate}.
+     * @throws NullPointerException If {@code predicate} is {@code null}.
+     * @throws ArithmeticException If the number of matching elements exceeds
+     *         {@link Long#MAX_VALUE}.
+     */
+    long count(
+        @NotNull IntPredicate predicate
+    );
+
+    /**
      * <p>Returns the elements of this sequence, or a singleton sequence
      * containing the specified default value if this sequence is empty.</p>
      *
@@ -509,7 +545,7 @@ public interface IntEnumerable
      *
      * <b>Usage:</b>
      * <pre>{@code
-     * IntEnumerable numbers = Linq.of();
+     * IntEnumerable numbers = Linq.ofInts();
      *
      * IntEnumerable result = numbers.defaultIfEmpty(-1);
      *
@@ -538,7 +574,7 @@ public interface IntEnumerable
      *
      * <b>Usage:</b>
      * <pre>{@code
-     * IntEnumerable numbers = Linq.of(
+     * IntEnumerable numbers = Linq.ofInts(
      *     1, 2, 2, 3, 1, 4
      * );
      *
@@ -564,7 +600,7 @@ public interface IntEnumerable
      *
      * <b>Usage:</b>
      * <pre>{@code
-     * IntEnumerable numbers = Linq.of(10, 20, 30, 40);
+     * IntEnumerable numbers = Linq.ofInts(10, 20, 30, 40);
      *
      * int value = numbers.elementAt(2);
      *
@@ -589,7 +625,7 @@ public interface IntEnumerable
      *
      * <b>Usage:</b>
      * <pre>{@code
-     * IntEnumerable numbers = Linq.of(10, 20, 30);
+     * IntEnumerable numbers = Linq.ofInts(10, 20, 30);
      *
      * OptionalInt result = numbers.elementAtOrEmpty(5);
      *
@@ -614,7 +650,7 @@ public interface IntEnumerable
      *
      * <b>Usage:</b>
      * <pre>{@code
-     * IntEnumerable numbers = Linq.of(10, 20, 30);
+     * IntEnumerable numbers = Linq.ofInts(10, 20, 30);
      *
      * int value = numbers.elementAtOrDefault(5, -1);
      *
@@ -647,8 +683,8 @@ public interface IntEnumerable
      *
      * <b>Usage:</b>
      * <pre>{@code
-     * IntEnumerable first = Linq.of(1, 2, 2, 3, 4);
-     * IntEnumerable second = Linq.of(2, 4);
+     * IntEnumerable first = Linq.ofInts(1, 2, 2, 3, 4);
+     * IntEnumerable second = Linq.ofInts(2, 4);
      *
      * IntEnumerable result = first.except(second);
      *
@@ -673,7 +709,7 @@ public interface IntEnumerable
      *
      * <b>Usage:</b>
      * <pre>{@code
-     * IntEnumerable numbers = Linq.of(10, 20, 30);
+     * IntEnumerable numbers = Linq.ofInts(10, 20, 30);
      *
      * int first = numbers.first();
      *
@@ -697,7 +733,7 @@ public interface IntEnumerable
      *
      * <b>Usage:</b>
      * <pre>{@code
-     * IntEnumerable numbers = Linq.of(1, 3, 6, 8, 10);
+     * IntEnumerable numbers = Linq.ofInts(1, 3, 6, 8, 10);
      *
      * int firstEven = numbers.first(
      *     value -> value % 2 == 0
@@ -727,7 +763,7 @@ public interface IntEnumerable
      *
      * <b>Usage:</b>
      * <pre>{@code
-     * IntEnumerable numbers = Linq.of();
+     * IntEnumerable numbers = Linq.ofInts();
      *
      * OptionalInt first = numbers.firstOrEmpty();
      *
@@ -751,7 +787,7 @@ public interface IntEnumerable
      *
      * <b>Usage:</b>
      * <pre>{@code
-     * IntEnumerable numbers = Linq.of(1, 3, 5, 7);
+     * IntEnumerable numbers = Linq.ofInts(1, 3, 5, 7);
      *
      * OptionalInt firstEven = numbers.firstOrEmpty(
      *     value -> value % 2 == 0
@@ -776,6 +812,125 @@ public interface IntEnumerable
     );
 
     /**
+     * <p>Returns the last primitive {@code int} value in this sequence.</p>
+     *
+     * <p>The sequence is enumerated until its end in order to determine the last
+     * element.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * IntEnumerable numbers = Linq.ofInts(10, 20, 30, 40);
+     *
+     * int last = numbers.last();
+     *
+     * System.out.println(last);
+     *
+     * // This code produces the following output:
+     * //
+     * // 40
+     * }</pre>
+     *
+     * @return The last element in this sequence.
+     * @throws NoSuchElementException If the sequence contains no elements.
+     */
+    int last();
+
+    /**
+     * <p>Returns the last primitive {@code int} value in this sequence that
+     * satisfies the specified condition.</p>
+     *
+     * <p>The entire sequence is enumerated because a later element may also
+     * satisfy {@code predicate}.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * IntEnumerable numbers = Linq.ofInts(
+     *     1, 2, 3, 4, 5, 6, 7
+     * );
+     *
+     * int lastEven = numbers.last(
+     *     value -> value % 2 == 0
+     * );
+     *
+     * System.out.println(lastEven);
+     *
+     * // This code produces the following output:
+     * //
+     * // 6
+     * }</pre>
+     *
+     * @param predicate A function to test each element for a condition.
+     * @return The last element that satisfies {@code predicate}.
+     * @throws NullPointerException If {@code predicate} is {@code null}.
+     * @throws NoSuchElementException If no element satisfies
+     *         {@code predicate}.
+     */
+    int last(
+        @NotNull IntPredicate predicate
+    );
+
+    /**
+     * <p>Returns the last primitive {@code int} value in this sequence as an
+     * {@link OptionalInt}, or an empty {@code OptionalInt} if the sequence
+     * contains no elements.</p>
+     *
+     * <p>The sequence is enumerated until its end in order to determine the last
+     * element.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * IntEnumerable numbers = Linq.ofInts();
+     *
+     * OptionalInt last = numbers.lastOrEmpty();
+     *
+     * System.out.println(last.isEmpty());
+     *
+     * // This code produces the following output:
+     * //
+     * // true
+     * }</pre>
+     *
+     * @return An {@link OptionalInt} containing the last element, or an empty
+     *         {@code OptionalInt} if the sequence contains no elements.
+     */
+    @NotNull
+    OptionalInt lastOrEmpty();
+
+    /**
+     * <p>Returns the last primitive {@code int} value that satisfies the
+     * specified condition as an {@link OptionalInt}, or an empty
+     * {@code OptionalInt} if no matching element exists.</p>
+     *
+     * <p>The entire sequence is enumerated because a later element may also
+     * satisfy {@code predicate}.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * IntEnumerable numbers = Linq.ofInts(1, 3, 5, 7);
+     *
+     * OptionalInt lastEven = numbers.lastOrEmpty(
+     *     value -> value % 2 == 0
+     * );
+     *
+     * System.out.println(lastEven.isEmpty());
+     *
+     * // This code produces the following output:
+     * //
+     * // true
+     * }</pre>
+     *
+     * @param predicate A function to test each element for a condition.
+     * @return An {@link OptionalInt} containing the last matching element,
+     *         or an empty {@code OptionalInt} if no element satisfies
+     *         {@code predicate}.
+     * @throws NullPointerException If {@code predicate} is {@code null}.
+     */
+    @NotNull
+    OptionalInt lastOrEmpty(
+        @NotNull IntPredicate predicate
+    );
+
+    /**
      * <p>Produces the set intersection of this sequence and another primitive
      * integer sequence.</p>
      *
@@ -786,8 +941,8 @@ public interface IntEnumerable
      *
      * <b>Usage:</b>
      * <pre>{@code
-     * IntEnumerable first = Linq.of(1, 2, 2, 3, 4);
-     * IntEnumerable second = Linq.of(2, 4, 5);
+     * IntEnumerable first = Linq.ofInts(1, 2, 2, 3, 4);
+     * IntEnumerable second = Linq.ofInts(2, 4, 5);
      *
      * IntEnumerable result = first.intersect(second);
      *
@@ -812,7 +967,7 @@ public interface IntEnumerable
      *
      * <b>Usage:</b>
      * <pre>{@code
-     * IntEnumerable numbers = Linq.of(9, 4, 7, 2, 8);
+     * IntEnumerable numbers = Linq.ofInts(9, 4, 7, 2, 8);
      *
      * int maximum = numbers.max();
      *
@@ -833,7 +988,7 @@ public interface IntEnumerable
      *
      * <b>Usage:</b>
      * <pre>{@code
-     * IntEnumerable numbers = Linq.of(9, 4, 7, 2, 8);
+     * IntEnumerable numbers = Linq.ofInts(9, 4, 7, 2, 8);
      *
      * int minimum = numbers.min();
      *
@@ -850,6 +1005,76 @@ public interface IntEnumerable
     int min();
 
 
+    /**
+     * <p>Returns the elements of this sequence ordered in ascending numerical
+     * order.</p>
+     *
+     * <p>The source sequence is buffered using primitive {@code int} storage when
+     * the returned enumerable is traversed. No {@link Integer} objects are
+     * required for sorting.</p>
+     *
+     * <p>This operation uses deferred execution.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * IntEnumerable numbers = Linq.ofInts(
+     *     5, 2, 8, 1, 4
+     * );
+     *
+     * IntEnumerable ordered = numbers.order();
+     *
+     * ordered.forEach(System.out::println);
+     *
+     * // This code produces the following output:
+     * //
+     * // 1
+     * // 2
+     * // 4
+     * // 5
+     * // 8
+     * }</pre>
+     *
+     * @return An {@code IntEnumerable} containing the elements of this sequence
+     *         in ascending numerical order.
+     */
+    @NotNull
+    IntEnumerable order();
+
+    /**
+     * <p>Returns the elements of this sequence ordered in descending numerical
+     * order.</p>
+     *
+     * <p>The source sequence is buffered using primitive {@code int} storage when
+     * the returned enumerable is traversed. No {@link Integer} objects are
+     * required for sorting.</p>
+     *
+     * <p>This operation uses deferred execution.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * IntEnumerable numbers = Linq.ofInts(
+     *     5, 2, 8, 1, 4
+     * );
+     *
+     * IntEnumerable ordered =
+     *     numbers.orderDescending();
+     *
+     * ordered.forEach(System.out::println);
+     *
+     * // This code produces the following output:
+     * //
+     * // 8
+     * // 5
+     * // 4
+     * // 2
+     * // 1
+     * }</pre>
+     *
+     * @return An {@code IntEnumerable} containing the elements of this sequence
+     *         in descending numerical order.
+     */
+    @NotNull
+    IntEnumerable orderDescending();
 
     /**
      * <p>Adds a specified primitive {@code int} value to the beginning of this
@@ -863,7 +1088,7 @@ public interface IntEnumerable
      *
      * <b>Usage:</b>
      * <pre>{@code
-     * IntEnumerable numbers = Linq.of(2, 3, 4);
+     * IntEnumerable numbers = Linq.ofInts(2, 3, 4);
      *
      * IntEnumerable result = numbers.prepend(1);
      *
@@ -892,7 +1117,7 @@ public interface IntEnumerable
      *
      * <b>Usage:</b>
      * <pre>{@code
-     * IntEnumerable numbers = Linq.of(1, 2, 3, 4);
+     * IntEnumerable numbers = Linq.ofInts(1, 2, 3, 4);
      *
      * IntEnumerable reversed = numbers.reverse();
      *
@@ -924,10 +1149,137 @@ public interface IntEnumerable
     @NotNull
     IntEnumerable shuffle();
 
+    /**
+     * <p>Returns the only primitive {@code int} value in this sequence.</p>
+     *
+     * <p>This operation succeeds only when the sequence contains exactly one
+     * element. An empty sequence and a sequence containing multiple elements are
+     * considered invalid for this operation.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * IntEnumerable numbers = Linq.ofInts(42);
+     *
+     * int value = numbers.single();
+     *
+     * System.out.println(value);
+     *
+     * // This code produces the following output:
+     * //
+     * // 42
+     * }</pre>
+     *
+     * @return The single element in this sequence.
+     * @throws NoSuchElementException If the sequence contains no elements.
+     * @throws IllegalStateException If the sequence contains more than one
+     *         element.
+     */
+    int single();
 
-// ---------------------------------------------------------------------
-// Slicing
-// ---------------------------------------------------------------------
+    /**
+     * <p>Returns the only primitive {@code int} value in this sequence that
+     * satisfies the specified condition.</p>
+     *
+     * <p>This operation succeeds only when exactly one element satisfies
+     * {@code predicate}. If no element satisfies the condition, or if more than
+     * one element satisfies it, the operation fails.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * IntEnumerable numbers = Linq.ofInts(
+     *     1, 3, 4, 5, 7
+     * );
+     *
+     * int even = numbers.single(
+     *     value -> value % 2 == 0
+     * );
+     *
+     * System.out.println(even);
+     *
+     * // This code produces the following output:
+     * //
+     * // 4
+     * }</pre>
+     *
+     * @param predicate A function to test each element for a condition.
+     * @return The single element that satisfies {@code predicate}.
+     * @throws NullPointerException If {@code predicate} is {@code null}.
+     * @throws NoSuchElementException If no element satisfies
+     *         {@code predicate}.
+     * @throws IllegalStateException If more than one element satisfies
+     *         {@code predicate}.
+     */
+    int single(
+        @NotNull IntPredicate predicate
+    );
+
+    /**
+     * <p>Returns the only primitive {@code int} value in this sequence as an
+     * {@link OptionalInt}, or an empty {@code OptionalInt} if the sequence
+     * contains no elements.</p>
+     *
+     * <p>If the sequence contains more than one element, this operation throws an
+     * exception rather than selecting one of the elements.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * IntEnumerable numbers = Linq.ofInts();
+     *
+     * OptionalInt value = numbers.singleOrEmpty();
+     *
+     * System.out.println(value.isEmpty());
+     *
+     * // This code produces the following output:
+     * //
+     * // true
+     * }</pre>
+     *
+     * @return An {@link OptionalInt} containing the single element, or an empty
+     *         {@code OptionalInt} if the sequence contains no elements.
+     * @throws IllegalStateException If the sequence contains more than one
+     *         element.
+     */
+    @NotNull
+    OptionalInt singleOrEmpty();
+
+    /**
+     * <p>Returns the only primitive {@code int} value that satisfies the
+     * specified condition as an {@link OptionalInt}.</p>
+     *
+     * <p>If no element satisfies {@code predicate}, an empty
+     * {@code OptionalInt} is returned. If more than one element satisfies the
+     * predicate, this operation throws an exception.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * IntEnumerable numbers = Linq.ofInts(
+     *     1, 3, 4, 5, 7
+     * );
+     *
+     * OptionalInt even = numbers.singleOrEmpty(
+     *     value -> value % 2 == 0
+     * );
+     *
+     * System.out.println(even.getAsInt());
+     *
+     * // This code produces the following output:
+     * //
+     * // 4
+     * }</pre>
+     *
+     * @param predicate A function to test each element for a condition.
+     * @return An {@link OptionalInt} containing the single matching element,
+     *         or an empty {@code OptionalInt} if no element satisfies
+     *         {@code predicate}.
+     * @throws NullPointerException If {@code predicate} is {@code null}.
+     * @throws IllegalStateException If more than one element satisfies
+     *         {@code predicate}.
+     */
+    @NotNull
+    OptionalInt singleOrEmpty(
+        @NotNull IntPredicate predicate
+    );
+
 
     /**
      * <p>Returns a sequence containing all elements of this sequence except for
@@ -940,7 +1292,7 @@ public interface IntEnumerable
      *
      * <b>Usage:</b>
      * <pre>{@code
-     * IntEnumerable numbers = Linq.of(1, 2, 3, 4, 5);
+     * IntEnumerable numbers = Linq.ofInts(1, 2, 3, 4, 5);
      *
      * IntEnumerable result = numbers.skipLast(2);
      *
@@ -969,7 +1321,7 @@ public interface IntEnumerable
      *
      * <b>Usage:</b>
      * <pre>{@code
-     * IntEnumerable numbers = Linq.of(1, 2, 3, 6, 4, 2);
+     * IntEnumerable numbers = Linq.ofInts(1, 2, 3, 6, 4, 2);
      *
      * IntEnumerable result = numbers.skipWhile(
      *     value -> value < 5
@@ -1002,8 +1354,8 @@ public interface IntEnumerable
      *
      * <b>Usage:</b>
      * <pre>{@code
-     * IntEnumerable first = Linq.of(1, 2, 3);
-     * IntEnumerable second = Linq.of(1, 2, 3);
+     * IntEnumerable first = Linq.ofInts(1, 2, 3);
+     * IntEnumerable second = Linq.ofInts(1, 2, 3);
      *
      * boolean equal = first.sequenceEqual(second);
      *
@@ -1034,7 +1386,7 @@ public interface IntEnumerable
      *
      * <b>Usage:</b>
      * <pre>{@code
-     * IntEnumerable numbers = Linq.of(1, 2, 3, 4);
+     * IntEnumerable numbers = Linq.ofInts(1, 2, 3, 4);
      *
      * IntEnumerable squares =
      *     numbers.select(number -> number * number);
@@ -1069,7 +1421,7 @@ public interface IntEnumerable
      *
      * <b>Usage:</b>
      * <pre>{@code
-     * LongEnumerable values = Linq.of(1, 2, 3)
+     * LongEnumerable values = Linq.ofInts(1, 2, 3)
      *     .selectToLong(value -> (long) value * 1_000_000_000L);
      *
      * values.forEach(System.out::println);
@@ -1095,7 +1447,7 @@ public interface IntEnumerable
      *
      * <b>Usage:</b>
      * <pre>{@code
-     * DoubleEnumerable halves = Linq.of(1, 2, 3, 4)
+     * DoubleEnumerable halves = Linq.ofInts(1, 2, 3, 4)
      *     .selectToDouble(value -> value / 2.0);
      *
      * halves.forEach(System.out::println);
@@ -1126,7 +1478,7 @@ public interface IntEnumerable
      *
      * <b>Usage:</b>
      * <pre>{@code
-     * Enumerable<String> values = Linq.of(10, 20, 30)
+     * Enumerable<String> values = Linq.ofInts(10, 20, 30)
      *     .selectToObj(value -> "Value: " + value);
      *
      * values.forEach(System.out::println);
@@ -1154,7 +1506,7 @@ public interface IntEnumerable
      *
      * <b>Usage:</b>
      * <pre>{@code
-     * IntEnumerable numbers = Linq.of(1, 2, 3, 4, 5);
+     * IntEnumerable numbers = Linq.ofInts(1, 2, 3, 4, 5);
      *
      * int sum = numbers.sum();
      *
@@ -1186,7 +1538,7 @@ public interface IntEnumerable
      *
      * <b>Usage:</b>
      * <pre>{@code
-     * IntEnumerable numbers = Linq.of(
+     * IntEnumerable numbers = Linq.ofInts(
      *     1, 2, 3, 4, 5
      * );
      *
@@ -1222,7 +1574,7 @@ public interface IntEnumerable
      *
      * <b>Usage:</b>
      * <pre>{@code
-     * IntEnumerable numbers = Linq.of(
+     * IntEnumerable numbers = Linq.ofInts(
      *     1, 2, 3, 4, 5
      * );
      *
@@ -1256,7 +1608,7 @@ public interface IntEnumerable
      *
      * <b>Usage:</b>
      * <pre>{@code
-     * IntEnumerable numbers = Linq.of(1, 2, 3, 4, 5);
+     * IntEnumerable numbers = Linq.ofInts(1, 2, 3, 4, 5);
      *
      * IntEnumerable result = numbers.takeLast(2);
      *
@@ -1282,7 +1634,7 @@ public interface IntEnumerable
      *
      * <b>Usage:</b>
      * <pre>{@code
-     * IntEnumerable numbers = Linq.of(1, 2, 3, 6, 4, 2);
+     * IntEnumerable numbers = Linq.ofInts(1, 2, 3, 6, 4, 2);
      *
      * IntEnumerable result = numbers.takeWhile(
      *     value -> value < 5
@@ -1318,8 +1670,8 @@ public interface IntEnumerable
      *
      * <b>Usage:</b>
      * <pre>{@code
-     * IntEnumerable first = Linq.of(1, 2, 3);
-     * IntEnumerable second = Linq.of(3, 4, 5);
+     * IntEnumerable first = Linq.ofInts(1, 2, 3);
+     * IntEnumerable second = Linq.ofInts(3, 4, 5);
      *
      * IntEnumerable result = first.union(second);
      *
@@ -1351,7 +1703,7 @@ public interface IntEnumerable
      * <b>Usage:</b>
      * <pre>{@code
      * IntEnumerable numbers =
-     *     Linq.of(1, 2, 3, 4, 5, 6);
+     *     Linq.ofInts(1, 2, 3, 4, 5, 6);
      *
      * IntEnumerable evenNumbers =
      *     numbers.where(number -> number % 2 == 0);
@@ -1385,7 +1737,7 @@ public interface IntEnumerable
      *
      * <b>Usage:</b>
      * <pre>{@code
-     * int[] values = Linq.of(1, 2, 3, 4)
+     * int[] values = Linq.ofInts(1, 2, 3, 4)
      *     .where(value -> value % 2 == 0)
      *     .toArray();
      *
@@ -1409,7 +1761,7 @@ public interface IntEnumerable
      *
      * <b>Usage:</b>
      * <pre>{@code
-     * IntEnumerable numbers = Linq.of(1, 2, 3);
+     * IntEnumerable numbers = Linq.ofInts(1, 2, 3);
      *
      * Enumerable<Integer> boxed = numbers.boxed();
      *
@@ -1427,4 +1779,42 @@ public interface IntEnumerable
      */
     @NotNull
     Enumerable<Integer> boxed();
+
+    /**
+     * <p>Creates an {@link IntEnumerable} from the specified primitive
+     * {@code int} values.</p>
+     *
+     * <p>The returned enumerable traverses the supplied array directly and does
+     * not require boxing the primitive values into {@link Integer} objects.</p>
+     *
+     * <p>The supplied array is not copied. Changes made to the array after this
+     * method returns may therefore be visible when the enumerable is traversed.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * IntEnumerable numbers = Linq.ofInts(
+     *     1, 2, 3, 4, 5
+     * );
+     *
+     * numbers
+     *     .where(value -> value % 2 != 0)
+     *     .select(value -> value * 10)
+     *     .forEach(System.out::println);
+     *
+     * // This code produces the following output:
+     * //
+     * // 10
+     * // 30
+     * // 50
+     * }</pre>
+     *
+     * @param ints The primitive {@code int} values used as the source sequence.
+     * @return An {@link IntEnumerable} that enumerates the specified values.
+     * @throws NullPointerException If {@code ints} is {@code null}.
+     */
+    @NotNull
+    static IntEnumerable of(int... ints) {
+        NullCheck.requireNonNull(ints);
+        return new IntEnumPipeline.Head(() -> new IntArrayEnumerator(ints));
+    }
 }

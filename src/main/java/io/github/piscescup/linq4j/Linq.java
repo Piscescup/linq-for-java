@@ -1,6 +1,7 @@
 package io.github.piscescup.linq4j;
 
 
+import io.github.piscescup.linq4j.primitive.*;
 import io.github.piscescup.util.validation.NullCheck;
 import org.jetbrains.annotations.NotNull;
 
@@ -16,6 +17,117 @@ import java.util.function.Supplier;
  */
 public final class Linq {
     private Linq() {}
+
+    /**
+     * <p>Creates an {@link IntEnumerable} from the specified primitive
+     * {@code int} values.</p>
+     *
+     * <p>The returned enumerable traverses the supplied array directly and does
+     * not require boxing the primitive values into {@link Integer} objects.</p>
+     *
+     * <p>The supplied array is not copied. Changes made to the array after this
+     * method returns may therefore be visible when the enumerable is traversed.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * IntEnumerable numbers = Linq.of(
+     *     1, 2, 3, 4, 5
+     * );
+     *
+     * numbers
+     *     .where(value -> value % 2 != 0)
+     *     .select(value -> value * 10)
+     *     .forEach(System.out::println);
+     *
+     * // This code produces the following output:
+     * //
+     * // 10
+     * // 30
+     * // 50
+     * }</pre>
+     *
+     * @param ints The primitive {@code int} values used as the source sequence.
+     * @return An {@link IntEnumerable} that enumerates the specified values.
+     * @throws NullPointerException If {@code ints} is {@code null}.
+     */
+    public static IntEnumerable ofInts(int... ints) {
+        return IntEnumerable.of(ints);
+    }
+
+    /**
+     * <p>Creates a {@link DoubleEnumerable} from the specified primitive
+     * {@code double} values.</p>
+     *
+     * <p>The returned enumerable traverses the supplied array directly and does
+     * not require boxing the primitive values into {@link Double} objects.</p>
+     *
+     * <p>The supplied array is not copied. Changes made to the array after this
+     * method returns may therefore be visible when the enumerable is traversed.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * DoubleEnumerable numbers = Linq.of(
+     *     1.5, 2.0, 3.5, 4.0, 5.5
+     * );
+     *
+     * numbers
+     *     .where(value -> value >= 3.0)
+     *     .select(value -> value * 2.0)
+     *     .forEach(System.out::println);
+     *
+     * // This code produces the following output:
+     * //
+     * // 7.0
+     * // 8.0
+     * // 11.0
+     * }</pre>
+     *
+     * @param doubles The primitive {@code double} values used as the source
+     *                sequence.
+     * @return A {@link DoubleEnumerable} that enumerates the specified values.
+     * @throws NullPointerException If {@code doubles} is {@code null}.
+     */
+    @NotNull
+    public static DoubleEnumerable ofDoubles(double @NotNull ... doubles) {
+        return DoubleEnumerable.of(doubles);
+    }
+
+    /**
+     * <p>Creates a {@link LongEnumerable} from the specified primitive
+     * {@code long} values.</p>
+     *
+     * <p>The returned enumerable traverses the supplied array directly and does
+     * not require boxing the primitive values into {@link Long} objects.</p>
+     *
+     * <p>The supplied array is not copied. Changes made to the array after this
+     * method returns may therefore be visible when the enumerable is traversed.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * LongEnumerable numbers = Linq.of(
+     *     1L, 2L, 3L, 4L, 5L
+     * );
+     *
+     * numbers
+     *     .where(value -> value % 2 != 0)
+     *     .select(value -> value * 10)
+     *     .forEach(System.out::println);
+     *
+     * // This code produces the following output:
+     * //
+     * // 10
+     * // 30
+     * // 50
+     * }</pre>
+     *
+     * @param longs The primitive {@code long} values used as the source sequence.
+     * @return A {@link LongEnumerable} that enumerates the specified values.
+     * @throws NullPointerException If {@code longs} is {@code null}.
+     */
+    @NotNull
+    public static LongEnumerable ofLongs(long @NotNull ... longs) {
+        return LongEnumerable.of(longs);
+    }
 
     /**
      * Creates an {@link Enumerable} sequence from the specified elements.

@@ -12,11 +12,7 @@ import java.util.Arrays;
 import java.util.NoSuchElementException;
 import java.util.OptionalInt;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.function.IntBinaryOperator;
-import java.util.function.IntFunction;
-import java.util.function.IntPredicate;
-import java.util.function.IntUnaryOperator;
-import java.util.function.Supplier;
+import java.util.function.*;
 
 /**
  * Abstract base class for primitive {@code int} enumerable pipeline stages.
@@ -646,6 +642,236 @@ abstract class IntEnumPipeline
     }
 
     // ---------------------------------------------------------------------
+// Last
+// ---------------------------------------------------------------------
+
+    /** {@inheritDoc} */
+    @Override
+    public final int last() {
+        try (IntEnumerator enumerator = enumerator()) {
+            if (!enumerator.moveNext()) {
+                throw new NoSuchElementException(
+                    "Sequence contains no elements."
+                );
+            }
+
+            int result = enumerator.current();
+
+            while (enumerator.moveNext()) {
+                result = enumerator.current();
+            }
+
+            return result;
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public final int last(
+        @NotNull IntPredicate predicate
+    ) {
+        NullCheck.requireNonNull(
+            predicate,
+            "predicate"
+        );
+
+        boolean found = false;
+        int result = 0;
+
+        try (IntEnumerator enumerator = enumerator()) {
+            while (enumerator.moveNext()) {
+                int value = enumerator.current();
+
+                if (predicate.test(value)) {
+                    result = value;
+                    found = true;
+                }
+            }
+        }
+
+        if (!found) {
+            throw new NoSuchElementException(
+                "No element satisfies the condition."
+            );
+        }
+
+        return result;
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public final @NotNull OptionalInt lastOrEmpty() {
+        boolean found = false;
+        int result = 0;
+
+        try (IntEnumerator enumerator = enumerator()) {
+            while (enumerator.moveNext()) {
+                result = enumerator.current();
+                found = true;
+            }
+        }
+
+        return found
+            ? OptionalInt.of(result)
+            : OptionalInt.empty();
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public final @NotNull OptionalInt lastOrEmpty(
+        @NotNull IntPredicate predicate
+    ) {
+        NullCheck.requireNonNull(
+            predicate,
+            "predicate"
+        );
+
+        boolean found = false;
+        int result = 0;
+
+        try (IntEnumerator enumerator = enumerator()) {
+            while (enumerator.moveNext()) {
+                int value = enumerator.current();
+
+                if (predicate.test(value)) {
+                    result = value;
+                    found = true;
+                }
+            }
+        }
+
+        return found
+            ? OptionalInt.of(result)
+            : OptionalInt.empty();
+    }
+
+
+// ---------------------------------------------------------------------
+// Single
+// ---------------------------------------------------------------------
+
+    /** {@inheritDoc} */
+    @Override
+    public final int single() {
+        try (IntEnumerator enumerator = enumerator()) {
+            if (!enumerator.moveNext()) {
+                throw new NoSuchElementException(
+                    "Sequence contains no elements."
+                );
+            }
+
+            int result = enumerator.current();
+
+            if (enumerator.moveNext()) {
+                throw new IllegalStateException(
+                    "Sequence contains more than one element."
+                );
+            }
+
+            return result;
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public final int single(
+        @NotNull IntPredicate predicate
+    ) {
+        NullCheck.requireNonNull(
+            predicate,
+            "predicate"
+        );
+
+        boolean found = false;
+        int result = 0;
+
+        try (IntEnumerator enumerator = enumerator()) {
+            while (enumerator.moveNext()) {
+                int value = enumerator.current();
+
+                if (!predicate.test(value)) {
+                    continue;
+                }
+
+                if (found) {
+                    throw new IllegalStateException(
+                        "Sequence contains more than one matching element."
+                    );
+                }
+
+                result = value;
+                found = true;
+            }
+        }
+
+        if (!found) {
+            throw new NoSuchElementException(
+                "No element satisfies the condition."
+            );
+        }
+
+        return result;
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public final @NotNull OptionalInt singleOrEmpty() {
+        try (IntEnumerator enumerator = enumerator()) {
+            if (!enumerator.moveNext()) {
+                return OptionalInt.empty();
+            }
+
+            int result = enumerator.current();
+
+            if (enumerator.moveNext()) {
+                throw new IllegalStateException(
+                    "Sequence contains more than one element."
+                );
+            }
+
+            return OptionalInt.of(result);
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public final @NotNull OptionalInt singleOrEmpty(
+        @NotNull IntPredicate predicate
+    ) {
+        NullCheck.requireNonNull(
+            predicate,
+            "predicate"
+        );
+
+        boolean found = false;
+        int result = 0;
+
+        try (IntEnumerator enumerator = enumerator()) {
+            while (enumerator.moveNext()) {
+                int value = enumerator.current();
+
+                if (!predicate.test(value)) {
+                    continue;
+                }
+
+                if (found) {
+                    throw new IllegalStateException(
+                        "Sequence contains more than one matching element."
+                    );
+                }
+
+                result = value;
+                found = true;
+            }
+        }
+
+        return found
+            ? OptionalInt.of(result)
+            : OptionalInt.empty();
+    }
+
+
+    // ---------------------------------------------------------------------
     // Numeric aggregation
     // ---------------------------------------------------------------------
 
@@ -698,10 +924,12 @@ abstract class IntEnumPipeline
         return count;
     }
 
-    /** {@inheritDoc} */
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    public final long sum() {
-        long sum = 0L;
+    public final int sum() {
+        int sum = 0;
 
         try (IntEnumerator enumerator = enumerator()) {
             while (enumerator.moveNext()) {
@@ -879,6 +1107,212 @@ abstract class IntEnumPipeline
                 };
             }
         };
+    }
+
+    @Override
+    public final @NotNull LongEnumerable selectToLong(
+        @NotNull IntToLongFunction selector
+    ) {
+        NullCheck.requireNonNull(
+            selector,
+            "selector"
+        );
+
+        return new LongEnumPipeline.Head(
+            () -> {
+                IntEnumerator upstream =
+                    enumerator();
+
+                return new LongEnumerator() {
+
+                    private long current;
+                    private boolean hasCurrent;
+                    private boolean finished;
+                    private boolean closed;
+
+                    @Override
+                    public boolean moveNext() {
+                        ensureOpen();
+
+                        if (finished) {
+                            hasCurrent = false;
+                            return false;
+                        }
+
+                        hasCurrent = false;
+
+                        if (!upstream.moveNext()) {
+                            finished = true;
+                            return false;
+                        }
+
+                        current = selector.applyAsLong(
+                            upstream.current()
+                        );
+
+                        hasCurrent = true;
+                        return true;
+                    }
+
+                    @Override
+                    public long current() {
+                        ensureOpen();
+
+                        if (!hasCurrent) {
+                            throw new IllegalStateException(
+                                "The enumerator is not positioned on an element."
+                            );
+                        }
+
+                        return current;
+                    }
+
+                    @Override
+                    public void remove() {
+                        ensureOpen();
+                        upstream.remove();
+                    }
+
+                    @Override
+                    public void reset() {
+                        ensureOpen();
+
+                        upstream.reset();
+
+                        current = 0L;
+                        hasCurrent = false;
+                        finished = false;
+                    }
+
+                    @Override
+                    public void close() {
+                        if (closed) {
+                            return;
+                        }
+
+                        closed = true;
+
+                        current = 0L;
+                        hasCurrent = false;
+                        finished = true;
+
+                        upstream.close();
+                    }
+
+                    private void ensureOpen() {
+                        if (closed) {
+                            throw new IllegalStateException(
+                                "The enumerator has already been closed."
+                            );
+                        }
+                    }
+                };
+            },
+            isParallel()
+        );
+    }
+
+    @Override
+    public final @NotNull DoubleEnumerable selectToDouble(
+        @NotNull IntToDoubleFunction selector
+    ) {
+        NullCheck.requireNonNull(
+            selector,
+            "selector"
+        );
+
+        return new DoubleEnumPipeline.Head(
+            () -> {
+                IntEnumerator upstream =
+                    enumerator();
+
+                return new DoubleEnumerator() {
+
+                    private double current;
+                    private boolean hasCurrent;
+                    private boolean finished;
+                    private boolean closed;
+
+                    @Override
+                    public boolean moveNext() {
+                        ensureOpen();
+
+                        if (finished) {
+                            hasCurrent = false;
+                            return false;
+                        }
+
+                        hasCurrent = false;
+
+                        if (!upstream.moveNext()) {
+                            finished = true;
+                            return false;
+                        }
+
+                        current = selector.applyAsDouble(
+                            upstream.current()
+                        );
+
+                        hasCurrent = true;
+                        return true;
+                    }
+
+                    @Override
+                    public double current() {
+                        ensureOpen();
+
+                        if (!hasCurrent) {
+                            throw new IllegalStateException(
+                                "The enumerator is not positioned on an element."
+                            );
+                        }
+
+                        return current;
+                    }
+
+                    @Override
+                    public void remove() {
+                        ensureOpen();
+                        upstream.remove();
+                    }
+
+                    @Override
+                    public void reset() {
+                        ensureOpen();
+
+                        upstream.reset();
+
+                        current = 0.0;
+                        hasCurrent = false;
+                        finished = false;
+                    }
+
+                    @Override
+                    public void close() {
+                        if (closed) {
+                            return;
+                        }
+
+                        closed = true;
+
+                        current = 0.0;
+                        hasCurrent = false;
+                        finished = true;
+
+                        upstream.close();
+                    }
+
+                    private void ensureOpen() {
+                        if (closed) {
+                            throw new IllegalStateException(
+                                "The enumerator has already been closed."
+                            );
+                        }
+                    }
+                };
+            },
+            isParallel()
+        );
     }
 
     /** {@inheritDoc} */
@@ -1649,9 +2083,102 @@ abstract class IntEnumPipeline
         };
     }
 
-    // ---------------------------------------------------------------------
-    // Materialization
-    // ---------------------------------------------------------------------
+    /** {@inheritDoc} */
+    @Override
+    public final @NotNull IntEnumerable order() {
+        return new StatefulOp(this) {
+
+            @Override
+            protected @NotNull IntEnumerator opWrapEnumerator(
+                @NotNull IntEnumerator upstream
+            ) {
+                return new IntPipelineEnumerator(upstream) {
+
+                    private int[] values;
+                    private int index;
+                    private boolean initialized;
+
+                    private void initialize() {
+                        if (initialized) {
+                            return;
+                        }
+
+                        initialized = true;
+
+                        values =
+                            collectToArray(upstream);
+
+                        Arrays.sort(values);
+                    }
+
+                    @Override
+                    protected boolean moveNextCore() {
+                        initialize();
+
+                        if (index >= values.length) {
+                            return false;
+                        }
+
+                        setCurrent(
+                            values[index++]
+                        );
+
+                        return true;
+                    }
+                };
+            }
+        };
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public final @NotNull IntEnumerable orderDescending() {
+        return new StatefulOp(this) {
+
+            @Override
+            protected @NotNull IntEnumerator opWrapEnumerator(
+                @NotNull IntEnumerator upstream
+            ) {
+                return new IntPipelineEnumerator(upstream) {
+
+                    private int[] values;
+                    private int index;
+                    private boolean initialized;
+
+                    private void initialize() {
+                        if (initialized) {
+                            return;
+                        }
+
+                        initialized = true;
+
+                        values =
+                            collectToArray(upstream);
+
+                        Arrays.sort(values);
+
+                        index =
+                            values.length - 1;
+                    }
+
+                    @Override
+                    protected boolean moveNextCore() {
+                        initialize();
+
+                        if (index < 0) {
+                            return false;
+                        }
+
+                        setCurrent(
+                            values[index--]
+                        );
+
+                        return true;
+                    }
+                };
+            }
+        };
+    }
 
     /** {@inheritDoc} */
     @Override
