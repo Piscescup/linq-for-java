@@ -1411,7 +1411,7 @@ public interface DoubleEnumerable
      * @throws NullPointerException If {@code doubles} is {@code null}.
      */
     @NotNull
-    static DoubleEnumerable of(double @NotNull ... doubles) {
+    static DoubleEnumerable ofDoubles(double @NotNull ... doubles) {
         NullCheck.requireNonNull(doubles);
 
         return new DoubleEnumPipeline.Head(() -> new DoubleArrayEnumerator(doubles));
