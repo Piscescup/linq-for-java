@@ -7,9 +7,59 @@ import java.util.Objects;
 import java.util.function.Consumer;
 
 /**
+ * Defines the internal enumeration contract for a sequence of reference-type
+ * elements.
+ *
+ * <p>{@code InternalEnumerable<T>} provides the fundamental traversal mechanism
+ * used by {@link Enumerable}. Each call to {@link #enumerator()} creates an
+ * {@link Enumerator} that represents an independent traversal of the sequence.
+ * The returned enumerator maintains the state associated with that particular
+ * enumeration, such as the current cursor position and any operation-specific
+ * traversal state.</p>
+ *
+ * <p>This interface also integrates the library's {@link Enumerator} abstraction
+ * with Java's standard {@link Iterable} API. The default implementation of
+ * {@link #iterator()} simply returns the enumerator created by
+ * {@link #enumerator()}, since {@code Enumerator<T>} also implements
+ * {@link Iterator}.</p>
+ *
+ * <p>As a result, implementations of this interface can be traversed using both
+ * the cursor-based enumeration API:</p>
+ *
+ * <pre>{@code
+ * try (Enumerator<String> enumerator = enumerable.enumerator()) {
+ *     while (enumerator.moveNext()) {
+ *         System.out.println(enumerator.current());
+ *     }
+ * }
+ * }</pre>
+ *
+ * <p>and the standard enhanced {@code for} statement:</p>
+ *
+ * <pre>{@code
+ * for (String element : enumerable) {
+ *     System.out.println(element);
+ * }
+ * }</pre>
+ *
+ * <p>The query itself and the state of an individual enumeration are separate.
+ * Implementations should therefore normally create a new enumerator for every
+ * call to {@link #enumerator()}, rather than reusing traversal state between
+ * independent enumerations.</p>
+ *
+ * <p>This interface is intended for reference-type sequences. Primitive
+ * specializations use corresponding internal enumeration interfaces so that
+ * primitive values can be traversed without boxing.</p>
+ *
+ * @param <T> the type of elements in this enumerable sequence
  *
  * @author REN YuanTong
  * @since 1.0.0
+ *
+ * @see Enumerable
+ * @see Enumerator
+ * @see Iterable
+ * @see Iterator
  */
 public interface InternalEnumerable<T> extends Iterable<T> {
 
