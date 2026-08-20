@@ -204,8 +204,14 @@ abstract class AbstractReferenceEnumPipeline<T_IN, T_OUT, ENUM_OUT extends BaseE
         this.sourceStage = previousStage.sourceStage;
         this.sourceSupplier = null;
         this.depth = previousStage.depth + 1;
-    }
 
+        /*
+         * Execution configuration is inherited by the newly created query
+         * stage. Because the pipeline is reusable, creating this stage does
+         * not mutate the source or the upstream stage.
+         */
+        this.parallel = previousStage.parallel;
+    }
 
     /**
      * Returns the depth of this stage in the pipeline.
