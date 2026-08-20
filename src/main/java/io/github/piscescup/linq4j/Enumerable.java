@@ -20,91 +20,336 @@ import java.util.*;
 import java.util.function.*;
 
 /**
- * A sequence of elements that supports aggregate operations in a declarative
- * style, analogous to the .NET {@code IEnumerable<T>} interface and its
- * Language Integrated Query (LINQ) extensions.  The following example
- * illustrates a typical aggregate operation using an {@code Enumerable}:
+ * Represents a sequence of elements that supports LINQ-style query and
+ * aggregation operations.
+ *
+ * <p>{@code Enumerable<T>} is the central sequence abstraction of this library.
+ * It is conceptually similar to .NET's {@code IEnumerable<T>} together with the
+ * standard LINQ query operators. An enumerable describes a sequence and provides
+ * operations for filtering, projection, aggregation, grouping, ordering, joining,
+ * set operations, and materialization.</p>
+ *
+ * <p>Queries are typically expressed by chaining operations together. For example,
+ * the following query filters a sequence of products, projects their prices, and
+ * materializes the result:</p>
  *
  * <pre>{@code
- * int sum = Linq.fromIterable(widgets)
- *     .where(w -> w.getColor() == RED)
- *     .select(w -> w.getWeight())
- *     .sum();
+ * record Product(String name, String category, double price) {}
+ *
+ * Enumerable<Product> products = Linq.of(
+ *     new Product("Apple", "Fruit", 3.5),
+ *     new Product("Banana", "Fruit", 2.0),
+ *     new Product("Notebook", "Stationery", 8.0),
+ *     new Product("Pen", "Stationery", 1.5)
+ * );
+ *
+ * List<Double> prices = products
+ *     .where(product -> product.price() >= 3.0)
+ *     .select(Product::price)
+ *     .toList();
+ *
+ * // prices: [3.5, 8.0]
  * }</pre>
  *
- * In this example, {@code widgets} is a {@code Collection<Widget>}.  We obtain
- * an {@code Enumerable<Widget>} via {@code asEnumerable()} (or a similar factory
- * method), filter it to retain only the red widgets using {@code where}, and
- * then transform each remaining widget into an {@code int} representing its
- * weight via {@code select}. Finally, the terminal operation {@code sum} computes
- * the total weight of all red widgets.
+ * <h2>Deferred execution</h2>
  *
- * <p>An {@code Enumerable} can be viewed as a <em>query</em> over its source
- * data.  The query is expressed as a <em>pipeline</em> of operations, which
- * consists of a source (e.g., a collection, an array, a generator function, or
- * an I/O channel), zero or more <em>intermediate operations</em> (such as
- * {@code where}, {@code select}, or {@code orderBy}) that transform one
- * {@code Enumerable} into another, and a <em>terminal operation</em> (such as
- * {@code sum}, {@code count}, or {@code forEach}) that produces a result or
- * performs a side-effect.  The pipeline is <em>lazy</em>; computation on the
- * source data is deferred until the terminal operation is invoked, and elements
- * are consumed only as needed.
+ * <p>Most operations that return another {@code Enumerable} use
+ * <em>deferred execution</em>. Calling an operation such as
+ * {@link #where(Predicate)}, {@link #select(Function)}, or
+ * {@link #orderBy(Function)} constructs a new query stage but does not
+ * immediately enumerate the source sequence.</p>
  *
- * <p>Implementations are allowed significant freedom in optimizing the execution
- * of the pipeline.  For example, an implementation may elide intermediate
- * operations entirely if it can prove that doing so does not affect the final
- * result.  Consequently, behavioral parameters (such as predicates or mapping
- * functions) may not be invoked in all cases, and any side-effects they might
- * have are not guaranteed to occur—unless specifically documented by the
- * terminal operation (e.g., {@code forEach} is guaranteed to execute its action
- * for each element).  For more details, see the discussion on
- * <a href="package-summary.html#SideEffects">side-effects</a>.
+ * <p>The query is evaluated when the resulting enumerable is traversed, for
+ * example through {@link #enumerator()}, {@link #iterator()}, {@code forEach},
+ * or a materialization or aggregation operation such as {@code toList},
+ * {@code count}, or {@code aggregateToResult}.</p>
  *
- * <p>While collections and enumerables share some superficial similarities,
- * their purposes differ.  Collections are primarily concerned with the efficient
- * storage, management, and direct access to their elements.  In contrast, an
- * {@code Enumerable} does not provide direct access to its elements; instead,
- * it is a <em>query</em> that declaratively describes the source and the
- * operations to be performed upon it.  If the built-in operations are insufficient,
- * you may obtain a traditional iterator via {@link #iterator()} or
- * {@link #spliterator()} to perform manual traversal.
+ * <p>This means that creating a query and executing a query are separate
+ * operations:</p>
  *
- * <p>Most operations accept user-specified behavioral parameters (typically
- * lambda expressions or method references) that must be <em>non-interfering</em>
- * (they do not modify the stream source) and, in most cases, <em>stateless</em>
- * (their result must not depend on any state that might change during pipeline
- * execution).  These parameters must also be <em>non-null</em> unless otherwise
- * specified.
+ * <pre>{@code
+ * Enumerable<Integer> numbers = Linq.of(1, 2, 3, 4, 5, 6);
  *
- * <p>An {@code Enumerable} should be operated on (i.e., intermediate or terminal
- * operations invoked) only once.  Reusing the same enumerable—for example, by
- * attempting to traverse it multiple times or by "forking" it into multiple
- * pipelines—is not supported and may lead to {@link IllegalStateException} if
- * detected.  Some operations may return the same instance rather than a new
- * object, making detection of reuse not always possible, but clients should
- * avoid such patterns.
+ * // Defines the query. The source is not enumerated here.
+ * Enumerable<Integer> query = numbers
+ *     .where(number -> number % 2 == 0)
+ *     .select(number -> number * number);
  *
- * <p>An {@code Enumerable} may implement {@link AutoCloseable} and provide a
- * {@link #close()} method.  Once closed, any further operation will throw
- * {@link IllegalStateException}.  Most enumerable instances do not require
- * explicit closing, as they are backed by in-memory collections or generating
- * functions that hold no external resources.  However, if the source is an I/O
- * channel (e.g., lines read from a file), the enumerable <em>must</em> be used
- * within a try-with-resources block or equivalent to ensure timely release of
- * resources.
+ * // Enumerates the source and evaluates the query.
+ * List<Integer> result = query.toList();
  *
- * <p>Execution may be sequential or parallel; this is a property of the
- * enumerable instance.  The initial execution mode is determined by the factory
- * method used to create it (e.g., a sequential or parallel factory).  The mode
- * can be changed using {@link #sequential()} or {@link #parallel()}, and the
- * current mode can be queried with {@link #isParallel()}.
+ * // result: [4, 16, 36]
+ * }</pre>
+ *
+ * <h2>Enumeration</h2>
+ *
+ * <p>An enumerable represents a sequence rather than a single-use traversal.
+ * An enumeration is created when {@link #enumerator()} is called. Pipeline
+ * implementations create the state required for a traversal independently for
+ * each enumerator. Consequently, traversal-specific state such as indexes,
+ * buffers, queues, grouping tables, distinct-value sets, and nested enumerators
+ * belongs to the enumeration rather than to the query description itself.</p>
+ *
+ * <p>This differs from {@link java.util.stream.Stream}, which represents a
+ * single-use stream pipeline. An {@code Enumerable} is intended to model the
+ * reusable query semantics of LINQ: the query describes <em>how</em> a source
+ * should be enumerated, while each enumeration performs that query over the
+ * source.</p>
+ *
+ * <p>If the underlying source itself is mutable, repeated enumeration can
+ * naturally produce different results because the query is evaluated against
+ * the source when enumeration occurs.</p>
+ *
+ * <h2>Stateless and stateful operations</h2>
+ *
+ * <p>Some query operations can produce elements directly as elements arrive
+ * from the upstream sequence. Operations such as {@code where}, {@code select},
+ * {@code skip}, and {@code take} are typical examples.</p>
+ *
+ * <p>Other operations require state associated with the current enumeration.
+ * For example, distinct and set operations maintain information about values
+ * already encountered, grouping operations construct groups, and ordering
+ * operations buffer elements before producing them in the requested order.
+ * Such state is created independently for each enumeration.</p>
+ *
+ * <h2>Aggregation</h2>
+ *
+ * <p>Aggregation operations consume elements from the sequence and produce a
+ * single result. {@code aggregateToResult} is the general-purpose aggregation
+ * operation and corresponds to LINQ's {@code Aggregate} operator.</p>
+ *
+ * <pre>{@code
+ * Enumerable<Integer> numbers = Linq.of(1, 2, 3, 4, 5);
+ *
+ * int sum = numbers.aggregateToResult(
+ *     0,
+ *     Integer::sum
+ * );
+ *
+ * // sum: 15
+ * }</pre>
+ *
+ * <p>An accumulator may also have a type different from the sequence element
+ * type:</p>
+ *
+ * <pre>{@code
+ * Enumerable<String> words = Linq.of(
+ *     "apple",
+ *     "banana",
+ *     "orange"
+ * );
+ *
+ * int totalCharacters = words.aggregateToResult(
+ *     0,
+ *     (length, word) -> length + word.length()
+ * );
+ *
+ * // totalCharacters: 17
+ * }</pre>
+ *
+ * <h2>Filtering with {@code where}</h2>
+ *
+ * <p>{@code where} filters a sequence according to a predicate. Elements are
+ * requested from the upstream sequence until an element satisfying the
+ * predicate is found.</p>
+ *
+ * <pre>{@code
+ * Enumerable<Integer> numbers =
+ *     Linq.of(1, 2, 3, 4, 5, 6, 7, 8);
+ *
+ * Enumerable<Integer> evenNumbers = numbers.where(
+ *     number -> number % 2 == 0
+ * );
+ *
+ * List<Integer> result = evenNumbers.toList();
+ *
+ * // result: [2, 4, 6, 8]
+ * }</pre>
+ *
+ * <h2>Projection with {@code select}</h2>
+ *
+ * <p>{@code select} transforms each element of a sequence into another value
+ * and corresponds to LINQ's {@code Select} operator.</p>
+ *
+ * <pre>{@code
+ * record Person(String name, int age) {}
+ *
+ * Enumerable<Person> people = Linq.of(
+ *     new Person("Alice", 24),
+ *     new Person("Bob", 31),
+ *     new Person("Charlie", 28)
+ * );
+ *
+ * Enumerable<String> names = people.select(Person::name);
+ *
+ * List<String> result = names.toList();
+ *
+ * // result: [Alice, Bob, Charlie]
+ * }</pre>
+ *
+ * <p>Filtering and projection are commonly combined:</p>
+ *
+ * <pre>{@code
+ * List<String> adultNames = people
+ *     .where(person -> person.age() >= 25)
+ *     .select(Person::name)
+ *     .toList();
+ *
+ * // adultNames: [Bob, Charlie]
+ * }</pre>
+ *
+ * <h2>Grouping with {@code groupBy}</h2>
+ *
+ * <p>{@code groupBy} partitions the elements of a sequence according to a
+ * selected key. Each resulting {@link Groupable} contains the key and the
+ * elements associated with that key.</p>
+ *
+ * <pre>{@code
+ * record Employee(String name, String department) {}
+ *
+ * Enumerable<Employee> employees = Linq.of(
+ *     new Employee("Alice", "Development"),
+ *     new Employee("Bob", "Sales"),
+ *     new Employee("Charlie", "Development"),
+ *     new Employee("David", "Sales"),
+ *     new Employee("Eve", "HR")
+ * );
+ *
+ * Enumerable<Groupable<String, Employee>> groups =
+ *     employees.groupBy(Employee::department);
+ *
+ * groups.forEach(group -> {
+ *     System.out.println(group.getGroupKey());
+ *
+ *     group.getEnumerableGroupElements()
+ *         .select(Employee::name)
+ *         .forEach(System.out::println);
+ * });
+ * }</pre>
+ *
+ * <p>Grouping may also be followed by projection to produce aggregate
+ * information for each group:</p>
+ *
+ * <pre>{@code
+ * Enumerable<String> summary = employees
+ *     .groupBy(Employee::department)
+ *     .select(group ->
+ *         group.getGroupKey()
+ *             + ": "
+ *             + group.getGroupElements().size()
+ *     );
+ *
+ * summary.forEach(System.out::println);
+ *
+ * // Development: 2
+ * // Sales: 2
+ * // HR: 1
+ * }</pre>
+ *
+ * <h2>Ordering with {@code orderBy}</h2>
+ *
+ * <p>{@code orderBy} orders the elements of a sequence according to a selected
+ * key and returns an {@link OrderedEnumerable}. Additional ordering criteria
+ * can be appended with {@code thenBy} and related operations.</p>
+ *
+ * <pre>{@code
+ * record Student(String name, String department, int score) {}
+ *
+ * Enumerable<Student> students = Linq.of(
+ *     new Student("Alice", "Physics", 91),
+ *     new Student("Bob", "Chemistry", 87),
+ *     new Student("Charlie", "Physics", 84),
+ *     new Student("David", "Chemistry", 95)
+ * );
+ *
+ * List<Student> ordered = students
+ *     .orderBy(Student::department)
+ *     .thenByIntDescending(Student::score)
+ *     .toList();
+ *
+ * // Chemistry: David (95), Bob (87)
+ * // Physics: Alice (91), Charlie (84)
+ * }</pre>
+ *
+ * <p>Ordering is a stateful operation: the elements of the current enumeration
+ * are buffered and ordered before they are returned. Ordering is stable, so
+ * elements that compare equally retain their relative source order.</p>
+ *
+ * <h2>Query composition</h2>
+ *
+ * <p>
+ * LINQ-style operations are designed to be composed.
+ * Complex queries can be built incrementally by chaining operations together,
+ * creating a declarative description of the desired result without executing the query
+ * while retaining a declarative description of the desired result:
+ * </p>
+ *
+ * <pre>{@code
+ * record Product(
+ *     String name,
+ *     String category,
+ *     double price
+ * ) {}
+ *
+ * Enumerable<Product> products = Linq.of(
+ *     new Product("Apple", "Fruit", 3.5),
+ *     new Product("Banana", "Fruit", 2.0),
+ *     new Product("Notebook", "Stationery", 8.0),
+ *     new Product("Pen", "Stationery", 1.5),
+ *     new Product("Orange", "Fruit", 4.0)
+ * );
+ *
+ * Enumerable<String> query = products
+ *     .where(product -> product.price() >= 2.0)
+ *     .orderBy(Product::category)
+ *     .thenByDouble(Product::price)
+ *     .select(product ->
+ *         product.category()
+ *             + ": "
+ *             + product.name()
+ *             + " - "
+ *             + product.price()
+ *     );
+ *
+ * query.forEach(System.out::println);
+ * }</pre>
+ *
+ * <h2>Equality semantics</h2>
+ *
+ * <p>Operations involving equality, such as distinct, grouping, set operations,
+ * joins, and map creation, may provide overloads accepting {@link Equalator} or
+ * {@link HashEqualator}. These allow callers to define equality independently
+ * of {@link Object#equals(Object)}. Hash-capable equality implementations can
+ * additionally be used by operators that provide hash-based implementations.</p>
+ *
+ * <h2>Sequential and parallel evaluation</h2>
+ *
+ * <p>An enumerable also carries an execution mode. {@link #sequential()} and
+ * {@link #parallel()} can be used to request sequential or parallel evaluation,
+ * and {@link #isParallel()} reports the current mode. The execution mode is a
+ * property of the enumerable query and is propagated through its pipeline.</p>
+ *
+ * <p>Unless an operation explicitly documents otherwise, functions supplied to
+ * query operators should not modify the enumerable source while it is being
+ * enumerated. Query functions should preferably be deterministic and free of
+ * externally observable side effects, since this makes composed queries easier
+ * to reason about and allows their behavior to remain independent of evaluation
+ * strategy.</p>
  *
  * @param <T> the type of the elements in this enumerable
+ *
+ * @author REN YuanTong
  * @since 1.0.0
+ *
  * @see BaseEnumerable
- * @see <a href="https://learn.microsoft.com/en-us/dotnet/api/system.collections.ienumerable?view=net-10.0">
- *     IEnumerable in .NET</a>
- * @see <a href="https://learn.microsoft.com/en-us/dotnet/csharp/linq/get-started/introduction-to-linq-queries">
+ * @see OrderedEnumerable
+ * @see Enumerator
+ * @see Groupable
+ * @see Equalator
+ * @see HashEqualator
+ * @see <a href="https://learn.microsoft.com/en-us/dotnet/api/system.collections.generic.ienumerable-1">
+ *     IEnumerable&lt;T&gt; in .NET</a>
+ * @see <a href="https://learn.microsoft.com/en-us/dotnet/csharp/linq/">
  *     Language Integrated Query (LINQ)</a>
  */
 public interface Enumerable<T>
@@ -169,7 +414,6 @@ public interface Enumerable<T>
      * @param aggregator An accumulator function to be invoked on each element.
      * @return The transformed final accumulator value.
      * @param <A> The type of the accumulator value.
-     * @param <R> The type of the resulting value.
      */
     <A> A aggregateToResult(
         @NotNull A seed, @NotNull BinFunction<? super A, ? super T, ? extends A> aggregator
@@ -661,7 +905,6 @@ public interface Enumerable<T>
      * @return The average of the sequence of values.
      * @throws NullPointerException if {@code selector} is {@code null}.
      * @throws ArithmeticException if the sequence contains no elements.
-     * @param <R> The type of the result produced by the selector.
      */
     default double averageToDouble(@NotNull ToDoubleFunction<? super T> selector) {
         NullCheck.requireNonNull(selector, "selector");
