@@ -1470,7 +1470,7 @@ public interface LongEnumerable
      * @throws NullPointerException If {@code longs} is {@code null}.
      */
     @NotNull
-    static LongEnumerable of(long @NotNull ... longs) {
+    static LongEnumerable ofLongs(long @NotNull ... longs) {
         NullCheck.requireNonNull(longs);
 
         return new LongEnumPipeline.Head(() -> new LongArrayEnumerator(longs));

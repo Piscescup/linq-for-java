@@ -51,7 +51,7 @@ public final class Linq {
      * @throws NullPointerException If {@code ints} is {@code null}.
      */
     public static IntEnumerable ofInts(int... ints) {
-        return IntEnumerable.of(ints);
+        return IntEnumerable.ofInts(ints);
     }
 
     /**
@@ -89,7 +89,7 @@ public final class Linq {
      */
     @NotNull
     public static DoubleEnumerable ofDoubles(double @NotNull ... doubles) {
-        return DoubleEnumerable.of(doubles);
+        return DoubleEnumerable.ofDoubles(doubles);
     }
 
     /**
@@ -126,7 +126,7 @@ public final class Linq {
      */
     @NotNull
     public static LongEnumerable ofLongs(long @NotNull ... longs) {
-        return LongEnumerable.of(longs);
+        return LongEnumerable.ofLongs(longs);
     }
 
     /**

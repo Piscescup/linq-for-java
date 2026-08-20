@@ -1813,7 +1813,7 @@ public interface IntEnumerable
      * @throws NullPointerException If {@code ints} is {@code null}.
      */
     @NotNull
-    static IntEnumerable of(int... ints) {
+    static IntEnumerable ofInts(int... ints) {
         NullCheck.requireNonNull(ints);
         return new IntEnumPipeline.Head(() -> new IntArrayEnumerator(ints));
     }
