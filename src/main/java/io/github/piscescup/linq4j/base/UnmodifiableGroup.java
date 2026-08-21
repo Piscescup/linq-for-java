@@ -21,13 +21,12 @@ import java.util.List;
  * @see Grouping
  * @see Collections#unmodifiableList(List)
  */
-public final class UnmodifiableGrouping<K, V> implements Groupable<K, V> {
+public final class UnmodifiableGrouping<K, V>
+    extends AbstractGrouping<K, V>
+    implements Groupable<K, V> {
     private static final String CANNOT_ADD_EX =
         "The add operation is unsupported in UnmodifiableGrouping.";
 
-    private final K key;
-
-    private final List<V> groupElements;
 
     /**
      * Constructs an unmodifiable grouping backed by the specified elements.
@@ -37,28 +36,7 @@ public final class UnmodifiableGrouping<K, V> implements Groupable<K, V> {
      * @throws NullPointerException if {@code groupElements} is {@code null}
      */
     public UnmodifiableGrouping(K key, List<V> groupElements) {
-        NullCheck.requireNonNull(key, "key");
-        NullCheck.requireNonNull(groupElements, "groupElements");
-        this.key = key;
-        this.groupElements = Collections.unmodifiableList(groupElements);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public K getGroupKey() {
-        return key;
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * @return an unmodifiable {@link List} of elements belonging to this group
-     */
-    @Override
-    public List<V> getGroupElements() {
-        return groupElements;
+        super(key, Collections.unmodifiableList(groupElements));
     }
 
     /**

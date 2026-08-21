@@ -1,5 +1,6 @@
 package io.github.piscescup.linq4j.base;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
@@ -17,11 +18,9 @@ import java.util.List;
  * @see Groupable
  * @see UnmodifiableGrouping
  */
-public final class Grouping<K, V> implements Groupable<K, V> {
-
-    private final K key;
-
-    private final List<V> groupElements;
+public final class Grouping<K, V>
+    extends AbstractGrouping<K, V>
+    implements Groupable<K, V> {
 
     /**
      * Constructs a {@code Grouping} with the specified key and backing element list.
@@ -30,8 +29,7 @@ public final class Grouping<K, V> implements Groupable<K, V> {
      * @param groupElements the backing list used to store elements
      */
     public Grouping(K key, List<V> groupElements) {
-        this.key = key;
-        this.groupElements = groupElements;
+        super(key, groupElements);
     }
 
     /**
@@ -59,19 +57,4 @@ public final class Grouping<K, V> implements Groupable<K, V> {
         return this;
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public K getGroupKey() {
-        return key;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public List<V> getGroupElements() {
-        return groupElements;
-    }
 }
