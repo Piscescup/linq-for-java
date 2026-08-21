@@ -1,7 +1,5 @@
 package io.github.piscescup.linq4j.base;
 
-import io.github.piscescup.util.validation.NullCheck;
-
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -18,11 +16,11 @@ import java.util.List;
  * @author REN YuanTong
  * @since 1.0.0
  * @see Groupable
- * @see Grouping
+ * @see Group
  * @see Collections#unmodifiableList(List)
  */
-public final class UnmodifiableGrouping<K, V>
-    extends AbstractGrouping<K, V>
+public final class UnmodifiableGroup<K, V>
+    extends AbstractGroup<K, V>
     implements Groupable<K, V> {
     private static final String CANNOT_ADD_EX =
         "The add operation is unsupported in UnmodifiableGrouping.";
@@ -35,7 +33,7 @@ public final class UnmodifiableGrouping<K, V>
      * @param groupElements the list of elements for this group
      * @throws NullPointerException if {@code groupElements} is {@code null}
      */
-    public UnmodifiableGrouping(K key, List<V> groupElements) {
+    public UnmodifiableGroup(K key, List<V> groupElements) {
         super(key, Collections.unmodifiableList(groupElements));
     }
 

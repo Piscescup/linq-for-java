@@ -9,7 +9,7 @@ import io.github.piscescup.interfaces.Pair;
 import io.github.piscescup.interfaces.exfunction.BinFunction;
 import io.github.piscescup.interfaces.exfunction.BinPredicate;
 import io.github.piscescup.linq4j.base.Groupable;
-import io.github.piscescup.linq4j.base.UnmodifiableGrouping;
+import io.github.piscescup.linq4j.base.UnmodifiableGroup;
 import io.github.piscescup.linq4j.enumerator.CollectionEnumerator;
 import io.github.piscescup.linq4j.enumerator.Enumerator;
 import io.github.piscescup.linq4j.enumerator.PipelineEnumerator;
@@ -877,7 +877,7 @@ public abstract class ReferenceEnumPipeline<T_IN, T_OUT>
 
                         Map.Entry<K, List<E>> entry = iterator.next();
                         setCurrent(
-                            new UnmodifiableGrouping<>(
+                            new UnmodifiableGroup<>(
                                 entry.getKey(),
                                 entry.getValue()
                             )

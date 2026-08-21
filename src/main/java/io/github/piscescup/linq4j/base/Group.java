@@ -1,6 +1,5 @@
 package io.github.piscescup.linq4j.base;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
@@ -16,10 +15,10 @@ import java.util.List;
  * @author REN YuanTong
  * @since 1.0.0
  * @see Groupable
- * @see UnmodifiableGrouping
+ * @see UnmodifiableGroup
  */
-public final class Grouping<K, V>
-    extends AbstractGrouping<K, V>
+public final class Group<K, V>
+    extends AbstractGroup<K, V>
     implements Groupable<K, V> {
 
     /**
@@ -28,7 +27,7 @@ public final class Grouping<K, V>
      * @param key the key associated with this group
      * @param groupElements the backing list used to store elements
      */
-    public Grouping(K key, List<V> groupElements) {
+    public Group(K key, List<V> groupElements) {
         super(key, groupElements);
     }
 

@@ -11,7 +11,7 @@ import java.util.List;
  * @author REN YuanTong
  * @since 1.0.0
  */
-public abstract class AbstractGrouping<K, V> implements Groupable<K, V> {
+public abstract class AbstractGroup<K, V> implements Groupable<K, V> {
     protected final K key;
 
     protected final List<V> groupElements;
@@ -22,7 +22,7 @@ public abstract class AbstractGrouping<K, V> implements Groupable<K, V> {
      * @param key the key associated with this group
      * @param groupElements the backing list used to store elements
      */
-    public AbstractGrouping(K key, List<V> groupElements) {
+    public AbstractGroup(K key, List<V> groupElements) {
         NullCheck.requireNonNull(key, "key");
         NullCheck.requireNonNull(groupElements, "groupElements");
         this.key = key;
