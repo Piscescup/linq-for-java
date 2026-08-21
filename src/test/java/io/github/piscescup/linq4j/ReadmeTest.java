@@ -1,7 +1,7 @@
 package io.github.piscescup.linq4j;
 
 import io.github.piscescup.linq4j.base.Groupable;
-import io.github.piscescup.linq4j.primitive.IntEnumerable;
+import io.github.piscescup.linq4j.core.IntEnumerable;
 import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.Test;
 

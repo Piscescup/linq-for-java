@@ -1,6 +1,6 @@
 package io.github.piscescup.linq4j.base;
 
-import io.github.piscescup.linq4j.Enumerable;
+import io.github.piscescup.linq4j.core.Enumerable;
 import io.github.piscescup.linq4j.Linq;
 
 import java.util.Collection;
