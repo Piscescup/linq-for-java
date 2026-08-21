@@ -164,7 +164,7 @@ public final class Linq {
     public static <T> Enumerable<T> of(@NotNull T... elements) {
         NullCheck.requireAllNonNull(elements);
 
-        return new ReferenceEnumPipeline.Head<>(() -> new ArrayEnumerator<>(elements));
+        return Enumerable.of(elements);
     }
 
     /**
@@ -203,7 +203,7 @@ public final class Linq {
     public static <T> Enumerable<T> of(@NotNull Collection<T> elements) {
         NullCheck.requireAllNonNull(elements);
 
-        return new ReferenceEnumPipeline.Head<>(() -> new CollectionEnumerator<>(elements));
+        return Enumerable.of(elements);
     }
 
     /**
@@ -242,9 +242,7 @@ public final class Linq {
     ) {
         NullCheck.requireNonNull(iteratorSupplier);
 
-        return new ReferenceEnumPipeline.Head<>(
-            () -> new IteratorEnumerator<>(iteratorSupplier.get())
-        );
+        return Enumerable.fromIterator(iteratorSupplier);
     }
 
     /**
@@ -285,6 +283,6 @@ public final class Linq {
     ) {
         NullCheck.requireNonNull(enumeratorSupplier);
 
-        return new ReferenceEnumPipeline.Head<>(enumeratorSupplier);
+        return Enumerable.fromEnumerator(enumeratorSupplier);
     }
 }
