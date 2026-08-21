@@ -1,4 +1,4 @@
-package io.github.piscescup.linq4j;
+package io.github.piscescup.linq4j.core;
 
 import io.github.piscescup.collection.EqualatorHashMap;
 import io.github.piscescup.collection.EqualatorHashSet;
@@ -10,6 +10,9 @@ import io.github.piscescup.interfaces.exfunction.BinFunction;
 import io.github.piscescup.interfaces.exfunction.BinPredicate;
 import io.github.piscescup.linq4j.base.Groupable;
 import io.github.piscescup.linq4j.base.UnmodifiableGrouping;
+import io.github.piscescup.linq4j.enumerator.CollectionEnumerator;
+import io.github.piscescup.linq4j.enumerator.Enumerator;
+import io.github.piscescup.linq4j.enumerator.PipelineEnumerator;
 import io.github.piscescup.util.validation.NullCheck;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -23,7 +26,7 @@ import java.util.function.*;
  * <p>A {@code ReferenceEnumPipeline} represents either the source stage of an
  * enumerable query or an intermediate operation that accepts elements of type
  * {@code T_IN} and produces elements of type {@code T_OUT}. It specializes
- * {@link AbstractEnumPipeline} by fixing the exposed enumerable type to
+ * {@link AbstractReferenceEnumPipeline} by fixing the exposed enumerable type to
  * {@code Enumerable<T_OUT>}.</p>
  *
  * <p>Pipeline construction uses deferred execution. Invoking an intermediate
@@ -40,8 +43,8 @@ import java.util.function.*;
  * @author REN YuanTong
  * @since 1.0.0
  */
-abstract class ReferenceEnumPipeline<T_IN, T_OUT>
-    extends AbstractEnumPipeline<T_IN, T_OUT, Enumerable<T_OUT>>
+public abstract class ReferenceEnumPipeline<T_IN, T_OUT>
+    extends AbstractReferenceEnumPipeline<T_IN, T_OUT, Enumerable<T_OUT>>
     implements Enumerable<T_OUT> {
 
     /**
@@ -63,7 +66,7 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
      * @param upstream the immediately preceding pipeline stage
      */
     protected ReferenceEnumPipeline(
-        @NotNull AbstractEnumPipeline<?, T_IN, ?> upstream
+        @NotNull AbstractReferenceEnumPipeline<?, T_IN, ?> upstream
     ) {
         super(upstream);
     }
@@ -3126,7 +3129,7 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         extends ReferenceEnumPipeline<T_IN, T_OUT> {
 
         protected StatelessOp(
-            @NotNull AbstractEnumPipeline<?, T_IN, ?> upstream
+            @NotNull AbstractReferenceEnumPipeline<?, T_IN, ?> upstream
         ) {
             super(upstream);
         }
@@ -3147,7 +3150,7 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         extends ReferenceEnumPipeline<T_IN, T_OUT> {
 
         protected StatefulOp(
-            @NotNull AbstractEnumPipeline<?, T_IN, ?> upstream
+            @NotNull AbstractReferenceEnumPipeline<?, T_IN, ?> upstream
         ) {
             super(upstream);
         }
@@ -3180,7 +3183,7 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         implements OrderedEnumerable<T> {
 
         @NotNull
-        private final AbstractEnumPipeline<?, T, ?> orderingSource;
+        private final AbstractReferenceEnumPipeline<?, T, ?> orderingSource;
 
         /**
          * Direct element comparator used by {@link #order()} and
@@ -3199,7 +3202,7 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         private final List<OrderCriterion<T>> criteria;
 
         private OrderedOp(
-            @NotNull AbstractEnumPipeline<?, T, ?> orderingSource,
+            @NotNull AbstractReferenceEnumPipeline<?, T, ?> orderingSource,
             @NotNull Comparator<? super T> comparator
         ) {
             super(orderingSource);
@@ -3209,7 +3212,7 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         }
 
         private OrderedOp(
-            @NotNull AbstractEnumPipeline<?, T, ?> orderingSource,
+            @NotNull AbstractReferenceEnumPipeline<?, T, ?> orderingSource,
             @NotNull OrderCriterion<T> criterion
         ) {
             super(orderingSource);
@@ -3219,7 +3222,7 @@ abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         }
 
         private OrderedOp(
-            @NotNull AbstractEnumPipeline<?, T, ?> orderingSource,
+            @NotNull AbstractReferenceEnumPipeline<?, T, ?> orderingSource,
             @Nullable Comparator<? super T> directComparator,
             @NotNull List<OrderCriterion<T>> criteria
         ) {

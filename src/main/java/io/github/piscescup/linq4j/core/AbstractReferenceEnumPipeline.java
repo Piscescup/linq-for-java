@@ -1,6 +1,8 @@
-package io.github.piscescup.linq4j;
+package io.github.piscescup.linq4j.core;
 
 
+import io.github.piscescup.linq4j.enumerator.Enumerator;
+import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -81,8 +83,10 @@ import java.util.function.Supplier;
  * @author REN YuanTong
  * @since 1.0.0
  */
-abstract class AbstractEnumPipeline<T_IN, T_OUT, ENUM_OUT extends BaseEnumerable<T_OUT, ENUM_OUT>>
-    implements BaseEnumerable<T_OUT, ENUM_OUT>
+@ApiStatus.Internal
+abstract class AbstractReferenceEnumPipeline<T_IN, T_OUT, ENUM_OUT extends BaseEnumerable<T_OUT, ENUM_OUT>>
+    extends AbstractBaseEnumPipeline<T_OUT, ENUM_OUT>
+    implements BaseEnumerable<T_OUT, ENUM_OUT>, InternalEnumerable<T_OUT>
 {
 
     /**
@@ -95,7 +99,7 @@ abstract class AbstractEnumPipeline<T_IN, T_OUT, ENUM_OUT extends BaseEnumerable
      * </p>
      */
     @SuppressWarnings("rawtypes")
-    protected final AbstractEnumPipeline sourceStage;
+    protected final AbstractReferenceEnumPipeline sourceStage;
 
     /**
      * The immediately preceding stage of this pipeline.
@@ -105,7 +109,7 @@ abstract class AbstractEnumPipeline<T_IN, T_OUT, ENUM_OUT extends BaseEnumerable
      * </p>
      */
     @SuppressWarnings("rawtypes")
-    protected final @Nullable AbstractEnumPipeline previousStage;
+    protected final @Nullable AbstractReferenceEnumPipeline previousStage;
 
     /**
      * Factory used to create enumerators for the source of this pipeline.
@@ -162,10 +166,12 @@ abstract class AbstractEnumPipeline<T_IN, T_OUT, ENUM_OUT extends BaseEnumerable
      * @param parallel whether the pipeline is configured for parallel
      *                 evaluation
      */
-    protected AbstractEnumPipeline(
+    protected AbstractReferenceEnumPipeline(
         @NotNull Supplier<? extends Enumerator<T_OUT>> sourceSupplier,
         boolean parallel
     ) {
+        super(parallel);
+
         this.previousStage = null;
         this.sourceStage = this;
         this.sourceSupplier = Objects.requireNonNull(
@@ -173,8 +179,8 @@ abstract class AbstractEnumPipeline<T_IN, T_OUT, ENUM_OUT extends BaseEnumerable
             "sourceSupplier"
         );
         this.depth = 0;
-        this.parallel = parallel;
     }
+
 
     /**
      * Creates an intermediate stage appended to the specified upstream
@@ -188,9 +194,11 @@ abstract class AbstractEnumPipeline<T_IN, T_OUT, ENUM_OUT extends BaseEnumerable
      *
      * @param previousStage the immediately preceding pipeline stage
      */
-    protected AbstractEnumPipeline(
-        @NotNull AbstractEnumPipeline<?, T_IN, ?> previousStage
+    protected AbstractReferenceEnumPipeline(
+        @NotNull AbstractReferenceEnumPipeline<?, T_IN, ?> previousStage
     ) {
+        super(previousStage);
+
         this.previousStage = Objects.requireNonNull(
             previousStage,
             "previousStage"
@@ -334,41 +342,6 @@ abstract class AbstractEnumPipeline<T_IN, T_OUT, ENUM_OUT extends BaseEnumerable
         );
     }
 
-    /**
-     * Returns whether this pipeline is configured for parallel evaluation.
-     *
-     * @return {@code true} if this pipeline is configured for parallel
-     *         evaluation; otherwise {@code false}
-     */
-    @Override
-    public final boolean isParallel() {
-        return sourceStage.parallel;
-    }
-
-    /**
-     * Returns whether this pipeline is configured for sequential evaluation.
-     *
-     * @return {@code true} if this pipeline is configured for sequential
-     *         evaluation; otherwise {@code false}
-     */
-    @Override
-    public final boolean isSequential() {
-        return !sourceStage.parallel;
-    }
-
-    @Override
-    @SuppressWarnings("unchecked")
-    public final ENUM_OUT sequential() {
-        sourceStage.parallel = false;
-        return (ENUM_OUT) this;
-    }
-
-    @Override
-    @SuppressWarnings("unchecked")
-    public final ENUM_OUT parallel() {
-        sourceStage.parallel = true;
-        return (ENUM_OUT) this;
-    }
 
     @Override
     public void close() {
@@ -377,18 +350,6 @@ abstract class AbstractEnumPipeline<T_IN, T_OUT, ENUM_OUT extends BaseEnumerable
             sourceStage.sourceCloseAction = null;
             closeAction.run();
         }
-    }
-
-    @Override
-    @SuppressWarnings("unchecked")
-    public ENUM_OUT onClose(@NotNull Runnable closeHandler) {
-        Objects.requireNonNull(closeHandler);
-        Runnable existingHandler = sourceStage.sourceCloseAction;
-        sourceStage.sourceCloseAction =
-            (existingHandler == null)
-                ? closeHandler
-                : composeWithExceptions(existingHandler, closeHandler);
-        return (ENUM_OUT) this;
     }
 
     static Runnable composeWithExceptions(Runnable first, Runnable second) {

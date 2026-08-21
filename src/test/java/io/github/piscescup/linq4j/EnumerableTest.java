@@ -4,13 +4,14 @@ import io.github.piscescup.equalators.StringEqualators;
 import io.github.piscescup.interfaces.Equalator;
 import io.github.piscescup.interfaces.HashEqualator;
 import io.github.piscescup.interfaces.Pair;
+import io.github.piscescup.linq4j.core.Enumerable;
+import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Function;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -30,14 +31,22 @@ class EnumerableTest {
     private record Order(String category, int quantity) {}
     private record LeftRow(int id, String value) {}
     private record RightRow(int id, String value) {}
+    private record NumericValue(
+        String name,
+        int intValue,
+        long longValue,
+        double doubleValue,
+        BigDecimal decimalValue
+    ) {}
 
-    private static <T> List<T> list(Enumerable<T> enumerable) {
+
+    private static <T> List<T> list(@NotNull Enumerable<T> enumerable) {
         return enumerable.toList();
     }
 
     private static <L, R> List<String> pairStrings(Enumerable<Pair<L, R>> enumerable) {
-        
-        
+
+
         return enumerable
             .select(p -> String.valueOf(p.getLeft()) + "=" + String.valueOf(p.getRight()))
             .toList();
@@ -47,22 +56,13 @@ class EnumerableTest {
     // aggregateToResult / aggregateBy
     // -------------------------------------------------------------------------
 
+
     @Test
     void aggregateToResult_allOverloads() {
         assertEquals(
-            "[10]",
-            Linq.of(1, 2, 3, 4)
-                .aggregateToResult(
-                    0,
-                    Integer::sum,
-                    sum -> "[" + sum + "]"
-                )
-        );
-
-        assertEquals(
-            10,
-            Linq.of(1, 2, 3, 4)
-                .aggregateToResult(0, Integer::sum)
+            6,
+            Linq.of("a", "bb", "ccc")
+                .aggregateToResult(0, (sum, value) -> sum + value.length())
         );
 
         assertEquals(
@@ -162,65 +162,49 @@ class EnumerableTest {
     // Quantifiers / simple sequence operations / averages
     // -------------------------------------------------------------------------
 
+
     @Test
     void all_any_andShortCircuit() {
-        assertTrue(Linq.<Integer>of().all(x -> x > 0));
-        assertTrue(Linq.of(2, 4, 6).all(x -> x % 2 == 0));
-        assertFalse(Linq.of(2, 3, 6).all(x -> x % 2 == 0));
+        assertTrue(Linq.<String>of().all(String::isEmpty));
+        assertTrue(Linq.of("aa", "bbbb", "cccccc").all(s -> s.length() % 2 == 0));
+        assertFalse(Linq.of("aa", "bbb", "cccccc").all(s -> s.length() % 2 == 0));
 
-        assertFalse(Linq.<Integer>of().any());
-        assertTrue(Linq.of(1).any());
-        assertTrue(Linq.of(1, 2, 3).any(x -> x == 2));
-        assertFalse(Linq.of(1, 2, 3).any(x -> x > 10));
+        assertFalse(Linq.of().any());
+        assertTrue(Linq.of("a").any());
+        assertTrue(Linq.of("a", "bb", "ccc").any(s -> s.length() == 2));
+        assertFalse(Linq.of("a", "bb", "ccc").any(s -> s.length() > 10));
 
         AtomicInteger calls = new AtomicInteger();
         assertTrue(
-            Linq.of(1, 2, 3, 4).any(x -> {
+            Linq.of("a", "bb", "ccc", "dddd").any(s -> {
                 calls.incrementAndGet();
-                return x == 2;
+                return s.length() == 2;
             })
         );
         assertEquals(2, calls.get());
     }
 
+
     @Test
     void append_prepend_concat_reverse_defaultIfEmpty() {
-        assertEquals(
-            List.of(1, 2, 3, 4),
-            list(Linq.of(1, 2, 3).append(4))
-        );
-
-        assertEquals(
-            Arrays.asList(null, 1, 2, 3),
-            list(Linq.of(1, 2, 3).prepend(null))
-        );
-
-        assertEquals(
-            List.of(1, 2, 3, 4),
-            list(Linq.of(1, 2).concat(Linq.of(3, 4)))
-        );
-
-        assertEquals(
-            List.of(3, 2, 1),
-            list(Linq.of(1, 2, 3).reverse())
-        );
-
-        assertEquals(
-            List.of(1, 2),
-            list(Linq.of(1, 2).defaultIfEmpty(99))
-        );
-
-        assertEquals(
-            List.of(99),
-            list(Linq.<Integer>of().defaultIfEmpty(99))
-        );
+        assertEquals(List.of("a", "b", "c", "d"), list(Linq.of("a", "b", "c").append("d")));
+        assertEquals(Arrays.asList(null, "a", "b", "c"), list(Linq.of("a", "b", "c").prepend(null)));
+        assertEquals(List.of("a", "b", "c", "d"), list(Linq.of("a", "b").concat(Linq.of("c", "d"))));
+        assertEquals(List.of("c", "b", "a"), list(Linq.of("a", "b", "c").reverse()));
+        assertEquals(List.of("a", "b"), list(Linq.of("a", "b").defaultIfEmpty("default")));
+        assertEquals(List.of("default"), list(Linq.<String>of().defaultIfEmpty("default")));
     }
+
 
     @Test
     void averageToDouble_and_averageToDecimal() {
         assertEquals(
-            2.5,
-            Linq.of(1, 2, 3, 4).averageToDouble(Integer::doubleValue),
+            25.0,
+            Linq.of(
+                    new Person("Alice", "IT", 20),
+                    new Person("Bob", "HR", 30)
+                )
+                .averageToDouble(Person::age),
             1e-12
         );
 
@@ -234,69 +218,50 @@ class EnumerableTest {
                 .averageToDecimal(x -> x, RoundingMode.HALF_UP)
         );
 
+        assertThrows(ArithmeticException.class, () -> Linq.<Person>of().averageToDouble(Person::age));
         assertThrows(
             ArithmeticException.class,
-            () -> Linq.<Integer>of().averageToDouble(Integer::doubleValue)
+            () -> Linq.<BigDecimal>of().averageToDecimal(x -> x, RoundingMode.HALF_UP)
         );
-
-        assertThrows(
-            ArithmeticException.class,
-            () -> Linq.<BigDecimal>of()
-                .averageToDecimal(x -> x, RoundingMode.HALF_UP)
-        );
-
         assertThrows(
             NullPointerException.class,
-            () -> Linq.of(1).averageToDouble(null)
+            () -> Linq.of(new Person("Alice", "IT", 20)).averageToDouble(null)
         );
-
         assertThrows(
             NullPointerException.class,
-            () -> Linq.of(BigDecimal.ONE)
-                .averageToDecimal(x -> x, null)
+            () -> Linq.of(BigDecimal.ONE).averageToDecimal(x -> x, null)
         );
     }
+
 
     @Test
     void cast() {
-        assertEquals(
-            List.of("a", "b"),
-            list(Linq.<Object>of("a", "b").cast(String.class))
-        );
-
+        assertEquals(List.of("a", "b"), list(Linq.<Object>of("a", "b").cast(String.class)));
         assertThrows(
             ClassCastException.class,
-            () -> Linq.<Object>of("a", 1)
-                .cast(String.class)
-                .toList()
+            () -> Linq.<Object>of("a", new Object()).cast(String.class).toList()
         );
-
-        assertThrows(
-            NullPointerException.class,
-            () -> Linq.of(1).cast(null)
-        );
+        assertThrows(NullPointerException.class, () -> Linq.of("a").cast(null));
     }
+
 
     @Test
     void chunk() {
-        List<List<Integer>> actual = Linq.of(1, 2, 3, 4, 5, 6, 7)
+        List<List<String>> actual = Linq.of("a", "b", "c", "d", "e", "f", "g")
             .chunk(3)
             .select(Enumerable::toList)
             .toList();
 
         assertEquals(
             List.of(
-                List.of(1, 2, 3),
-                List.of(4, 5, 6),
-                List.of(7)
+                List.of("a", "b", "c"),
+                List.of("d", "e", "f"),
+                List.of("g")
             ),
             actual
         );
 
-        assertThrows(
-            IllegalArgumentException.class,
-            () -> Linq.of(1, 2, 3).chunk(0)
-        );
+        assertThrows(IllegalArgumentException.class, () -> Linq.of("a", "b", "c").chunk(0));
     }
 
     // -------------------------------------------------------------------------
@@ -319,15 +284,12 @@ class EnumerableTest {
         );
     }
 
+
     @Test
     void count_allOverloads() {
-        assertEquals(4L, Linq.of(1, 2, 3, 4).count());
-        assertEquals(2L, Linq.of(1, 2, 3, 4).count(x -> x % 2 == 0));
-
-        assertThrows(
-            NullPointerException.class,
-            () -> Linq.of(1, 2, 3).count(null)
-        );
+        assertEquals(4L, Linq.of("a", "bb", "ccc", "dddd").count());
+        assertEquals(2L, Linq.of("a", "bb", "ccc", "dddd").count(s -> s.length() % 2 == 0));
+        assertThrows(NullPointerException.class, () -> Linq.of("a", "b", "c").count(null));
     }
 
     @Test
@@ -361,18 +323,11 @@ class EnumerableTest {
     // distinct / except / intersect / union
     // -------------------------------------------------------------------------
 
+
     @Test
     void distinct_allVariants() {
-        assertEquals(
-            List.of(1, 2, 3),
-            list(Linq.of(1, 1, 2, 3, 2).distinct())
-        );
-
-        assertEquals(
-            List.of("A", "B"),
-            list(Linq.of("A", "a", "B", "b").distinct(CASE_INSENSITIVE))
-        );
-
+        assertEquals(List.of("a", "b", "c"), list(Linq.of("a", "a", "b", "c", "b").distinct()));
+        assertEquals(List.of("A", "B"), list(Linq.of("A", "a", "B", "b").distinct(CASE_INSENSITIVE)));
         assertEquals(
             List.of("A", "B"),
             list(Linq.of("A", "a", "B", "b").distinctInHash(StringEqualators.ORDINAL_IGNORE_CASE))
@@ -420,27 +375,20 @@ class EnumerableTest {
         );
     }
 
+
     @Test
     void except_allVariants() {
         assertEquals(
-            List.of(1, 3),
-            list(Linq.of(1, 2, 2, 3, 4).except(Linq.of(2, 4)))
+            List.of("a", "c"),
+            list(Linq.of("a", "b", "b", "c", "d").except(Linq.of("b", "d")))
         );
-
         assertEquals(
             List.of("B"),
-            list(
-                Linq.of("A", "a", "B")
-                    .except(Linq.of("a"), CASE_INSENSITIVE)
-            )
+            list(Linq.of("A", "a", "B").except(Linq.of("a"), CASE_INSENSITIVE))
         );
-
         assertEquals(
             List.of("B"),
-            list(
-                Linq.of("A", "a", "B")
-                    .exceptInHash(Linq.of("a"), StringEqualators.ORDINAL_IGNORE_CASE)
-            )
+            list(Linq.of("A", "a", "B").exceptInHash(Linq.of("a"), StringEqualators.ORDINAL_IGNORE_CASE))
         );
     }
 
@@ -477,27 +425,20 @@ class EnumerableTest {
         );
     }
 
+
     @Test
     void intersect_allVariants() {
         assertEquals(
-            List.of(2, 3),
-            list(Linq.of(1, 2, 2, 3).intersect(Linq.of(2, 3, 4)))
+            List.of("b", "c"),
+            list(Linq.of("a", "b", "b", "c").intersect(Linq.of("b", "c", "d")))
         );
-
         assertEquals(
             List.of("A", "B"),
-            list(
-                Linq.of("A", "a", "B", "C")
-                    .intersect(Linq.of("a", "b"), CASE_INSENSITIVE)
-            )
+            list(Linq.of("A", "a", "B", "C").intersect(Linq.of("a", "b"), CASE_INSENSITIVE))
         );
-
         assertEquals(
             List.of("A", "B"),
-            list(
-                Linq.of("A", "a", "B", "C")
-                    .intersectInHash(Linq.of("a", "b"), StringEqualators.ORDINAL_IGNORE_CASE)
-            )
+            list(Linq.of("A", "a", "B", "C").intersectInHash(Linq.of("a", "b"), StringEqualators.ORDINAL_IGNORE_CASE))
         );
     }
 
@@ -534,27 +475,20 @@ class EnumerableTest {
         );
     }
 
+
     @Test
     void union_allVariants() {
         assertEquals(
-            List.of(1, 2, 3, 4),
-            list(Linq.of(1, 2, 2).union(Linq.of(2, 3, 4)))
+            List.of("a", "b", "c", "d"),
+            list(Linq.of("a", "b", "b").union(Linq.of("b", "c", "d")))
         );
-
         assertEquals(
             List.of("A", "B", "C"),
-            list(
-                Linq.of("A", "B")
-                    .union(Linq.of("a", "C"), CASE_INSENSITIVE)
-            )
+            list(Linq.of("A", "B").union(Linq.of("a", "C"), CASE_INSENSITIVE))
         );
-
         assertEquals(
             List.of("A", "B", "C"),
-            list(
-                Linq.of("A", "B")
-                    .unionInHash(Linq.of("a", "C"), StringEqualators.ORDINAL_IGNORE_CASE)
-            )
+            list(Linq.of("A", "B").unionInHash(Linq.of("a", "C"), StringEqualators.ORDINAL_IGNORE_CASE))
         );
     }
 
@@ -594,108 +528,118 @@ class EnumerableTest {
     // Element operators
     // -------------------------------------------------------------------------
 
+
     @Test
     void elementAt_elementAtOrNull_elementAtOrDefault() {
-        assertEquals(20, Linq.of(10, 20, 30).elementAt(1));
-        assertThrows(IndexOutOfBoundsException.class, () -> Linq.of(1, 2).elementAt(-1));
-        assertThrows(IndexOutOfBoundsException.class, () -> Linq.of(1, 2).elementAt(2));
+        assertEquals("b", Linq.of("a", "b", "c").elementAt(1));
+        assertThrows(IndexOutOfBoundsException.class, () -> Linq.of("a", "b").elementAt(-1));
+        assertThrows(IndexOutOfBoundsException.class, () -> Linq.of("a", "b").elementAt(2));
 
-        assertEquals(20, Linq.of(10, 20, 30).elementAtOrNull(1));
-        assertNull(Linq.of(10, 20, 30).elementAtOrNull(-1));
-        assertNull(Linq.of(10, 20, 30).elementAtOrNull(99));
+        assertEquals("b", Linq.of("a", "b", "c").elementAtOrNull(1));
+        assertNull(Linq.of("a", "b", "c").elementAtOrNull(-1));
+        assertNull(Linq.of("a", "b", "c").elementAtOrNull(99));
 
-        assertEquals(20, Linq.of(10, 20, 30).elementAtOrDefault(1, 99));
-        assertEquals(99, Linq.of(10, 20, 30).elementAtOrDefault(-1, 99));
-        assertEquals(99, Linq.of(10, 20, 30).elementAtOrDefault(99, 99));
+        assertEquals("b", Linq.of("a", "b", "c").elementAtOrDefault(1, "default"));
+        assertEquals("default", Linq.of("a", "b", "c").elementAtOrDefault(-1, "default"));
+        assertEquals("default", Linq.of("a", "b", "c").elementAtOrDefault(99, "default"));
     }
+
 
     @Test
     void first_allOverloads() {
-        assertEquals(1, Linq.of(1, 2, 3).first());
-        assertEquals(2, Linq.of(1, 2, 3, 4).first(x -> x % 2 == 0));
-
-        assertThrows(NoSuchElementException.class, () -> Linq.<Integer>of().first());
-        assertThrows(NoSuchElementException.class, () -> Linq.of(1, 3).first(x -> x % 2 == 0));
+        assertEquals("a", Linq.of("a", "bb", "ccc").first());
+        assertEquals("bb", Linq.of("a", "bb", "ccc", "dddd").first(s -> s.length() % 2 == 0));
+        assertThrows(NoSuchElementException.class, () -> Linq.<String>of().first());
+        assertThrows(NoSuchElementException.class, () -> Linq.of("a", "ccc").first(s -> s.length() % 2 == 0));
     }
+
 
     @Test
     void firstOrNull_allOverloads() {
-        assertEquals(1, Linq.of(1, 2).firstOrNull());
-        assertNull(Linq.<Integer>of().firstOrNull());
-
-        assertEquals(2, Linq.of(1, 2, 4).firstOrNull(x -> x % 2 == 0));
-        assertNull(Linq.of(1, 3).firstOrNull(x -> x % 2 == 0));
+        assertEquals("a", Linq.of("a", "bb").firstOrNull());
+        assertNull(Linq.<String>of().firstOrNull());
+        assertEquals("bb", Linq.of("a", "bb", "dddd").firstOrNull(s -> s.length() == 2));
+        assertNull(Linq.of("a", "ccc").firstOrNull(s -> s.length() == 2));
     }
+
 
     @Test
     void firstOrDefault_allOverloads() {
-        assertEquals(1, Linq.of(1, 2).firstOrDefault(99));
-        assertEquals(99, Linq.<Integer>of().firstOrDefault(99));
-
-        assertEquals(2, Linq.of(1, 2, 4).firstOrDefault(x -> x % 2 == 0, 99));
-        assertEquals(99, Linq.of(1, 3).firstOrDefault(x -> x % 2 == 0, 99));
+        assertEquals("a", Linq.of("a", "bb").firstOrDefault("default"));
+        assertEquals("default", Linq.<String>of().firstOrDefault("default"));
+        assertEquals("bb", Linq.of("a", "bb", "dddd").firstOrDefault(s -> s.length() == 2, "default"));
+        assertEquals("default", Linq.of("a", "ccc").firstOrDefault(s -> s.length() == 2, "default"));
     }
+
 
     @Test
     void last_allOverloads() {
-        assertEquals(3, Linq.of(1, 2, 3).last());
-        assertEquals(4, Linq.of(1, 2, 3, 4).last(x -> x % 2 == 0));
-
-        assertThrows(NoSuchElementException.class, () -> Linq.<Integer>of().last());
-        assertThrows(NoSuchElementException.class, () -> Linq.of(1, 3).last(x -> x % 2 == 0));
+        assertEquals("ccc", Linq.of("a", "bb", "ccc").last());
+        assertEquals("dddd", Linq.of("a", "bb", "ccc", "dddd").last(s -> s.length() % 2 == 0));
+        assertThrows(NoSuchElementException.class, () -> Linq.<String>of().last());
+        assertThrows(NoSuchElementException.class, () -> Linq.of("a", "ccc").last(s -> s.length() % 2 == 0));
     }
+
 
     @Test
     void lastOrNull_allOverloads() {
-        assertEquals(3, Linq.of(1, 2, 3).lastOrNull());
-        assertNull(Linq.<Integer>of().lastOrNull());
-
-        assertEquals(4, Linq.of(1, 2, 3, 4).lastOrNull(x -> x % 2 == 0));
-        assertNull(Linq.of(1, 3).lastOrNull(x -> x % 2 == 0));
+        assertEquals("ccc", Linq.of("a", "bb", "ccc").lastOrNull());
+        assertNull(Linq.<String>of().lastOrNull());
+        assertEquals("dddd", Linq.of("a", "bb", "ccc", "dddd").lastOrNull(s -> s.length() % 2 == 0));
+        assertNull(Linq.of("a", "ccc").lastOrNull(s -> s.length() % 2 == 0));
     }
+
 
     @Test
     void lastOrDefault_allOverloads() {
-        assertEquals(3, Linq.of(1, 2, 3).lastOrDefault(99));
-        assertEquals(99, Linq.<Integer>of().lastOrDefault(99));
-
-        assertEquals(4, Linq.of(1, 2, 3, 4).lastOrDefault(x -> x % 2 == 0, 99));
-        assertEquals(99, Linq.of(1, 3).lastOrDefault(x -> x % 2 == 0, 99));
+        assertEquals("ccc", Linq.of("a", "bb", "ccc").lastOrDefault("default"));
+        assertEquals("default", Linq.<String>of().lastOrDefault("default"));
+        assertEquals(
+            "dddd",
+            Linq.of("a", "bb", "ccc", "dddd").lastOrDefault(s -> s.length() % 2 == 0, "default")
+        );
+        assertEquals(
+            "default",
+            Linq.of("a", "ccc").lastOrDefault(s -> s.length() % 2 == 0, "default")
+        );
     }
+
 
     @Test
     void single_allOverloads_andFailureCases() {
-        assertEquals(1, Linq.of(1).single());
-        assertThrows(NoSuchElementException.class, () -> Linq.<Integer>of().single());
-        assertThrows(IllegalStateException.class, () -> Linq.of(1, 2).single());
+        assertEquals("a", Linq.of("a").single());
+        assertThrows(NoSuchElementException.class, () -> Linq.<String>of().single());
+        assertThrows(IllegalStateException.class, () -> Linq.of("a", "b").single());
 
-        assertEquals(2, Linq.of(1, 2, 3).single(x -> x % 2 == 0));
-        assertThrows(NoSuchElementException.class, () -> Linq.of(1, 3).single(x -> x % 2 == 0));
-        assertThrows(IllegalStateException.class, () -> Linq.of(2, 4).single(x -> x % 2 == 0));
+        assertEquals("bb", Linq.of("a", "bb", "ccc").single(s -> s.length() == 2));
+        assertThrows(NoSuchElementException.class, () -> Linq.of("a", "ccc").single(s -> s.length() == 2));
+        assertThrows(IllegalStateException.class, () -> Linq.of("aa", "bb").single(s -> s.length() == 2));
     }
+
 
     @Test
     void singleOrNull_allOverloads() {
-        assertEquals(1, Linq.of(1).singleOrNull());
-        assertNull(Linq.<Integer>of().singleOrNull());
-        assertThrows(IllegalStateException.class, () -> Linq.of(1, 2).singleOrNull());
+        assertEquals("a", Linq.of("a").singleOrNull());
+        assertNull(Linq.<String>of().singleOrNull());
+        assertThrows(IllegalStateException.class, () -> Linq.of("a", "b").singleOrNull());
 
-        assertEquals(2, Linq.of(1, 2, 3).singleOrNull(x -> x % 2 == 0));
-        assertNull(Linq.of(1, 3).singleOrNull(x -> x % 2 == 0));
-        assertThrows(IllegalStateException.class, () -> Linq.of(2, 4).singleOrNull(x -> x % 2 == 0));
+        assertEquals("bb", Linq.of("a", "bb", "ccc").singleOrNull(s -> s.length() == 2));
+        assertNull(Linq.of("a", "ccc").singleOrNull(s -> s.length() == 2));
+        assertThrows(IllegalStateException.class, () -> Linq.of("aa", "bb").singleOrNull(s -> s.length() == 2));
     }
+
 
     @Test
     void singleOrDefault_allOverloads() {
-        assertEquals(1, Linq.of(1).singleOrDefault(99));
-        assertEquals(99, Linq.<Integer>of().singleOrDefault(99));
-        assertThrows(IllegalStateException.class, () -> Linq.of(1, 2).singleOrDefault(99));
+        assertEquals("a", Linq.of("a").singleOrDefault("default"));
+        assertEquals("default", Linq.<String>of().singleOrDefault("default"));
+        assertThrows(IllegalStateException.class, () -> Linq.of("a", "b").singleOrDefault("default"));
 
-        assertEquals(2, Linq.of(1, 2, 3).singleOrDefault(x -> x % 2 == 0, 99));
-        assertEquals(99, Linq.of(1, 3).singleOrDefault(x -> x % 2 == 0, 99));
+        assertEquals("bb", Linq.of("a", "bb", "ccc").singleOrDefault(s -> s.length() == 2, "default"));
+        assertEquals("default", Linq.of("a", "ccc").singleOrDefault(s -> s.length() == 2, "default"));
         assertThrows(
             IllegalStateException.class,
-            () -> Linq.of(2, 4).singleOrDefault(x -> x % 2 == 0, 99)
+            () -> Linq.of("aa", "bb").singleOrDefault(s -> s.length() == 2, "default")
         );
     }
 
@@ -1097,95 +1041,94 @@ class EnumerableTest {
     // max / min / sum
     // -------------------------------------------------------------------------
 
+
     @Test
     void max_allVariants() {
-        assertEquals(5, Linq.of(1, 5, 3).max());
-        assertEquals(5, Linq.of(1, 5, 3).max(Integer::compareTo));
-        assertEquals(5, Linq.of(1, 5, 3).maxToInt(Integer::intValue));
-        assertEquals(5L, Linq.of(1L, 5L, 3L).maxToLong(Long::longValue));
-        assertEquals(5.5, Linq.of(1.0, 5.5, 3.0).maxToDouble(Double::doubleValue), 1e-12);
-        assertEquals(
-            new BigDecimal("5"),
-            Linq.of(new BigDecimal("1"), new BigDecimal("5"), new BigDecimal("3"))
-                .maxToDecimal(x -> x)
+        assertEquals("ccc", Linq.of("a", "bb", "ccc").max());
+        assertEquals("a", Linq.of("a", "bb", "ccc").max(Comparator.reverseOrder()));
+
+        List<NumericValue> values = List.of(
+            new NumericValue("one", 1, 10L, 1.5, new BigDecimal("1")),
+            new NumericValue("five", 5, 50L, 5.5, new BigDecimal("5")),
+            new NumericValue("three", 3, 30L, 3.5, new BigDecimal("3"))
         );
 
-        assertEquals(
-            "banana",
-            Linq.of("a", "banana", "cat").maxBy(String::length)
-        );
+        assertEquals(5, Linq.of(values).maxToInt(NumericValue::intValue));
+        assertEquals(50L, Linq.of(values).maxToLong(NumericValue::longValue));
+        assertEquals(5.5, Linq.of(values).maxToDouble(NumericValue::doubleValue), 1e-12);
+        assertEquals(new BigDecimal("5"), Linq.of(values).maxToDecimal(NumericValue::decimalValue));
 
+        assertEquals("banana", Linq.of("a", "banana", "cat").maxBy(String::length));
         assertEquals(
             "a",
-            Linq.of("a", "banana", "cat")
-                .maxBy(String::length, Comparator.reverseOrder())
+            Linq.of("a", "banana", "cat").maxBy(String::length, Comparator.reverseOrder())
         );
     }
+
 
     @Test
     void min_allVariants() {
-        assertEquals(1, Linq.of(1, 5, 3).min());
-        assertEquals(1, Linq.of(1, 5, 3).min(Integer::compareTo));
-        assertEquals(1, Linq.of(1, 5, 3).minToInt(Integer::intValue));
-        assertEquals(1L, Linq.of(1L, 5L, 3L).minToLong(Long::longValue));
-        assertEquals(1.0, Linq.of(1.0, 5.5, 3.0).minToDouble(Double::doubleValue), 1e-12);
-        assertEquals(
-            new BigDecimal("1"),
-            Linq.of(new BigDecimal("1"), new BigDecimal("5"), new BigDecimal("3"))
-                .minToDecimal(x -> x)
+        assertEquals("a", Linq.of("a", "bb", "ccc").min());
+        assertEquals("ccc", Linq.of("a", "bb", "ccc").min(Comparator.reverseOrder()));
+
+        List<NumericValue> values = List.of(
+            new NumericValue("one", 1, 10L, 1.5, new BigDecimal("1")),
+            new NumericValue("five", 5, 50L, 5.5, new BigDecimal("5")),
+            new NumericValue("three", 3, 30L, 3.5, new BigDecimal("3"))
         );
 
-        assertEquals(
-            "a",
-            Linq.of("a", "banana", "cat").minBy(String::length)
-        );
+        assertEquals(1, Linq.of(values).minToInt(NumericValue::intValue));
+        assertEquals(10L, Linq.of(values).minToLong(NumericValue::longValue));
+        assertEquals(1.5, Linq.of(values).minToDouble(NumericValue::doubleValue), 1e-12);
+        assertEquals(new BigDecimal("1"), Linq.of(values).minToDecimal(NumericValue::decimalValue));
 
+        assertEquals("a", Linq.of("a", "banana", "cat").minBy(String::length));
         assertEquals(
             "banana",
-            Linq.of("a", "banana", "cat")
-                .minBy(String::length, Comparator.reverseOrder())
+            Linq.of("a", "banana", "cat").minBy(String::length, Comparator.reverseOrder())
         );
     }
+
 
     @Test
     void maxMin_emptySequencesThrow() {
-        assertThrows(NoSuchElementException.class, () -> Linq.<Integer>of().max());
-        assertThrows(NoSuchElementException.class, () -> Linq.<Integer>of().min());
-        assertThrows(NoSuchElementException.class, () -> Linq.<Integer>of().max(Integer::compareTo));
-        assertThrows(NoSuchElementException.class, () -> Linq.<Integer>of().min(Integer::compareTo));
-        assertThrows(NoSuchElementException.class, () -> Linq.<Integer>of().maxToInt(Integer::intValue));
-        assertThrows(NoSuchElementException.class, () -> Linq.<Integer>of().minToInt(Integer::intValue));
+        assertThrows(NoSuchElementException.class, () -> Linq.<String>of().max());
+        assertThrows(NoSuchElementException.class, () -> Linq.<String>of().min());
+        assertThrows(NoSuchElementException.class, () -> Linq.<String>of().max(String::compareTo));
+        assertThrows(NoSuchElementException.class, () -> Linq.<String>of().min(String::compareTo));
+        assertThrows(NoSuchElementException.class, () -> Linq.<NumericValue>of().maxToInt(NumericValue::intValue));
+        assertThrows(NoSuchElementException.class, () -> Linq.<NumericValue>of().minToInt(NumericValue::intValue));
     }
+
 
     @Test
     void sum_allVariants() {
-        assertEquals(6L, Linq.of(1, 2, 3).sumToInt(Integer::intValue));
-        assertEquals(6L, Linq.of(1L, 2L, 3L).sumToLong(Long::longValue));
-        assertEquals(6.5, Linq.of(1.0, 2.0, 3.5).sumToDouble(Double::doubleValue), 1e-12);
-        assertEquals(
-            new BigDecimal("6"),
-            Linq.of(new BigDecimal("1"), new BigDecimal("2"), new BigDecimal("3"))
-                .sumToDecimal(x -> x)
+        List<NumericValue> values = List.of(
+            new NumericValue("one", 1, 10L, 1.5, new BigDecimal("1")),
+            new NumericValue("two", 2, 20L, 2.0, new BigDecimal("2")),
+            new NumericValue("three", 3, 30L, 3.5, new BigDecimal("3"))
         );
 
-        assertEquals(0L, Linq.<Integer>of().sumToInt(Integer::intValue));
-        assertEquals(BigDecimal.ZERO, Linq.<BigDecimal>of().sumToDecimal(x -> x));
+        assertEquals(6L, Linq.of(values).sumToInt(NumericValue::intValue));
+        assertEquals(60L, Linq.of(values).sumToLong(NumericValue::longValue));
+        assertEquals(7.0, Linq.of(values).sumToDouble(NumericValue::doubleValue), 1e-12);
+        assertEquals(new BigDecimal("6"), Linq.of(values).sumToDecimal(NumericValue::decimalValue));
+
+        assertEquals(0L, Linq.<NumericValue>of().sumToInt(NumericValue::intValue));
+        assertEquals(BigDecimal.ZERO, Linq.<NumericValue>of().sumToDecimal(NumericValue::decimalValue));
     }
 
     // -------------------------------------------------------------------------
     // Ordering
     // -------------------------------------------------------------------------
 
+
     @Test
     void order_allOverloads() {
+        assertEquals(List.of("a", "b", "c"), Linq.of("c", "a", "b").order().toList());
         assertEquals(
-            List.of(1, 2, 3),
-            Linq.of(3, 1, 2).order().toList()
-        );
-
-        assertEquals(
-            List.of(3, 2, 1),
-            Linq.of(3, 1, 2).order(Comparator.reverseOrder()).toList()
+            List.of("c", "b", "a"),
+            Linq.of("c", "a", "b").order(Comparator.reverseOrder()).toList()
         );
     }
 
@@ -1230,42 +1173,38 @@ class EnumerableTest {
         );
     }
 
+
     @Test
     void primitiveOrderByVariants() {
-        List<Person> people = List.of(
-            new Person("Bob", "IT", 30),
-            new Person("Alice", "HR", 20),
-            new Person("Carol", "Sales", 25)
+        List<NumericValue> values = List.of(
+            new NumericValue("third", 3, 30L, 3.0, BigDecimal.valueOf(3)),
+            new NumericValue("first", 1, 10L, 1.0, BigDecimal.ONE),
+            new NumericValue("second", 2, 20L, 2.0, BigDecimal.valueOf(2))
         );
 
         assertEquals(
-            List.of("Alice", "Carol", "Bob"),
-            Linq.of(people).orderByInt(Person::age).select(Person::name).toList()
+            List.of("first", "second", "third"),
+            Linq.of(values).orderByInt(NumericValue::intValue).select(NumericValue::name).toList()
         );
-
         assertEquals(
-            List.of("Bob", "Carol", "Alice"),
-            Linq.of(people).orderByIntDescending(Person::age).select(Person::name).toList()
+            List.of("third", "second", "first"),
+            Linq.of(values).orderByIntDescending(NumericValue::intValue).select(NumericValue::name).toList()
         );
-
         assertEquals(
-            List.of(1L, 2L, 3L),
-            Linq.of(3L, 1L, 2L).orderByLong(Long::longValue).toList()
+            List.of("first", "second", "third"),
+            Linq.of(values).orderByLong(NumericValue::longValue).select(NumericValue::name).toList()
         );
-
         assertEquals(
-            List.of(3L, 2L, 1L),
-            Linq.of(3L, 1L, 2L).orderByLongDescending(Long::longValue).toList()
+            List.of("third", "second", "first"),
+            Linq.of(values).orderByLongDescending(NumericValue::longValue).select(NumericValue::name).toList()
         );
-
         assertEquals(
-            List.of(1.0, 2.0, 3.0),
-            Linq.of(3.0, 1.0, 2.0).orderByDouble(Double::doubleValue).toList()
+            List.of("first", "second", "third"),
+            Linq.of(values).orderByDouble(NumericValue::doubleValue).select(NumericValue::name).toList()
         );
-
         assertEquals(
-            List.of(3.0, 2.0, 1.0),
-            Linq.of(3.0, 1.0, 2.0).orderByDoubleDescending(Double::doubleValue).toList()
+            List.of("third", "second", "first"),
+            Linq.of(values).orderByDoubleDescending(NumericValue::doubleValue).select(NumericValue::name).toList()
         );
     }
 
@@ -1273,11 +1212,12 @@ class EnumerableTest {
     // Projection / filtering / zip
     // -------------------------------------------------------------------------
 
+
     @Test
     void select_allOverloads() {
         assertEquals(
-            List.of(2, 4, 6),
-            Linq.of(1, 2, 3).select(x -> x * 2).toList()
+            List.of("A", "BB", "CCC"),
+            Linq.of("a", "bb", "ccc").select(s -> s.toUpperCase()).toList()
         );
 
         assertEquals(
@@ -1288,13 +1228,12 @@ class EnumerableTest {
         );
     }
 
+
     @Test
     void selectMany_allOverloads() {
         assertEquals(
-            List.of(1, 10, 2, 20),
-            Linq.of(1, 2)
-                .selectMany(x -> Linq.of(x, x * 10))
-                .toList()
+            List.of("a", "A", "b", "B"),
+            Linq.of("a", "b").selectMany(x -> Linq.of(x, x.toUpperCase())).toList()
         );
 
         assertEquals(
@@ -1305,21 +1244,18 @@ class EnumerableTest {
         );
 
         assertEquals(
-            List.of("a1", "a2", "b1", "b2"),
+            List.of("a-x", "a-y", "b-x", "b-y"),
             Linq.of("a", "b")
-                .selectMany(
-                    s -> List.of(1, 2),
-                    (s, n) -> s + n
-                )
+                .selectMany(_ -> List.of("x", "y"), (s, suffix) -> s + "-" + suffix)
                 .toList()
         );
 
         assertEquals(
-            List.of("0:a1", "0:a2", "1:b1", "1:b2"),
+            List.of("0:a-x", "0:a-y", "1:b-x", "1:b-y"),
             Linq.of("a", "b")
                 .selectMany(
-                    (s, i) -> List.of(1, 2),
-                    (s, n) -> (s.equals("a") ? "0:" : "1:") + s + n
+                    (s, i) -> List.of("x", "y"),
+                    (s, suffix) -> (s.equals("a") ? "0:" : "1:") + s + "-" + suffix
                 )
                 .toList()
         );
@@ -1328,8 +1264,8 @@ class EnumerableTest {
     @Test
     void where_allOverloads() {
         assertEquals(
-            List.of(2, 4),
-            Linq.of(1, 2, 3, 4).where(x -> x % 2 == 0).toList()
+            List.of("bb", "dddd"),
+            Linq.of("a", "bb", "ccc", "dddd").where(s -> s.length() % 2 == 0).toList()
         );
 
         assertEquals(
@@ -1340,105 +1276,93 @@ class EnumerableTest {
         );
     }
 
+
     @Test
     void zip_allOverloads() {
         assertEquals(
-            List.of("1=a", "2=b"),
-            pairStrings(Linq.of(1, 2, 3).zip(Linq.of("a", "b")))
+            List.of("a=x", "b=y"),
+            pairStrings(Linq.of("a", "b", "c").zip(Linq.of("x", "y")))
         );
 
         assertEquals(
-            List.of("1a", "2b"),
-            Linq.of(1, 2, 3)
-                .zip(Linq.of("a", "b"), (n, s) -> n + s)
+            List.of("ax", "by"),
+            Linq.of("a", "b", "c")
+                .zip(Linq.of("x", "y"), (left, right) -> left + right)
                 .toList()
         );
     }
 
+
     @Test
     void sequenceEqual_allOverloads() {
-        assertTrue(Linq.of(1, 2, 3).sequenceEqual(Linq.of(1, 2, 3)));
-        assertFalse(Linq.of(1, 2, 3).sequenceEqual(Linq.of(1, 3, 2)));
+        assertTrue(Linq.of("a", "b", "c").sequenceEqual(Linq.of("a", "b", "c")));
+        assertFalse(Linq.of("a", "b", "c").sequenceEqual(Linq.of("a", "c", "b")));
 
-        assertTrue(
-            Linq.of("A", "b")
-                .sequenceEqual(Linq.of("a", "B"), CASE_INSENSITIVE)
-        );
-        assertFalse(
-            Linq.of("A", "b")
-                .sequenceEqual(Linq.of("a"), CASE_INSENSITIVE)
-        );
+        assertTrue(Linq.of("A", "b").sequenceEqual(Linq.of("a", "B"), CASE_INSENSITIVE));
+        assertFalse(Linq.of("A", "b").sequenceEqual(Linq.of("a"), CASE_INSENSITIVE));
     }
 
     // -------------------------------------------------------------------------
     // Partition operators
     // -------------------------------------------------------------------------
 
+
     @Test
     void skip_skipLast_take_takeLast() {
-        assertEquals(List.of(3, 4), Linq.of(1, 2, 3, 4).skip(2).toList());
-        assertEquals(List.of(1, 2), Linq.of(1, 2, 3, 4).skipLast(2).toList());
-
-        assertEquals(List.of(1, 2), Linq.of(1, 2, 3, 4).take(2).toList());
-        assertEquals(List.of(3, 4), Linq.of(1, 2, 3, 4).takeLast(2).toList());
-
+        assertEquals(List.of("c", "d"), Linq.of("a", "b", "c", "d").skip(2).toList());
+        assertEquals(List.of("a", "b"), Linq.of("a", "b", "c", "d").skipLast(2).toList());
+        assertEquals(List.of("a", "b"), Linq.of("a", "b", "c", "d").take(2).toList());
+        assertEquals(List.of("c", "d"), Linq.of("a", "b", "c", "d").takeLast(2).toList());
     }
+
 
     @Test
     void skipWhile_allOverloads() {
         assertEquals(
-            List.of(3, 2),
-            Linq.of(1, 2, 3, 2).skipWhile(x -> x < 3).toList()
+            List.of("ccc", "bb"),
+            Linq.of("a", "bb", "ccc", "bb").skipWhile(s -> s.length() < 3).toList()
         );
 
         assertEquals(
             List.of("c", "d"),
-            Linq.of("a", "b", "c", "d")
-                .skipWhile((value, index) -> index < 2)
-                .toList()
+            Linq.of("a", "b", "c", "d").skipWhile((value, index) -> index < 2).toList()
         );
     }
+
 
     @Test
     void takeWhile_allOverloads() {
         assertEquals(
-            List.of(1, 2),
-            Linq.of(1, 2, 3, 2).takeWhile(x -> x < 3).toList()
+            List.of("a", "bb"),
+            Linq.of("a", "bb", "ccc", "bb").takeWhile(s -> s.length() < 3).toList()
         );
 
         assertEquals(
             List.of("a", "b"),
-            Linq.of("a", "b", "c", "d")
-                .takeWhile((value, index) -> index < 2)
-                .toList()
+            Linq.of("a", "b", "c", "d").takeWhile((value, index) -> index < 2).toList()
         );
     }
 
+
     @Test
     void shuffle_preservesElements() {
-        List<Integer> result = Linq.of(1, 2, 3, 4, 5).shuffle().toList();
+        List<String> result = Linq.of("a", "b", "c", "d", "e").shuffle().toList();
         assertEquals(5, result.size());
 
-        List<Integer> sorted = new ArrayList<>(result);
+        List<String> sorted = new ArrayList<>(result);
         Collections.sort(sorted);
-        assertEquals(List.of(1, 2, 3, 4, 5), sorted);
+        assertEquals(List.of("a", "b", "c", "d", "e"), sorted);
     }
 
     // -------------------------------------------------------------------------
     // Array / map / collection materialization
     // -------------------------------------------------------------------------
 
+
     @Test
     void toArray_allOverloads() {
-        assertArrayEquals(
-            new Integer[]{1, 2, 3},
-            Linq.of(1, 2, 3).toArray(Integer[]::new)
-        );
-
-        assertArrayEquals(
-            new Object[]{1, 2, 3},
-            Linq.of(1, 2, 3).toArray()
-        );
+        assertArrayEquals(new String[]{"a", "b", "c"}, Linq.of("a", "b", "c").toArray(String[]::new));
+        assertArrayEquals(new Object[]{"a", "b", "c"}, Linq.of("a", "b", "c").toArray());
     }
 
     @Test
@@ -1518,73 +1442,52 @@ class EnumerableTest {
         assertEquals("CCC", m2.get(3));
     }
 
+
     @Test
     void listMaterializers() {
+        assertEquals(List.of("c", "a", "b"), Linq.of("c", "a", "b").toList());
+        assertEquals(List.of("a", "b", "c"), Linq.of("c", "a", "b").toSortedList());
         assertEquals(
-            List.of(3, 1, 2),
-            Linq.of(3, 1, 2).toList()
+            List.of("c", "b", "a"),
+            Linq.of("c", "a", "b").toSortedList(Comparator.reverseOrder())
         );
 
-        assertEquals(
-            List.of(1, 2, 3),
-            Linq.of(3, 1, 2).toSortedList()
-        );
+        List<String> unmodifiable = Linq.of("c", "a", "b").toUnmodifiableList();
+        assertEquals(List.of("c", "a", "b"), unmodifiable);
+        assertThrows(UnsupportedOperationException.class, () -> unmodifiable.add("d"));
 
-        assertEquals(
-            List.of(3, 2, 1),
-            Linq.of(3, 1, 2).toSortedList(Comparator.reverseOrder())
-        );
+        List<String> naturalSorted = Linq.of("c", "a", "b").toUnmodifiableSortedList();
+        assertEquals(List.of("a", "b", "c"), naturalSorted);
+        assertThrows(UnsupportedOperationException.class, () -> naturalSorted.add("d"));
 
-        List<Integer> unmodifiable = Linq.of(3, 1, 2).toUnmodifiableList();
-        assertEquals(List.of(3, 1, 2), unmodifiable);
-        assertThrows(UnsupportedOperationException.class, () -> unmodifiable.add(4));
-
-        List<Integer> naturalSorted = Linq.of(3, 1, 2).toUnmodifiableSortedList();
-        assertEquals(List.of(1, 2, 3), naturalSorted);
-        assertThrows(UnsupportedOperationException.class, () -> naturalSorted.add(4));
-
-        List<Integer> reverseSorted = Linq.of(3, 1, 2)
+        List<String> reverseSorted = Linq.of("c", "a", "b")
             .toUnmodifiableSortedList(Comparator.reverseOrder());
-        assertEquals(List.of(3, 2, 1), reverseSorted);
-        assertThrows(UnsupportedOperationException.class, () -> reverseSorted.add(4));
+        assertEquals(List.of("c", "b", "a"), reverseSorted);
+        assertThrows(UnsupportedOperationException.class, () -> reverseSorted.add("d"));
     }
+
 
     @Test
     void setMaterializers() {
-        assertEquals(
-            Set.of(1, 2, 3),
-            Linq.of(1, 1, 2, 3).toHashSet()
-        );
+        assertEquals(Set.of("a", "b", "c"), Linq.of("a", "a", "b", "c").toHashSet());
 
-        Set<Integer> unmodifiableHashSet = Linq.of(1, 1, 2, 3)
-            .toUnmodifiableHashSet();
-        assertEquals(Set.of(1, 2, 3), unmodifiableHashSet);
-        assertThrows(
-            UnsupportedOperationException.class,
-            () -> unmodifiableHashSet.add(4)
-        );
+        Set<String> unmodifiableHashSet = Linq.of("a", "a", "b", "c").toUnmodifiableHashSet();
+        assertEquals(Set.of("a", "b", "c"), unmodifiableHashSet);
+        assertThrows(UnsupportedOperationException.class, () -> unmodifiableHashSet.add("d"));
 
-        SortedSet<Integer> naturalSorted = Linq.of(3, 1, 2).toSortedSet();
-        assertEquals(List.of(1, 2, 3), new ArrayList<>(naturalSorted));
+        SortedSet<String> naturalSorted = Linq.of("c", "a", "b").toSortedSet();
+        assertEquals(List.of("a", "b", "c"), new ArrayList<>(naturalSorted));
 
-        SortedSet<Integer> sorted = Linq.of(3, 1, 2)
-            .toSortedSet(Comparator.reverseOrder());
-        assertEquals(List.of(3, 2, 1), new ArrayList<>(sorted));
+        SortedSet<String> sorted = Linq.of("c", "a", "b").toSortedSet(Comparator.reverseOrder());
+        assertEquals(List.of("c", "b", "a"), new ArrayList<>(sorted));
 
-        SortedSet<Integer> naturalUnmodifiable = Linq.of(3, 1, 2)
-            .toUnmodifiableSortedSet();
-        assertEquals(List.of(1, 2, 3), new ArrayList<>(naturalUnmodifiable));
-        assertThrows(
-            UnsupportedOperationException.class,
-            () -> naturalUnmodifiable.add(4)
-        );
+        SortedSet<String> naturalUnmodifiable = Linq.of("c", "a", "b").toUnmodifiableSortedSet();
+        assertEquals(List.of("a", "b", "c"), new ArrayList<>(naturalUnmodifiable));
+        assertThrows(UnsupportedOperationException.class, () -> naturalUnmodifiable.add("d"));
 
-        SortedSet<Integer> reverseUnmodifiable = Linq.of(3, 1, 2)
+        SortedSet<String> reverseUnmodifiable = Linq.of("c", "a", "b")
             .toUnmodifiableSortedSet(Comparator.reverseOrder());
-        assertEquals(List.of(3, 2, 1), new ArrayList<>(reverseUnmodifiable));
-        assertThrows(
-            UnsupportedOperationException.class,
-            () -> reverseUnmodifiable.add(4)
-        );
+        assertEquals(List.of("c", "b", "a"), new ArrayList<>(reverseUnmodifiable));
+        assertThrows(UnsupportedOperationException.class, () -> reverseUnmodifiable.add("d"));
     }
 }

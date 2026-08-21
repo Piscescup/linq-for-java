@@ -1,4 +1,4 @@
-package io.github.piscescup.linq4j;
+package io.github.piscescup.linq4j.enumerator;
 
 
 import org.jetbrains.annotations.NotNull;
@@ -22,7 +22,7 @@ import java.util.Objects;
  * @param <T_IN> the type of elements produced by the upstream enumerator
  * @param <T_OUT> the type of elements produced by this enumerator
  */
-abstract class PipelineEnumerator<T_IN, T_OUT>
+public abstract class PipelineEnumerator<T_IN, T_OUT>
     implements Enumerator<T_OUT> {
 
     private static final  String ENUMERATOR_CLOSED = "The enumerator has already been closed.";

@@ -1,6 +1,6 @@
 package io.github.piscescup.linq4j.base;
 
-import io.github.piscescup.linq4j.Enumerable;
+import io.github.piscescup.linq4j.core.Enumerable;
 import io.github.piscescup.linq4j.Linq;
 
 import java.util.Collection;
@@ -60,6 +60,6 @@ public interface Groupable<K, V> {
      * @return an {@link Enumerable} view over the group elements
      */
     default Enumerable<V> getEnumerableGroupElements() {
-        return Linq.of();
+        return Linq.of(getGroupElements());
     }
 }

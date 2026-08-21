@@ -1,5 +1,6 @@
-package io.github.piscescup.linq4j;
+package io.github.piscescup.linq4j.enumerator;
 
+import io.github.piscescup.linq4j.core.InternalEnumerable;
 import io.github.piscescup.util.validation.NullCheck;
 
 import java.util.Iterator;

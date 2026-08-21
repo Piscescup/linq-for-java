@@ -1,4 +1,4 @@
-package io.github.piscescup.linq4j;
+package io.github.piscescup.linq4j.core;
 
 import org.jetbrains.annotations.NotNull;
 

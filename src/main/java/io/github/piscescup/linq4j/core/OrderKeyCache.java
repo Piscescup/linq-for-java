@@ -1,4 +1,4 @@
-package io.github.piscescup.linq4j;
+package io.github.piscescup.linq4j.core;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -27,7 +27,7 @@ interface OrderKeyCache {
 
     /**
      * Key cache used when the primary ordering was created from an arbitrary
-     * element comparator through {@link #order(Comparator)}.
+     * element comparator through {@link Comparator#order(Comparator)}.
      *
      * <p>An arbitrary comparator has no extractable key that can be cached, so
      * the primary comparison still delegates to that comparator. Secondary
