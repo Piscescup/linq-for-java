@@ -28,7 +28,7 @@ IEnumerable<int> numQuery1 =
     select num;
 
 // Execute the query.
-foreach (var i in scoreQuery)
+foreach (var i in numQuery1 )
 {
     Console.Write(i + " ");
 }
@@ -46,9 +46,9 @@ int[] numbers = [ 5, 10, 8, 3, 6, 12 ];
 IEnumerable<int> numQuery2 = numbers
     .Where(num => num % 2 == 0)
     .OrderBy(n => n);
-    
+  
 // Execute the query.
-foreach (var i in scoreQuery)
+foreach (var i in numQuery2 )
 {
     Console.Write(i + " ");
 }
@@ -61,19 +61,15 @@ foreach (var i in scoreQuery)
 * **Unified Query Model**
 
   Provides a consistent way to query and process different kinds of data sources.
-
 * **Deferred Execution**
 
   Many LINQ operations do not execute immediately. A query is evaluated only when its results are actually enumerated or consumed.
-
 * **Composability**
 
   Query operators such as `where`, `select`, `orderBy`, and `groupBy` can be chained together to build complex query pipelines.
-
 * **Rich Query Operators**
 
   Provides operations for filtering, projection, sorting, grouping, aggregation, joining, set operations, element retrieval, and more.
-
 * **Functional Programming Support**
 
   LINQ works naturally with lambda expressions and functions, making data transformations concise and expressive.
@@ -192,27 +188,41 @@ dependencies {
 ```
 
 ---
-
 ## Quick Start
-
-Create an enumerable sequence using `Linq`:
+Create an enumerable sequence using Linq:
 
 ```java
 import io.github.piscescup.linq4j.Linq;
 
-var numbers = Linq.ofInts(1, 2, 3, 4, 5);
+// From varargs
+var numbers = Linq.of(1, 2, 3, 4, 5);
+
+// From array
+String[] array = {"a", "b", "c"};
+var strings = Linq.of(array);
+
+// From Collection
+List<String> list = List.of("x", "y", "z");
+var fromList = Linq.of(list);
+
+// Primitive specific
+var ints = Linq.ofInts(1, 2, 3, 4, 5);
+```
+Define a sample data class for the following examples:
+
+```java
+import org.jetbrains.annotations.NotNull;
 
 record Person(String name, int age) {
     @Override
+    @NotNull
     public String toString() {
         return name + "-" + age;
     }
 }
 ```
-
 ### Filtering
-
-Use `where` to select elements that satisfy a condition:
+Use where to select elements that satisfy a condition:
 
 ```java
 var evens = Linq.ofInts(1, 2, 3, 4, 5)
@@ -221,16 +231,13 @@ var evens = Linq.ofInts(1, 2, 3, 4, 5)
 
 System.out.println(Arrays.toString(evens));
 ```
-
 Output:
-
 ```text
 [2, 4]
 ```
 
 ### Projection
-
-Use `select` to transform each element:
+Use select to transform each element:
 
 ```java
 var nameLengths = Linq.of("Alice", "Bob", "Charlie")
@@ -239,16 +246,12 @@ var nameLengths = Linq.of("Alice", "Bob", "Charlie")
 
 System.out.println(nameLengths);
 ```
-
-Output:
-
+Output: 
 ```text
 [5, 3, 7]
 ```
-
 ### Ordering
-
-Use `orderBy` and `thenBy` to perform multi-level ordering:
+Use orderBy and thenBy to perform multi-level ordering:
 
 ```java
 var people = Linq.of(
@@ -264,58 +267,145 @@ var ordered = people
 
 System.out.println(ordered);
 ```
-
-Output:
-
-```text
+Output: 
+```test
 [Bob-20, Alice-25, Charlie-25]
 ```
-
 ### Grouping
-
-Use `groupBy` to group elements by a selected key:
-
+Use groupBy to group elements by a selected key. Each group is represented by a Grouping<K, V> interface, which provides getKey() and getElements():
 ```java
 var groups = Linq.of(
         new Person("Alice", 20),
         new Person("Bob", 20),
         new Person("Charlie", 25)
     )
-    .groupBy(Person::age)
-    .toMap(
-        Groupable::getGroupKey,
-        Groupable::getGroupElements
-    );
+    .groupBy(Person::age);
 
-System.out.println(groups);
+// Iterate groups
+groups.forEach(group ->
+    System.out.println(
+        "Age " + group.getGroupKey() + ": " 
+        + group.getGroupElements()
+));
+```
+Output: 
+```test
+Age 20: [Alice-20, Bob-20]
+Age 25: [Charlie-25]
 ```
 
-Output:
-
+```java
+// Or convert the Groupable to a Map
+var map = groups.toMap(
+    Grouping::getKey,
+    Grouping::getElements
+);
+System.out.println(map);
+```
+Output: 
 ```text
 {20=[Alice-20, Bob-20], 25=[Charlie-25]}
 ```
 
 ### Aggregation
-
 LINQ-style aggregation can be used to reduce a sequence into a single value:
 
 ```java
 int sum = Linq.of(
-        new Person("Alice", 20),
-        new Person("Bob", 20),
-        new Person("Charlie", 25)
-    )
-    .select(Person::age)
-    .aggregateToResult(0, Integer::sum);
+            new Person("Alice", 20),
+            new Person("Bob", 20),
+            new Person("Charlie", 25)
+        )
+        .select(Person::age)
+        .aggregateToResult(0, Integer::sum); // identity + accumulator
 
 System.out.println(sum);
 ```
-
 Output:
-
 ```text
 65
+```
+For primitive enumerable, dedicated methods like sum(), average(), min(), and max() are available:
+
+
+```java
+int total = IntEnumerable.ofInts(1, 2, 3, 4, 5)
+        .sum();
+double avg = IntEnumerable.ofInts(1, 2, 3, 4, 5)
+        .average();
+
+System.out.println("total = " + total + ", age = " + avg);
+```
+Output:
+```text
+total = 15, avg = 3.0
+```
+### Joins
+Perform inner joins using join:
+
+```java
+record Order(int id, String customer) {}
+record Detail(int orderId, String product) {}
+
+var orders = Linq.of(
+    new Order(1, "Alice"),
+    new Order(2, "Bob")
+);
+var details = Linq.of(
+    new Detail(1, "Product A"),
+    new Detail(1, "Product B"),
+    new Detail(2, "Product C")
+);
+
+var joined = orders.join(
+    details, 
+    Order::id,
+    Detail::orderId
+    (order, detail) -> order.customer() + " bought " + detail.product()
+);
+
+joined.forEach(System.out::println);
+```
+
+Output:
+```text
+Alice bought Product A
+Alice bought Product B
+Bob bought Product C
+```
+
+### Set Operations
+Use `distinct`, `except`, `intersect`, and `union`:
+
+```java
+var seq1 = Linq.of(1, 2, 3, 4);
+var seq2 = Linq.of(3, 4, 5, 6);
+
+var distinct = seq1
+        .distinct()
+        .toList();
+var except = seq1
+        .except(seq2)
+        .toList();
+var intersect = seq1
+        .intersect(seq2)
+        .toList();
+var union = seq1
+        .union(seq2)
+        .toList();
+
+System.out.println("distinct = " + distinct);
+System.out.println("except = " + except);
+System.out.println("intersect = " + intersect);
+System.out.println("union = " + union);            // [1, 2, 3, 4, 5, 6]
+```
+
+Output: 
+```text
+distinct = [1, 2, 3, 4]
+except = [1, 2]
+intersect = [3, 4]
+union = [1, 2, 3, 4, 5, 6]
 ```
 
 ---
@@ -358,13 +448,24 @@ Creating a query does not necessarily enumerate the source immediately. Instead,
 
 ```java
 var query = Linq.of(1, 2, 3, 4, 5)
-    .where(value -> value > 2)
-    .select(value -> value * 10);
+            .where(value -> {
+              System.out.println("Filtering: " + value);
+              return value > 2;
+            })
+            .select(value -> value * 10);
+```
+The filter lambda above will not execute until query is enumerated by a terminal operators executed:
+
+```java
+// The lambda executes only when toList() is called
+var result = query.toList();
+// Console output: Filtering: 1, Filtering: 2, Filtering: 3, Filtering: 4, Filtering: 5
 ```
 
-The query pipeline is evaluated when the resulting sequence is enumerated or when a terminal operation requests its result.
+Below are some intermediate and terminal operators:
+- **Intermediate operators**: `where`, `select`, `orderBy`, `skip`, `take`, `distinct`, `union`, etc.
 
-This makes it possible to compose query pipelines before actually processing the underlying data.
+- **Terminal operators**: `toList()`, `toArray()`, `toMap()`, `aggregateToResult()`, `count()`, `first()`, `forEach()`, `sum()`, etc.
 
 ---
 
@@ -381,11 +482,10 @@ More usage examples can be found in the project's tests:
 
 ## Requirements
 
-* **JDK 25 or later**
-* [`commons-lib`](https://central.sonatype.com/artifact/io.github.piscescup/commons-lib)
+* **JDK 25 or later**: This project leverages modern Java features such as record types, pattern matching, and unnamed variables.
+* [`commons-lib`](https://central.sonatype.com/artifact/io.github.piscescup/commons-lib): A lightweight utility dependency used internally.
 
 ---
-
 
 ## Example
 
@@ -412,6 +512,18 @@ Output:
 ```
 
 ---
+
+## Contributing
+
+Contributions are welcome! Here’s how you can help:
+
+1. Fork the [linq-for-java](https://github.com/Piscescup/linq-for-java) repository.
+2. Create a feature branch (`git checkout -b feature/amazing-feature`).
+3. Commit your changes (`git commit -m 'Add some amazing feature'`).
+4. Push to the branch (`git push origin feature/amazing-feature`).
+5. Open a Pull Request.
+
+Please ensure your code adheres to the existing style and includes appropriate tests. For major changes, please open an issue first to discuss what you would like to change.
 
 ## License
 

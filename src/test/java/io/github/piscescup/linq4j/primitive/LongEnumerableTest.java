@@ -1,6 +1,7 @@
 package io.github.piscescup.linq4j.primitive;
 
 import io.github.piscescup.linq4j.Linq;
+import io.github.piscescup.linq4j.core.LongEnumerable;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;

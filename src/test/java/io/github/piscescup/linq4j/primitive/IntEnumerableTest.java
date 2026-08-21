@@ -1,5 +1,6 @@
 package io.github.piscescup.linq4j.primitive;
 
+import io.github.piscescup.linq4j.core.IntEnumerable;
 import io.github.piscescup.linq4j.Linq;
 import org.junit.jupiter.api.Test;
 
