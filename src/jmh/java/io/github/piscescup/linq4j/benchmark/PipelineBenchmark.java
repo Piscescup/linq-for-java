@@ -1,7 +1,7 @@
 package io.github.piscescup.linq4j.benchmark;
 
 
-import io.github.piscescup.linq4j.Enumerable;
+import io.github.piscescup.linq4j.core.Enumerable;
 import io.github.piscescup.linq4j.Linq;
 import io.github.piscescup.linq4j.benchmark.BenchmarkData.Person;
 import org.openjdk.jmh.annotations.*;

@@ -1,7 +1,11 @@
 package io.github.piscescup.linq4j;
 
 
-import io.github.piscescup.linq4j.primitive.*;
+import io.github.piscescup.linq4j.core.*;
+import io.github.piscescup.linq4j.enumerator.ArrayEnumerator;
+import io.github.piscescup.linq4j.enumerator.CollectionEnumerator;
+import io.github.piscescup.linq4j.enumerator.Enumerator;
+import io.github.piscescup.linq4j.enumerator.IteratorEnumerator;
 import io.github.piscescup.util.validation.NullCheck;
 import org.jetbrains.annotations.NotNull;
 
@@ -160,7 +164,7 @@ public final class Linq {
     public static <T> Enumerable<T> of(@NotNull T... elements) {
         NullCheck.requireAllNonNull(elements);
 
-        return new ReferenceEnumPipeline.Head<>(() -> new ArrayEnumerator<>(elements));
+        return Enumerable.of(elements);
     }
 
     /**
@@ -199,7 +203,7 @@ public final class Linq {
     public static <T> Enumerable<T> of(@NotNull Collection<T> elements) {
         NullCheck.requireAllNonNull(elements);
 
-        return new ReferenceEnumPipeline.Head<>(() -> new CollectionEnumerator<>(elements));
+        return Enumerable.of(elements);
     }
 
     /**
@@ -238,9 +242,7 @@ public final class Linq {
     ) {
         NullCheck.requireNonNull(iteratorSupplier);
 
-        return new ReferenceEnumPipeline.Head<>(
-            () -> new IteratorEnumerator<>(iteratorSupplier.get())
-        );
+        return Enumerable.fromIterator(iteratorSupplier);
     }
 
     /**
@@ -281,6 +283,6 @@ public final class Linq {
     ) {
         NullCheck.requireNonNull(enumeratorSupplier);
 
-        return new ReferenceEnumPipeline.Head<>(enumeratorSupplier);
+        return Enumerable.fromEnumerator(enumeratorSupplier);
     }
 }

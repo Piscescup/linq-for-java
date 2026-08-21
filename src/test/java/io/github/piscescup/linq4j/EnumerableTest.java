@@ -4,6 +4,7 @@ import io.github.piscescup.equalators.StringEqualators;
 import io.github.piscescup.interfaces.Equalator;
 import io.github.piscescup.interfaces.HashEqualator;
 import io.github.piscescup.interfaces.Pair;
+import io.github.piscescup.linq4j.core.Enumerable;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
 

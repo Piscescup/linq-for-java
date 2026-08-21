@@ -7,7 +7,7 @@ import org.openjdk.jmh.annotations.*;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-import io.github.piscescup.linq4j.Enumerable;
+import io.github.piscescup.linq4j.core.Enumerable;
 import io.github.piscescup.linq4j.Linq;
 
 @BenchmarkMode(Mode.AverageTime)
