@@ -5538,6 +5538,113 @@ public interface Enumerable<T>
     );
 
     /**
+     * <p>Projects each element of the sequence into an {@code int} value.</p>
+     *
+     * <p>The selector function is invoked once for each element of the
+     * sequence, and the returned {@code int} values form the resulting sequence.</p>
+     *
+     * <p>This method uses deferred execution.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<String> numbers =
+     *     Linq.of("1", "2", "3", "4", "5");
+     *
+     * IntEnumerable values =
+     *     numbers.selectToInt(Integer::parseInt);
+     *
+     * values.forEach(System.out::println);
+     *
+     * // This code produces the following output:
+     * //
+     * // 1
+     * // 2
+     * // 3
+     * // 4
+     * // 5
+     * }</pre>
+     *
+     * @param selector A transform function to apply to each element.
+     * @return An {@link IntEnumerable} whose elements are the result of invoking
+     *         the selector function on each element of the sequence.
+     * @throws NullPointerException If {@code selector} is {@code null}.
+     */
+    @NotNull
+    IntEnumerable selectToInt(
+        @NotNull ToIntFunction<? super T> selector
+    );
+
+    /**
+     * <p>Projects each element of the sequence into a {@code long} value.</p>
+     *
+     * <p>The selector function is invoked once for each element of the
+     * sequence, and the returned {@code long} values form the resulting sequence.</p>
+     *
+     * <p>This method uses deferred execution.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<String> numbers =
+     *     Linq.of("10000000000", "20000000000", "30000000000");
+     *
+     * LongEnumerable values =
+     *     numbers.selectToLong(Long::parseLong);
+     *
+     * values.forEach(System.out::println);
+     *
+     * // This code produces the following output:
+     * //
+     * // 10000000000
+     * // 20000000000
+     * // 30000000000
+     * }</pre>
+     *
+     * @param selector A transform function to apply to each element.
+     * @return A {@link LongEnumerable} whose elements are the result of invoking
+     *         the selector function on each element of the sequence.
+     * @throws NullPointerException If {@code selector} is {@code null}.
+     */
+    @NotNull
+    LongEnumerable selectToLong(
+        @NotNull ToLongFunction<? super T> selector
+    );
+
+    /**
+     * <p>Projects each element of the sequence into a {@code double} value.</p>
+     *
+     * <p>The selector function is invoked once for each element of the
+     * sequence, and the returned {@code double} values form the resulting sequence.</p>
+     *
+     * <p>This method uses deferred execution.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<String> numbers =
+     *     Linq.of("1.5", "2.5", "3.5");
+     *
+     * DoubleEnumerable values =
+     *     numbers.selectToDouble(Double::parseDouble);
+     *
+     * values.forEach(System.out::println);
+     *
+     * // This code produces the following output:
+     * //
+     * // 1.5
+     * // 2.5
+     * // 3.5
+     * }</pre>
+     *
+     * @param selector A transform function to apply to each element.
+     * @return A {@link DoubleEnumerable} whose elements are the result of invoking
+     *         the selector function on each element of the sequence.
+     * @throws NullPointerException If {@code selector} is {@code null}.
+     */
+    @NotNull
+    DoubleEnumerable selectToDouble(
+        @NotNull ToDoubleFunction<? super T> selector
+    );
+
+    /**
      * Projects each element of the sequence to an {@link Iterable},
      * and flattens the resulting sequences into one sequence.
      *

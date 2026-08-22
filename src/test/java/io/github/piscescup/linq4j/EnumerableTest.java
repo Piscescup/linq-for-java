@@ -475,6 +475,53 @@ class EnumerableTest {
         );
     }
 
+    @Test
+    public void testSelectToPrimitive() {
+        record Score(double math, double chinese, double english) {
+            public double totalScore() {
+                return math + chinese + english;
+            }
+
+            public double avgScore() {
+                return totalScore() / 3;
+            }
+        }
+
+        record Student(String name, int id, Score score) {
+
+        }
+
+        List<Person> people = List.of(
+            new Person("Alice", "IT", 20),
+            new Person("Bob", "HR", 21),
+            new Person("Carol", "Sales", 22)
+        );
+
+        assertArrayEquals(
+            new int[] {20, 21, 22},
+            Linq.of(people)
+                .selectToInt(Person::age)
+                .toArray()
+        );
+
+        List<Student> students = List.of(
+            new Student("Alice", 1001, new Score(98, 90, 93)),
+            new Student("Bob", 1002, new Score(97, 91, 96)),
+            new Student("Carol", 1003, new Score(99, 83, 87))
+        );
+
+        assertArrayEquals(
+            new double[] {
+                89.666666666666666666666666666667,
+                93.666666666666666666666666666667,
+                94.666666666666666666666666666667
+            },
+            Linq.of(students)
+                .selectToDouble(s -> s.score().avgScore())
+                .order()
+                .toArray()
+        );
+    }
 
     @Test
     void union_allVariants() {

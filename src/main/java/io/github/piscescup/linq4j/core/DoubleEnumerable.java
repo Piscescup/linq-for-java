@@ -5,6 +5,8 @@ import io.github.piscescup.linq4j.enumerator.DoubleEnumerator;
 import io.github.piscescup.util.validation.NullCheck;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.OptionalDouble;
 import java.util.function.DoubleBinaryOperator;
@@ -1376,6 +1378,54 @@ public interface DoubleEnumerable
      */
     @NotNull
     Enumerable<Double> boxed();
+
+    /**
+     * <p>Creates a {@link List List<Double>} from an enumerable sequence.</p>
+     * <b>Usage:</b>
+     * <pre>{@code
+     * List<Double> nums = Linq.ofDoubles(1L, 2L, 2L, 3L, 4L, 5L)
+     *     .distinct()
+     *     .toList();
+     *
+     * System.out.println(nums.toString);
+     *
+     * // This code produces the following output:
+     * //
+     * // [1, 2, 3, 4, 5]
+     * }</pre>
+     *
+     * @return A {@link List} that contains elements from the input sequence.
+     * @see #toUnmodifiableList()
+     */
+    default List<Double> toList() {
+        final List<Double> result = new ArrayList<>();
+        this.forEach(result::add);
+        return result;
+    }
+
+    /**
+     * <p>Creates an unmodifiable {@link List List<Double>} from an enumerable sequence.</p>
+     * <b>Usage:</b>
+     * <pre>{@code
+     * List<Double> nums = Linq.ofDoubles(1L, 2L, 2L, 3L, 4L, 5L)
+     *     .distinct()
+     *     .toList();
+     *
+     * System.out.println(nums.toString);
+     *
+     * // This code produces the following output:
+     * //
+     * // [1, 2, 3, 4, 5]
+     * }</pre>
+     *
+     * @return A {@link List} that contains elements from the input sequence.
+     * @see #toUnmodifiableList()
+     */
+    default List<Double> toUnmodifiableList() {
+        final List<Double> result = new ArrayList<>();
+        this.forEach(result::add);
+        return result;
+    }
 
     /**
      * <p>Creates a {@link DoubleEnumerable} from the specified primitive
