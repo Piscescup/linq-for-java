@@ -5,6 +5,8 @@ import io.github.piscescup.linq4j.enumerator.IntEnumerator;
 import io.github.piscescup.util.validation.NullCheck;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.OptionalInt;
 import java.util.function.IntBinaryOperator;
@@ -1748,6 +1750,56 @@ public interface IntEnumerable
      *         this sequence in enumeration order.
      */
     int @NotNull [] toArray();
+
+
+    /**
+     * <p>Creates a {@link List List<Integer>} from an enumerable sequence.</p>
+     * <b>Usage:</b>
+     * <pre>{@code
+     * List List<Double> nums = Linq.ofDoubles(1.0, 2.0, 2.0, 3.0, 4.0, 5.0)
+     *     .distinct()
+     *     .toList();
+     *
+     * System.out.println(nums.toString);
+     *
+     * // This code produces the following output:
+     * //
+     * // [1.0, 2.0, 3.0, 4.0, 5.0]
+     * }</pre>
+     *
+     * @return A {@link List} that contains elements from the input sequence.
+     * @see #toUnmodifiableList()
+     */
+    default List<Integer> toList() {
+        final List<Integer> result = new ArrayList<>();
+        this.forEach(result::add);
+        return result;
+    }
+
+
+    /**
+     * <p>Creates an unmodifiable {@link List List<Double>} from an enumerable sequence.</p>
+     * <b>Usage:</b>
+     * <pre>{@code
+     * List List<Double> nums = Linq.ofDoubles(1.0, 2.0, 2.0, 3.0, 4.0, 5.0)
+     *     .distinct()
+     *     .toList();
+     *
+     * System.out.println(nums.toString);
+     *
+     * // This code produces the following output:
+     * //
+     * // [1.0, 2.0, 3.0, 4.0, 5.0]
+     * }</pre>
+     *
+     * @return A {@link List} that contains elements from the input sequence.
+     * @see #toList()
+     */
+    default List<Integer> toUnmodifiableList() {
+        final List<Integer> result = new ArrayList<>();
+        this.forEach(result::add);
+        return result;
+    }
 
     /**
      * <p>Returns a reference-type enumerable whose elements are the values of

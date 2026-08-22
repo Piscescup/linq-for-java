@@ -1751,6 +1751,141 @@ public abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         };
     }
 
+    @Override
+    @NotNull
+    public IntEnumerable selectToInt(
+        @NotNull ToIntFunction<? super T_OUT> selector
+    ) {
+        NullCheck.requireNonNull(selector, "selector");
+
+        return new IntEnumPipeline.Head(
+            () -> {
+                Enumerator<T_OUT> upstream = enumerator();
+
+                return new IntEnumerator() {
+
+                    private int current;
+
+                    @Override
+                    public boolean moveNext() {
+                        if (!upstream.moveNext()) {
+                            return false;
+                        }
+
+                        current = selector.applyAsInt(upstream.current());
+                        return true;
+                    }
+
+                    @Override
+                    public int current() {
+                        return current;
+                    }
+
+                    @Override
+                    public void remove() {
+                        upstream.remove();
+                    }
+
+                    @Override
+                    public void close() {
+                        upstream.close();
+                    }
+                };
+            },
+            isParallel()
+        );
+    }
+
+    @Override
+    @NotNull
+    public LongEnumerable selectToLong(
+        @NotNull ToLongFunction<? super T_OUT> selector
+    ) {
+        NullCheck.requireNonNull(selector, "selector");
+
+        return new LongEnumPipeline.Head(
+            () -> {
+                Enumerator<T_OUT> upstream = enumerator();
+
+                return new LongEnumerator() {
+
+                    private long current;
+
+                    @Override
+                    public boolean moveNext() {
+                        if (!upstream.moveNext()) {
+                            return false;
+                        }
+
+                        current = selector.applyAsLong(upstream.current());
+                        return true;
+                    }
+
+                    @Override
+                    public long current() {
+                        return current;
+                    }
+
+                    @Override
+                    public void remove() {
+                        upstream.remove();
+                    }
+
+                    @Override
+                    public void close() {
+                        upstream.close();
+                    }
+                };
+            },
+            isParallel()
+        );
+    }
+
+    @Override
+    @NotNull
+    public DoubleEnumerable selectToDouble(
+        @NotNull ToDoubleFunction<? super T_OUT> selector
+    ) {
+        NullCheck.requireNonNull(selector, "selector");
+
+        return new DoubleEnumPipeline.Head(
+            () -> {
+                Enumerator<T_OUT> upstream = enumerator();
+
+                return new DoubleEnumerator() {
+
+                    private double current;
+
+                    @Override
+                    public boolean moveNext() {
+                        if (!upstream.moveNext()) {
+                            return false;
+                        }
+
+                        current = selector.applyAsDouble(upstream.current());
+                        return true;
+                    }
+
+                    @Override
+                    public double current() {
+                        return current;
+                    }
+
+                    @Override
+                    public void remove() {
+                        upstream.remove();
+                    }
+
+                    @Override
+                    public void close() {
+                        upstream.close();
+                    }
+                };
+            },
+            isParallel()
+        );
+    }
+
     /** {@inheritDoc} */
     @Override
     public final <R> @NotNull Enumerable<R> selectMany(
