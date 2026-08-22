@@ -15,13 +15,11 @@ import java.util.List;
  * @author REN YuanTong
  * @since 1.0.0
  * @see Groupable
- * @see UnmodifiableGrouping
+ * @see UnmodifiableGroup
  */
-public final class Grouping<K, V> implements Groupable<K, V> {
-
-    private final K key;
-
-    private final List<V> groupElements;
+public final class Group<K, V>
+    extends AbstractGroup<K, V>
+    implements Groupable<K, V> {
 
     /**
      * Constructs a {@code Grouping} with the specified key and backing element list.
@@ -29,9 +27,8 @@ public final class Grouping<K, V> implements Groupable<K, V> {
      * @param key the key associated with this group
      * @param groupElements the backing list used to store elements
      */
-    public Grouping(K key, List<V> groupElements) {
-        this.key = key;
-        this.groupElements = groupElements;
+    public Group(K key, List<V> groupElements) {
+        super(key, groupElements);
     }
 
     /**
@@ -59,19 +56,4 @@ public final class Grouping<K, V> implements Groupable<K, V> {
         return this;
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public K getGroupKey() {
-        return key;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public List<V> getGroupElements() {
-        return groupElements;
-    }
 }

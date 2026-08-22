@@ -1,7 +1,5 @@
 package io.github.piscescup.linq4j.base;
 
-import io.github.piscescup.util.validation.NullCheck;
-
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -18,16 +16,15 @@ import java.util.List;
  * @author REN YuanTong
  * @since 1.0.0
  * @see Groupable
- * @see Grouping
+ * @see Group
  * @see Collections#unmodifiableList(List)
  */
-public final class UnmodifiableGrouping<K, V> implements Groupable<K, V> {
+public final class UnmodifiableGroup<K, V>
+    extends AbstractGroup<K, V>
+    implements Groupable<K, V> {
     private static final String CANNOT_ADD_EX =
         "The add operation is unsupported in UnmodifiableGrouping.";
 
-    private final K key;
-
-    private final List<V> groupElements;
 
     /**
      * Constructs an unmodifiable grouping backed by the specified elements.
@@ -36,29 +33,8 @@ public final class UnmodifiableGrouping<K, V> implements Groupable<K, V> {
      * @param groupElements the list of elements for this group
      * @throws NullPointerException if {@code groupElements} is {@code null}
      */
-    public UnmodifiableGrouping(K key, List<V> groupElements) {
-        NullCheck.requireNonNull(key, "key");
-        NullCheck.requireNonNull(groupElements, "groupElements");
-        this.key = key;
-        this.groupElements = Collections.unmodifiableList(groupElements);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public K getGroupKey() {
-        return key;
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * @return an unmodifiable {@link List} of elements belonging to this group
-     */
-    @Override
-    public List<V> getGroupElements() {
-        return groupElements;
+    public UnmodifiableGroup(K key, List<V> groupElements) {
+        super(key, Collections.unmodifiableList(groupElements));
     }
 
     /**
