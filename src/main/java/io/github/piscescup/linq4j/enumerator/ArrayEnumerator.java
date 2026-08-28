@@ -1,4 +1,4 @@
-package io.github.piscescup.linq4j;
+package io.github.piscescup.linq4j.enumerator;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -27,7 +27,7 @@ import java.util.Objects;
  * @author REN YuanTong
  * @since 1.0.0
  */
-final class ArrayEnumerator<E> implements Enumerator<E> {
+public final class ArrayEnumerator<E> implements Enumerator<E> {
 
     /**
      * Error message used when an operation is attempted after this enumerator
@@ -72,7 +72,7 @@ final class ArrayEnumerator<E> implements Enumerator<E> {
      *
      * @throws NullPointerException if {@code values} is {@code null}
      */
-    ArrayEnumerator(
+    public ArrayEnumerator(
         @NotNull final E[] values
     ) {
         this.values = Objects.requireNonNull(

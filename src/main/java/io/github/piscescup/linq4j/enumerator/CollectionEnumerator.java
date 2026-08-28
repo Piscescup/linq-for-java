@@ -1,37 +1,36 @@
-package io.github.piscescup.linq4j;
+package io.github.piscescup.linq4j.enumerator;
 
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Iterator;
-import java.util.NoSuchElementException;
-import java.util.Objects;
+import java.util.*;
 
 /**
- * An {@link Enumerator} implementation backed by an {@link Iterator}.
+ * An {@link Enumerator} implementation backed by a {@link Collection}.
  *
- * <p>This enumerator adapts a standard Java {@link Iterator} to the
- * cursor-based {@link Enumerator} contract. Elements are consumed from the
- * backing iterator as the enumerator advances.</p>
+ * <p>This enumerator traverses the elements of the supplied collection by
+ * using its {@link Collection#iterator()} method. Consequently, the iteration
+ * order of this enumerator is the iteration order defined by the underlying
+ * collection.</p>
  *
- * <p>The backing iterator is retained directly and is not copied. Since an
- * iterator generally represents a one-time traversal, this enumerator does
- * not support {@link #reset()}.</p>
+ * <p>For example, an {@link java.util.ArrayList} preserves list order,
+ * a {@link java.util.LinkedHashSet} preserves insertion order, while a
+ * {@link java.util.HashSet} does not guarantee a particular iteration
+ * order.</p>
  *
- * <p>The {@link #hasNext()} method delegates to the backing iterator and does
- * not consume an element. Therefore repeated calls to {@code hasNext()} do
- * not advance the enumeration.</p>
+ * <p>The supplied collection is not copied. Changes to the collection while
+ * this enumerator is being consumed are therefore subject to the behavior of
+ * the collection's iterator and may result in a
+ * {@link java.util.ConcurrentModificationException}.</p>
  *
- * <p>Closing this enumerator does not close or otherwise modify the backing
- * iterator because {@link Iterator} does not define a close operation.
- * After this enumerator has been closed, further enumeration operations are
- * not permitted.</p>
+ * <p>The {@link #hasNext()} method does not advance the enumeration and may be
+ * called repeatedly without consuming an element.</p>
  *
  * @param <E> the type of elements enumerated
  *
  * @author REN YuanTong
  * @since 1.0.0
  */
-final class IteratorEnumerator<E> implements Enumerator<E> {
+public final class CollectionEnumerator<E> implements Enumerator<E> {
 
     /**
      * Error message used when an operation is attempted after this enumerator
@@ -48,10 +47,16 @@ final class IteratorEnumerator<E> implements Enumerator<E> {
         "The enumerator is not positioned on an element.";
 
     /**
-     * The iterator supplying elements to this enumerator.
+     * The collection containing the elements to enumerate.
      */
     @NotNull
-    private final Iterator<? extends E> iterator;
+    private final Collection<? extends E> values;
+
+    /**
+     * The iterator used by the current enumeration.
+     */
+    @NotNull
+    private Iterator<? extends E> iterator;
 
     /**
      * The element at the current cursor position.
@@ -59,15 +64,9 @@ final class IteratorEnumerator<E> implements Enumerator<E> {
     private E current;
 
     /**
-     * Indicates whether {@link #current} currently represents a valid element.
+     * Indicates whether {@link #current} currently contains a valid element.
      */
     private boolean hasCurrent;
-
-    /**
-     * Indicates whether this enumerator has reached the end of the backing
-     * iterator.
-     */
-    private boolean finished;
 
     /**
      * Indicates whether this enumerator has been closed.
@@ -75,29 +74,32 @@ final class IteratorEnumerator<E> implements Enumerator<E> {
     private boolean closed;
 
     /**
-     * Creates an enumerator backed by the specified iterator.
+     * Creates an enumerator over the specified collection.
      *
-     * @param iterator the iterator supplying elements
+     * <p>The collection itself is retained and is not copied.</p>
      *
-     * @throws NullPointerException if {@code iterator} is {@code null}
+     * @param values the collection whose elements are to be enumerated
+     *
+     * @throws NullPointerException if {@code values} is {@code null}
      */
-    IteratorEnumerator(
-        @NotNull final Iterator<? extends E> iterator
+    public CollectionEnumerator(
+        @NotNull final Collection<? extends E> values
     ) {
-        this.iterator = Objects.requireNonNull(
-            iterator,
-            "iterator"
+        this.values = Objects.requireNonNull(
+            values,
+            "values"
         );
+
+        this.iterator = values.iterator();
     }
 
     /**
      * Advances this enumerator to the next element.
      *
-     * <p>If another element exists, the element is consumed from the backing
-     * iterator and becomes available through {@link #current()}.</p>
-     *
-     * <p>If the backing iterator is exhausted, this method returns
-     * {@code false} and {@link #current()} becomes unavailable.</p>
+     * <p>If another element exists, this method makes that element available
+     * through {@link #current()} and returns {@code true}. When the collection
+     * has been exhausted, this method clears the current element and returns
+     * {@code false}.</p>
      *
      * @return {@code true} if another element was available;
      *         otherwise {@code false}
@@ -108,16 +110,9 @@ final class IteratorEnumerator<E> implements Enumerator<E> {
     public boolean moveNext() {
         ensureOpen();
 
-        if (finished) {
-            hasCurrent = false;
-            return false;
-        }
-
         if (!iterator.hasNext()) {
-            finished = true;
             current = null;
             hasCurrent = false;
-
             return false;
         }
 
@@ -152,8 +147,7 @@ final class IteratorEnumerator<E> implements Enumerator<E> {
     /**
      * Returns whether another element is available.
      *
-     * <p>This method does not advance the backing iterator and may be invoked
-     * repeatedly without consuming elements.</p>
+     * <p>This method does not advance the enumeration.</p>
      *
      * @return {@code true} if another element is available;
      *         otherwise {@code false}
@@ -164,17 +158,7 @@ final class IteratorEnumerator<E> implements Enumerator<E> {
     public boolean hasNext() {
         ensureOpen();
 
-        if (finished) {
-            return false;
-        }
-
-        boolean hasNext = iterator.hasNext();
-
-        if (!hasNext) {
-            finished = true;
-        }
-
-        return hasNext;
+        return iterator.hasNext();
     }
 
     /**
@@ -197,26 +181,28 @@ final class IteratorEnumerator<E> implements Enumerator<E> {
     }
 
     /**
-     * Resetting an iterator-backed enumerator is not supported.
+     * Resets this enumerator to its initial position.
      *
-     * <p>A Java {@link Iterator} does not provide a standard mechanism for
-     * returning to its initial position. A new iterator must be obtained from
-     * the original source instead.</p>
+     * <p>A new iterator is obtained from the backing collection. After this
+     * method returns, {@link #current()} is unavailable until
+     * {@link #moveNext()} is called successfully.</p>
      *
-     * @throws UnsupportedOperationException always
+     * @throws IllegalStateException if this enumerator has been closed
      */
     @Override
     public void reset() {
-        throw new UnsupportedOperationException(
-            "Reset operation is not supported by an iterator-backed enumerator."
-        );
+        ensureOpen();
+
+        iterator = values.iterator();
+        current = null;
+        hasCurrent = false;
     }
 
     /**
      * Closes this enumerator.
      *
-     * <p>This operation is idempotent. Closing this enumerator does not close
-     * or modify the backing iterator.</p>
+     * <p>This operation is idempotent. Closing this enumerator does not modify
+     * or clear the backing collection.</p>
      */
     @Override
     public void close() {
@@ -225,9 +211,8 @@ final class IteratorEnumerator<E> implements Enumerator<E> {
         }
 
         closed = true;
-        finished = true;
-        hasCurrent = false;
         current = null;
+        hasCurrent = false;
     }
 
     /**
