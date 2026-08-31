@@ -2031,7 +2031,7 @@ final class LongHashSet {
         z *= 0xc4ceb9fe1a85ec53L;
         z ^= z >>> 33;
 
-        return (int) (z ^ (z >>> 32));
+        return Long.hashCode(z);
     }
 }
 
