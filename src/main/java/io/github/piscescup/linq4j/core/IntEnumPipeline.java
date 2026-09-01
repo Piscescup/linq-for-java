@@ -1717,6 +1717,36 @@ abstract class IntEnumPipeline
         };
     }
 
+    @Override
+    public final @NotNull IntEnumerable peek(
+        @NotNull IntConsumer action
+    ) {
+        NullCheck.requireNonNull(action, "action");
+
+        return new StatelessOp(this) {
+            @Override
+            protected @NotNull IntEnumerator opWrapEnumerator(
+                @NotNull IntEnumerator upstream
+            ) {
+                return new IntPipelineEnumerator(upstream) {
+                    @Override
+                    protected boolean moveNextCore() {
+                        if (upstream.moveNext()) {
+                            int element = upstream.current();
+
+                            action.accept(element);
+                            setCurrent(element);
+
+                            return true;
+                        }
+
+                        return false;
+                    }
+                };
+            }
+        };
+    }
+
     /** {@inheritDoc} */
     @Override
     public final @NotNull IntEnumerable shuffle() {

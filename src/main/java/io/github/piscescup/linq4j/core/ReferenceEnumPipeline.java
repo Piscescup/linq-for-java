@@ -1561,6 +1561,39 @@ public abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         };
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public final @NotNull Enumerable<T_OUT> peek(
+        @NotNull Consumer<? super T_OUT> action
+    ) {
+        NullCheck.requireNonNull(action, "action");
+
+        return new StatelessOp<>(this) {
+            @Override
+            protected @NotNull Enumerator<T_OUT> opWrapEnumerator(
+                @NotNull Enumerator<T_OUT> upstream
+            ) {
+                return new PipelineEnumerator<>(upstream) {
+                    @Override
+                    protected boolean moveNextCore() {
+                        if (upstream.moveNext()) {
+                            T_OUT element = upstream.current();
+
+                            action.accept(element);
+                            setCurrent(element);
+
+                            return true;
+                        }
+
+                        return false;
+                    }
+                };
+            }
+        };
+    }
+
     /** {@inheritDoc} */
     @Override
     public final @NotNull Enumerable<T_OUT> reverse() {

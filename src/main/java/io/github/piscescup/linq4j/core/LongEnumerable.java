@@ -9,12 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.OptionalLong;
-import java.util.function.LongBinaryOperator;
-import java.util.function.LongFunction;
-import java.util.function.LongPredicate;
-import java.util.function.LongToDoubleFunction;
-import java.util.function.LongToIntFunction;
-import java.util.function.LongUnaryOperator;
+import java.util.function.*;
 
 /**
  * Represents a sequence of primitive {@code long} values that supports
@@ -1390,6 +1385,53 @@ public interface LongEnumerable
      */
     @NotNull
     LongEnumerable orderDescending();
+
+    /**
+     * <p>Returns a sequence consisting of the elements of the current sequence,
+     * additionally performing the specified action on each element as elements
+     * are consumed from the resulting sequence.</p>
+     *
+     * <p>This method uses deferred execution.</p>
+     *
+     * <p>For parallel pipelines, the action may be invoked at whatever time and
+     * in whatever thread the element is made available by the upstream operation.
+     * If the action modifies shared state, the action is responsible for providing
+     * the required synchronization.</p>
+     *
+     * <p>This method is mainly intended for debugging, where it can be used to
+     * observe elements as they pass through a particular point in a pipeline.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * LongEnumerable result =
+     *     Linq.ofLong(1L, 2L, 3L, 4L)
+     *         .where(value -> value > 2L)
+     *         .peek(value ->
+     *             System.out.println("Filtered value: " + value)
+     *         );
+     *
+     * result.toArray();
+     *
+     * // This code produces the following output:
+     * //
+     * // Filtered value: 3
+     * // Filtered value: 4
+     * }</pre>
+     *
+     * <p>If the pipeline does not consume some or all elements, the action will
+     * not be invoked for those elements. This may occur, for example, when a
+     * short-circuiting operation stops enumeration before the sequence is fully
+     * consumed.</p>
+     *
+     * @param action A non-interfering action to perform on each element as it is
+     *               consumed from the resulting sequence.
+     * @return A new sequence containing the same elements as the current sequence,
+     *         with {@code action} performed as the elements are consumed.
+     */
+    @NotNull
+    LongEnumerable peek(
+        @NotNull LongConsumer action
+    );
 
     /**
      * <p>Creates an array containing all primitive {@code long} values in this
