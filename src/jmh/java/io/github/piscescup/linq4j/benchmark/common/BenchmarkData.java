@@ -1,5 +1,4 @@
-package io.github.piscescup.linq4j.benchmark;
-
+package io.github.piscescup.linq4j.benchmark.common;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -110,124 +109,47 @@ public final class BenchmarkData {
         throw new UnsupportedOperationException();
     }
 
-    /**
-     * Creates deterministic person data.
-     */
     public static List<Person> createPeople(int size) {
-
         Random random = new Random(RANDOM_SEED + size);
-
         List<Department> departments = createDepartments();
-
         List<Person> result = new ArrayList<>(size);
 
         for (int i = 0; i < size; i++) {
-
-            Department department =
-                departments.get(random.nextInt(departments.size()));
+            Department department = departments.get(random.nextInt(departments.size()));
 
             Address address = new Address();
-
-            address.setCountry(
-                COUNTRIES[random.nextInt(COUNTRIES.length)]
-            );
-
-            address.setProvince(
-                PROVINCES[random.nextInt(PROVINCES.length)]
-            );
-
-            address.setCity(
-                CITIES[random.nextInt(CITIES.length)]
-            );
-
-            address.setDistrict(
-                DISTRICTS[random.nextInt(DISTRICTS.length)]
-            );
-
-            address.setStreet(
-                "Street-" + random.nextInt(200)
-            );
-
-            address.setPostalCode(
-                String.format("%06d", random.nextInt(1_000_000))
-            );
+            address.setCountry(COUNTRIES[random.nextInt(COUNTRIES.length)]);
+            address.setProvince(PROVINCES[random.nextInt(PROVINCES.length)]);
+            address.setCity(CITIES[random.nextInt(CITIES.length)]);
+            address.setDistrict(DISTRICTS[random.nextInt(DISTRICTS.length)]);
+            address.setStreet("Street-" + random.nextInt(200));
+            address.setPostalCode(String.format("%06d", random.nextInt(1_000_000)));
 
             Profile profile = new Profile();
-
-            profile.setPerformanceScore(
-                40.0 + random.nextDouble() * 60.0
-            );
-
-            profile.setCompletedProjects(
-                random.nextInt(40)
-            );
-
-            profile.setManager(
-                random.nextDouble() < 0.15
-            );
-
-            profile.setEducation(
-                Education.values()[
-                    random.nextInt(Education.values().length)
-                    ]
-            );
+            profile.setPerformanceScore(40.0 + random.nextDouble() * 60.0);
+            profile.setCompletedProjects(random.nextInt(40));
+            profile.setManager(random.nextDouble() < 0.15);
+            profile.setEducation(Education.values()[random.nextInt(Education.values().length)]);
 
             int skillCount = 1 + random.nextInt(5);
-
             List<String> skills = new ArrayList<>(skillCount);
-
             for (int j = 0; j < skillCount; j++) {
-                skills.add(
-                    SKILL_POOL[
-                        random.nextInt(SKILL_POOL.length)
-                        ]
-                );
+                skills.add(SKILL_POOL[random.nextInt(SKILL_POOL.length)]);
             }
 
             Person person = new Person();
-
             person.setId(i);
-
-            person.setFirstName(
-                FIRST_NAMES[
-                    random.nextInt(FIRST_NAMES.length)
-                    ]
-            );
-
-            person.setLastName(
-                LAST_NAMES[
-                    random.nextInt(LAST_NAMES.length)
-                    ]
-            );
-
-            person.setAge(
-                18 + random.nextInt(48)
-            );
-
-            person.setGender(
-                Gender.values()[
-                    random.nextInt(Gender.values().length)
-                    ]
-            );
-
+            person.setFirstName(FIRST_NAMES[random.nextInt(FIRST_NAMES.length)]);
+            person.setLastName(LAST_NAMES[random.nextInt(LAST_NAMES.length)]);
+            person.setAge(18 + random.nextInt(48));
+            person.setGender(Gender.values()[random.nextInt(Gender.values().length)]);
             person.setAddress(address);
             person.setDepartment(department);
-
-            person.setSalary(
-                3_000.0 + random.nextDouble() * 27_000.0
-            );
-
-            person.setActive(
-                random.nextDouble() < 0.85
-            );
-
-            person.setExperienceYears(
-                random.nextInt(30)
-            );
-
+            person.setSalary(3_000.0 + random.nextDouble() * 27_000.0);
+            person.setActive(random.nextDouble() < 0.85);
+            person.setExperienceYears(random.nextInt(30));
             person.setSkills(skills);
             person.setProfile(profile);
-
             result.add(person);
         }
 
@@ -235,49 +157,25 @@ public final class BenchmarkData {
     }
 
     public static List<DepartmentBudget> createDepartmentBudgets() {
-
         List<Department> departments = createDepartments();
-
-        List<DepartmentBudget> result =
-            new ArrayList<>(departments.size());
+        List<DepartmentBudget> result = new ArrayList<>(departments.size());
 
         for (Department department : departments) {
-
             DepartmentBudget budget = new DepartmentBudget();
-
             budget.setDepartmentId(department.getId());
-
-            budget.setAnnualBudget(
-                500_000.0
-                    + department.getId() * 375_000.0
-            );
-
-            budget.setCostCenter(
-                "CC-" + String.format(
-                    "%04d",
-                    department.getId()
-                )
-            );
-
-            budget.setEmployeeLimit(
-                50 + department.getId() * 25
-            );
-
+            budget.setAnnualBudget(500_000.0 + department.getId() * 375_000.0);
+            budget.setCostCenter("CC-" + String.format("%04d", department.getId()));
+            budget.setEmployeeLimit(50 + department.getId() * 25);
             result.add(budget);
         }
 
         return result;
     }
 
-    public static List<String> createDistinctKeys(
-        List<Person> people
-    ) {
-
-        List<String> result =
-            new ArrayList<>(people.size());
+    public static List<String> createDistinctKeys(List<Person> people) {
+        List<String> result = new ArrayList<>(people.size());
 
         for (Person person : people) {
-
             result.add(
                 person.getDepartment().getDivision()
                     + ':'
@@ -291,28 +189,14 @@ public final class BenchmarkData {
     }
 
     private static List<Department> createDepartments() {
-
-        List<Department> result =
-            new ArrayList<>(DEPARTMENT_NAMES.length);
+        List<Department> result = new ArrayList<>(DEPARTMENT_NAMES.length);
 
         for (int i = 0; i < DEPARTMENT_NAMES.length; i++) {
-
             Department department = new Department();
-
             department.setId(i);
-
-            department.setName(
-                DEPARTMENT_NAMES[i]
-            );
-
-            department.setDivision(
-                DIVISIONS[i % DIVISIONS.length]
-            );
-
-            department.setLevel(
-                1 + i % 5
-            );
-
+            department.setName(DEPARTMENT_NAMES[i]);
+            department.setDivision(DIVISIONS[i % DIVISIONS.length]);
+            department.setLevel(1 + i % 5);
             result.add(department);
         }
 
@@ -335,27 +219,16 @@ public final class BenchmarkData {
     public static class Person {
 
         private long id;
-
         private String firstName;
-
         private String lastName;
-
         private int age;
-
         private Gender gender;
-
         private Address address;
-
         private Department department;
-
         private double salary;
-
         private boolean active;
-
         private int experienceYears;
-
         private List<String> skills;
-
         private Profile profile;
 
         public String getFullName() {
@@ -560,20 +433,15 @@ public final class BenchmarkData {
     public static class Profile {
 
         private double performanceScore;
-
         private int completedProjects;
-
         private boolean manager;
-
         private Education education;
 
         public double getPerformanceScore() {
             return performanceScore;
         }
 
-        public void setPerformanceScore(
-            double performanceScore
-        ) {
+        public void setPerformanceScore(double performanceScore) {
             this.performanceScore = performanceScore;
         }
 
@@ -581,9 +449,7 @@ public final class BenchmarkData {
             return completedProjects;
         }
 
-        public void setCompletedProjects(
-            int completedProjects
-        ) {
+        public void setCompletedProjects(int completedProjects) {
             this.completedProjects = completedProjects;
         }
 
@@ -607,11 +473,8 @@ public final class BenchmarkData {
     public static class DepartmentBudget {
 
         private int departmentId;
-
         private double annualBudget;
-
         private String costCenter;
-
         private int employeeLimit;
 
         public int getDepartmentId() {

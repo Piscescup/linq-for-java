@@ -2213,11 +2213,11 @@ final class DoubleHashSet {
         long hash = value;
 
         hash ^= hash >>> 33;
-        hash *= 0xff51afd7ed558ccdl;
+        hash *= 0xff51afd7ed558ccdL;
         hash ^= hash >>> 33;
-        hash *= 0xc4ceb9fe1a85ec53l;
+        hash *= 0xc4ceb9fe1a85ec53L;
         hash ^= hash >>> 33;
 
-        return (int) (hash ^ (hash >>> 32));
+        return Long.hashCode(hash);
     }
 }
