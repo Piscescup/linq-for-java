@@ -927,6 +927,36 @@ abstract class LongEnumPipeline
     }
 
     @Override
+    public final @NotNull LongEnumerable peek(
+        @NotNull LongConsumer action
+    ) {
+        NullCheck.requireNonNull(action, "action");
+
+        return new StatelessOp(this) {
+            @Override
+            protected @NotNull LongEnumerator opWrapEnumerator(
+                @NotNull LongEnumerator upstream
+            ) {
+                return new LongPipelineEnumerator(upstream) {
+                    @Override
+                    protected boolean moveNextCore() {
+                        if (upstream.moveNext()) {
+                            long element = upstream.current();
+
+                            action.accept(element);
+                            setCurrent(element);
+
+                            return true;
+                        }
+
+                        return false;
+                    }
+                };
+            }
+        };
+    }
+
+    @Override
     public final @NotNull LongEnumerable shuffle() {
         return new StatefulOp(this) {
             @Override

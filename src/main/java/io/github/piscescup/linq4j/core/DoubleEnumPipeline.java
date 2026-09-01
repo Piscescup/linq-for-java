@@ -1294,6 +1294,36 @@ abstract class DoubleEnumPipeline
             : OptionalDouble.empty();
     }
 
+    @Override
+    public final @NotNull DoubleEnumerable peek(
+        @NotNull DoubleConsumer action
+    ) {
+        NullCheck.requireNonNull(action, "action");
+
+        return new StatelessOp(this) {
+            @Override
+            protected @NotNull DoubleEnumerator opWrapEnumerator(
+                @NotNull DoubleEnumerator upstream
+            ) {
+                return new DoublePipelineEnumerator(upstream) {
+                    @Override
+                    protected boolean moveNextCore() {
+                        if (upstream.moveNext()) {
+                            double element = upstream.current();
+
+                            action.accept(element);
+                            setCurrent(element);
+
+                            return true;
+                        }
+
+                        return false;
+                    }
+                };
+            }
+        };
+    }
+
 
 // ---------------------------------------------------------------------
 // Single
