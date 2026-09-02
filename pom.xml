@@ -36,7 +36,7 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
         <!-- Dependencies -->
-        <commons-lib.version>1.1.5</commons-lib.version>
+        <commons-lib.version>1.1.6</commons-lib.version>
         <jetbrains-annotations.version>26.0.2</jetbrains-annotations.version>
 
         <junit-platform.version>6.1.3</junit-platform.version>
