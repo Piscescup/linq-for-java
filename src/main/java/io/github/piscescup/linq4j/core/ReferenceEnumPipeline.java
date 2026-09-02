@@ -7,7 +7,8 @@ import io.github.piscescup.interfaces.Equalator;
 import io.github.piscescup.interfaces.HashEqualator;
 import io.github.piscescup.interfaces.Pair;
 import io.github.piscescup.interfaces.exfunction.BinFunction;
-import io.github.piscescup.interfaces.exfunction.BinPredicate;
+import io.github.piscescup.interfaces.exfunction.ObjIntPredicate;
+import io.github.piscescup.interfaces.exfunction.ObjIntToObjFunction;
 import io.github.piscescup.linq4j.base.Groupable;
 import io.github.piscescup.linq4j.base.UnmodifiableGroup;
 import io.github.piscescup.linq4j.enumerator.*;
@@ -41,7 +42,7 @@ import java.util.function.*;
  * @author REN YuanTong
  * @since 1.0.0
  */
-public abstract class ReferenceEnumPipeline<T_IN, T_OUT>
+abstract class ReferenceEnumPipeline<T_IN, T_OUT>
     extends AbstractReferenceEnumPipeline<T_IN, T_OUT, Enumerable<T_OUT>>
     implements Enumerable<T_OUT> {
 
@@ -1760,7 +1761,7 @@ public abstract class ReferenceEnumPipeline<T_IN, T_OUT>
     /** {@inheritDoc} */
     @Override
     public final <R> @NotNull Enumerable<R> select(
-        @NotNull BinFunction<? super T_OUT, Integer, ? extends R> selector
+        @NotNull ObjIntToObjFunction<? super T_OUT, ? extends R> selector
     ) {
         NullCheck.requireNonNull(selector, "selector");
         return new StatelessOp<>(this) {
@@ -1971,7 +1972,7 @@ public abstract class ReferenceEnumPipeline<T_IN, T_OUT>
     /** {@inheritDoc} */
     @Override
     public final <R> @NotNull Enumerable<R> selectMany(
-        @NotNull BinFunction<? super T_OUT, Integer, ? extends Enumerable<? extends R>> selector
+        @NotNull ObjIntToObjFunction<? super T_OUT, ? extends Enumerable<? extends R>> selector
     ) {
         NullCheck.requireNonNull(selector, "selector");
         return new StatelessOp<>(this) {
@@ -2063,7 +2064,7 @@ public abstract class ReferenceEnumPipeline<T_IN, T_OUT>
     /** {@inheritDoc} */
     @Override
     public final <C, R> @NotNull Enumerable<R> selectMany(
-        @NotNull BinFunction<? super T_OUT, Integer, ? extends Iterable<? extends C>> collectionSelector,
+        @NotNull ObjIntToObjFunction<? super T_OUT, ? extends Iterable<? extends C>> collectionSelector,
         @NotNull BinFunction<? super T_OUT, ? super C, ? extends R> resultSelector
     ) {
         NullCheck.requireNonNull(collectionSelector, "collectionSelector");
@@ -2260,7 +2261,7 @@ public abstract class ReferenceEnumPipeline<T_IN, T_OUT>
     /** {@inheritDoc} */
     @Override
     public final @NotNull Enumerable<T_OUT> skipWhile(
-        @NotNull BinPredicate<? super T_OUT, Integer> predicate
+        @NotNull ObjIntPredicate<? super T_OUT> predicate
     ) {
         NullCheck.requireNonNull(predicate, "predicate");
         return new StatelessOp<>(this) {
@@ -2378,7 +2379,7 @@ public abstract class ReferenceEnumPipeline<T_IN, T_OUT>
     /** {@inheritDoc} */
     @Override
     public final @NotNull Enumerable<T_OUT> takeWhile(
-        @NotNull BinPredicate<? super T_OUT, Integer> predicate
+        @NotNull ObjIntPredicate<? super T_OUT> predicate
     ) {
         NullCheck.requireNonNull(predicate, "predicate");
         return new StatelessOp<>(this) {
@@ -2588,7 +2589,7 @@ public abstract class ReferenceEnumPipeline<T_IN, T_OUT>
     /** {@inheritDoc} */
     @Override
     public final @NotNull Enumerable<T_OUT> where(
-        @NotNull BinPredicate<? super T_OUT, Integer> predicate
+        @NotNull ObjIntPredicate<? super T_OUT> predicate
     ) {
         NullCheck.requireNonNull(predicate, "predicate");
         return new StatelessOp<>(this) {
@@ -2764,7 +2765,7 @@ public abstract class ReferenceEnumPipeline<T_IN, T_OUT>
             keySelector,
             seed,
             aggregator,
-            (Equalator<? super K>) keyEqualator
+            keyEqualator
         );
     }
 
@@ -2781,7 +2782,7 @@ public abstract class ReferenceEnumPipeline<T_IN, T_OUT>
             keySelector,
             seedSelector,
             aggregator,
-            (Equalator<? super K>) keyEqualator
+            keyEqualator
         );
     }
 
@@ -2792,7 +2793,7 @@ public abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         @NotNull HashEqualator<? super K> keyEqualator
     ) {
         NullCheck.requireNonNull(keyEqualator, "keyEqualator");
-        return countBy(keySelector, (Equalator<? super K>) keyEqualator);
+        return countBy(keySelector, keyEqualator);
     }
 
     /** {@inheritDoc} */
@@ -2801,7 +2802,7 @@ public abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         @NotNull HashEqualator<? super T_OUT> equalator
     ) {
         NullCheck.requireNonNull(equalator, "equalator");
-        return distinct((Equalator<? super T_OUT>) equalator);
+        return distinct(equalator);
     }
 
     /** {@inheritDoc} */
@@ -2811,7 +2812,7 @@ public abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         @NotNull HashEqualator<? super K> keyEqualator
     ) {
         NullCheck.requireNonNull(keyEqualator, "keyEqualator");
-        return distinctBy(keySelector, (Equalator<? super K>) keyEqualator);
+        return distinctBy(keySelector, keyEqualator);
     }
 
     /** {@inheritDoc} */
@@ -2821,7 +2822,7 @@ public abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         @NotNull HashEqualator<? super T_OUT> equalator
     ) {
         NullCheck.requireNonNull(equalator, "equalator");
-        return except(other, (Equalator<? super T_OUT>) equalator);
+        return except(other, equalator);
     }
 
     /** {@inheritDoc} */
@@ -2832,7 +2833,7 @@ public abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         @NotNull HashEqualator<? super K> equalator
     ) {
         NullCheck.requireNonNull(equalator, "equalator");
-        return exceptBy(other, keySelector, (Equalator<? super K>) equalator);
+        return exceptBy(other, keySelector, equalator);
     }
 
     /** {@inheritDoc} */
@@ -2842,7 +2843,7 @@ public abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         @NotNull HashEqualator<? super K> equalator
     ) {
         NullCheck.requireNonNull(equalator, "equalator");
-        return groupBy(keySelector, (Equalator<? super K>) equalator);
+        return groupBy(keySelector, equalator);
     }
 
     /** {@inheritDoc} */
@@ -2856,7 +2857,7 @@ public abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         return groupBy(
             keySelector,
             elementSelector,
-            (Equalator<? super K>) equalator
+            equalator
         );
     }
 
@@ -2871,7 +2872,7 @@ public abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         return groupToResult(
             keySelector,
             resultSelector,
-            (Equalator<? super K>) equalator
+            equalator
         );
     }
 
@@ -2888,7 +2889,7 @@ public abstract class ReferenceEnumPipeline<T_IN, T_OUT>
             keySelector,
             elementSelector,
             resultSelector,
-            (Equalator<? super K>) equalator
+            equalator
         );
     }
 
@@ -2907,7 +2908,7 @@ public abstract class ReferenceEnumPipeline<T_IN, T_OUT>
             outerKeySelector,
             innerKeySelector,
             resultSelector,
-            (Equalator<? super K>) equalator
+            equalator
         );
     }
 
@@ -2918,7 +2919,7 @@ public abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         @NotNull HashEqualator<? super T_OUT> equalator
     ) {
         NullCheck.requireNonNull(equalator, "equalator");
-        return intersect(other, (Equalator<? super T_OUT>) equalator);
+        return intersect(other, equalator);
     }
 
     /** {@inheritDoc} */
@@ -2929,7 +2930,7 @@ public abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         @NotNull HashEqualator<? super K> equalator
     ) {
         NullCheck.requireNonNull(equalator, "equalator");
-        return intersectBy(other, keySelector, (Equalator<? super K>) equalator);
+        return intersectBy(other, keySelector, equalator);
     }
 
     /** {@inheritDoc} */
@@ -2947,7 +2948,7 @@ public abstract class ReferenceEnumPipeline<T_IN, T_OUT>
             outerKeySelector,
             innerKeySelector,
             resultSelector,
-            (Equalator<? super K>) equalator
+            equalator
         );
     }
 
@@ -2966,7 +2967,7 @@ public abstract class ReferenceEnumPipeline<T_IN, T_OUT>
             outerKeySelector,
             innerKeySelector,
             resultSelector,
-            (Equalator<? super K>) equalator
+            equalator
         );
     }
 
@@ -2983,7 +2984,7 @@ public abstract class ReferenceEnumPipeline<T_IN, T_OUT>
             inner,
             outerKeySelector,
             innerKeySelector,
-            (Equalator<? super K>) equalator
+            equalator
         );
     }
 
@@ -3002,7 +3003,7 @@ public abstract class ReferenceEnumPipeline<T_IN, T_OUT>
             outerKeySelector,
             innerKeySelector,
             resultSelector,
-            (Equalator<? super K>) equalator
+            equalator
         );
     }
 
@@ -3013,7 +3014,7 @@ public abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         @NotNull HashEqualator<? super T_OUT> comparer
     ) {
         NullCheck.requireNonNull(comparer, "comparer");
-        return union(other, (Equalator<? super T_OUT>) comparer);
+        return union(other, comparer);
     }
 
     /** {@inheritDoc} */
@@ -3024,7 +3025,7 @@ public abstract class ReferenceEnumPipeline<T_IN, T_OUT>
         @NotNull HashEqualator<? super K> comparer
     ) {
         NullCheck.requireNonNull(comparer, "comparer");
-        return unionBy(second, keySelector, (Equalator<? super K>) comparer);
+        return unionBy(second, keySelector, comparer);
     }
 
     /** {@inheritDoc} */
@@ -3539,7 +3540,7 @@ public abstract class ReferenceEnumPipeline<T_IN, T_OUT>
 
         /** {@inheritDoc} */
         @Override
-        public final <K extends Comparable<? super K>> @NotNull OrderedEnumerable<T> thenBy(
+        public <K extends Comparable<? super K>> @NotNull OrderedEnumerable<T> thenBy(
             @NotNull Function<? super T, ? extends K> keySelector
         ) {
             NullCheck.requireNonNull(keySelector, "keySelector");
@@ -3555,7 +3556,7 @@ public abstract class ReferenceEnumPipeline<T_IN, T_OUT>
 
         /** {@inheritDoc} */
         @Override
-        public final <K> @NotNull OrderedEnumerable<T> thenBy(
+        public <K> @NotNull OrderedEnumerable<T> thenBy(
             @NotNull Function<? super T, ? extends K> keySelector,
             @NotNull Comparator<? super K> keyComparator
         ) {
@@ -3573,7 +3574,7 @@ public abstract class ReferenceEnumPipeline<T_IN, T_OUT>
 
         /** {@inheritDoc} */
         @Override
-        public final <K extends Comparable<? super K>> @NotNull OrderedEnumerable<T> thenByDescending(
+        public <K extends Comparable<? super K>> @NotNull OrderedEnumerable<T> thenByDescending(
             @NotNull Function<? super T, ? extends K> keySelector
         ) {
             NullCheck.requireNonNull(keySelector, "keySelector");
@@ -3589,7 +3590,7 @@ public abstract class ReferenceEnumPipeline<T_IN, T_OUT>
 
         /** {@inheritDoc} */
         @Override
-        public final <K> @NotNull OrderedEnumerable<T> thenByDescending(
+        public <K> @NotNull OrderedEnumerable<T> thenByDescending(
             @NotNull Function<? super T, ? extends K> keySelector,
             @NotNull Comparator<? super K> keyComparator
         ) {
@@ -3607,7 +3608,7 @@ public abstract class ReferenceEnumPipeline<T_IN, T_OUT>
 
         /** {@inheritDoc} */
         @Override
-        public final @NotNull OrderedEnumerable<T> thenByInt(
+        public @NotNull OrderedEnumerable<T> thenByInt(
             @NotNull ToIntFunction<? super T> keySelector
         ) {
             NullCheck.requireNonNull(keySelector, "keySelector");
@@ -3619,7 +3620,7 @@ public abstract class ReferenceEnumPipeline<T_IN, T_OUT>
 
         /** {@inheritDoc} */
         @Override
-        public final @NotNull OrderedEnumerable<T> thenByIntDescending(
+        public @NotNull OrderedEnumerable<T> thenByIntDescending(
             @NotNull ToIntFunction<? super T> keySelector
         ) {
             NullCheck.requireNonNull(keySelector, "keySelector");
@@ -3631,7 +3632,7 @@ public abstract class ReferenceEnumPipeline<T_IN, T_OUT>
 
         /** {@inheritDoc} */
         @Override
-        public final @NotNull OrderedEnumerable<T> thenByLong(
+        public @NotNull OrderedEnumerable<T> thenByLong(
             @NotNull ToLongFunction<? super T> keySelector
         ) {
             NullCheck.requireNonNull(keySelector, "keySelector");
@@ -3643,7 +3644,7 @@ public abstract class ReferenceEnumPipeline<T_IN, T_OUT>
 
         /** {@inheritDoc} */
         @Override
-        public final @NotNull OrderedEnumerable<T> thenByLongDescending(
+        public @NotNull OrderedEnumerable<T> thenByLongDescending(
             @NotNull ToLongFunction<? super T> keySelector
         ) {
             NullCheck.requireNonNull(keySelector, "keySelector");
@@ -3655,7 +3656,7 @@ public abstract class ReferenceEnumPipeline<T_IN, T_OUT>
 
         /** {@inheritDoc} */
         @Override
-        public final @NotNull OrderedEnumerable<T> thenByDouble(
+        public @NotNull OrderedEnumerable<T> thenByDouble(
             @NotNull ToDoubleFunction<? super T> keySelector
         ) {
             NullCheck.requireNonNull(keySelector, "keySelector");
@@ -3667,7 +3668,7 @@ public abstract class ReferenceEnumPipeline<T_IN, T_OUT>
 
         /** {@inheritDoc} */
         @Override
-        public final @NotNull OrderedEnumerable<T> thenByDoubleDescending(
+        public @NotNull OrderedEnumerable<T> thenByDoubleDescending(
             @NotNull ToDoubleFunction<? super T> keySelector
         ) {
             NullCheck.requireNonNull(keySelector, "keySelector");

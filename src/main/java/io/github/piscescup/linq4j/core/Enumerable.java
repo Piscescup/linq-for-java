@@ -7,7 +7,8 @@ import io.github.piscescup.interfaces.Equalator;
 import io.github.piscescup.interfaces.HashEqualator;
 import io.github.piscescup.interfaces.Pair;
 import io.github.piscescup.interfaces.exfunction.BinFunction;
-import io.github.piscescup.interfaces.exfunction.BinPredicate;
+import io.github.piscescup.interfaces.exfunction.ObjIntPredicate;
+import io.github.piscescup.interfaces.exfunction.ObjIntToObjFunction;
 import io.github.piscescup.linq4j.base.Groupable;
 import io.github.piscescup.linq4j.enumerator.ArrayEnumerator;
 import io.github.piscescup.linq4j.enumerator.CollectionEnumerator;
@@ -5587,7 +5588,7 @@ public interface Enumerable<T>
      */
     @NotNull
     <R> Enumerable<R> select(
-        @NotNull BinFunction<? super T, Integer, ? extends R> selector
+        @NotNull ObjIntToObjFunction<? super T, ? extends R> selector
     );
 
     /**
@@ -5728,8 +5729,7 @@ public interface Enumerable<T>
      */
     @NotNull
     <R> Enumerable<R> selectMany(
-        @NotNull BinFunction<? super T, Integer,
-            ? extends Enumerable<? extends R>> selector
+        @NotNull ObjIntToObjFunction<? super T, ? extends Enumerable<? extends R>> selector
     );
 
 
@@ -5777,8 +5777,7 @@ public interface Enumerable<T>
      */
     @NotNull
     <C, R> Enumerable<R> selectMany(
-        @NotNull BinFunction<? super T, Integer,
-            ? extends Iterable<? extends C>> collectionSelector,
+        @NotNull ObjIntToObjFunction<? super T, ? extends Iterable<? extends C>> collectionSelector,
         @NotNull BinFunction<? super T, ? super C, ? extends R> resultSelector
     );
 
@@ -6194,7 +6193,7 @@ public interface Enumerable<T>
      *
      * @param predicate A function to test each element for a condition.
      * @return An enumerable that contains the elements from the input sequence starting at the first element in the linear series that does not pass the test specified by {@code predicate}.
-     * @see #skipWhile(BinPredicate)
+     * @see #skipWhile(ObjIntPredicate)
      * @see #skip(int)
      */
     @NotNull
@@ -6225,7 +6224,7 @@ public interface Enumerable<T>
      * @see #skipWhile(Predicate)
      */
     @NotNull
-    Enumerable<T> skipWhile(@NotNull BinPredicate<? super T, Integer> predicate);
+    Enumerable<T> skipWhile(@NotNull ObjIntPredicate<? super T> predicate);
     /**
      * <p>Computes the sum of a sequence of {@code int} values that are obtained by
      * applying the specified selector to each element of the sequence.</p>
@@ -6469,7 +6468,7 @@ public interface Enumerable<T>
      *
      * @param predicate A function to test each element for a condition.
      * @return An enumerable that contains the elements from the input sequence that occur before the element at which the test no longer passes.
-     * @see #takeWhile(BinPredicate)
+     * @see #takeWhile(ObjIntPredicate)
      * @see #take(int)
      */
     @NotNull
@@ -6502,7 +6501,7 @@ public interface Enumerable<T>
      * @see #takeWhile(Predicate)
      */
     @NotNull
-    Enumerable<T> takeWhile(@NotNull BinPredicate<? super T, Integer> predicate);
+    Enumerable<T> takeWhile(@NotNull ObjIntPredicate<? super T> predicate);
 
     /**
      * <p>Produces the set union of two sequences by using the default equality comparer.</p>
@@ -6763,7 +6762,7 @@ public interface Enumerable<T>
      *
      * @param predicate A function to test each element for a condition.
      * @return An enumerable that contains elements from the input sequence that satisfy the condition.
-     * @see #where(BinPredicate)
+     * @see #where(ObjIntPredicate)
      */
     @NotNull
     Enumerable<T> where(@NotNull Predicate<? super T> predicate);
@@ -6795,7 +6794,7 @@ public interface Enumerable<T>
      * @see #where(Predicate)
      */
     @NotNull
-    Enumerable<T> where(@NotNull BinPredicate<? super T, Integer> predicate);
+    Enumerable<T> where(@NotNull ObjIntPredicate<? super T> predicate);
 
     /**
      * <p>Produces a sequence of tuples ({@link Pair}) with elements from the two specified sequences.</p>
