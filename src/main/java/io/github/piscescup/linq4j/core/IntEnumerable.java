@@ -2,7 +2,9 @@ package io.github.piscescup.linq4j.core;
 
 import io.github.piscescup.linq4j.enumerator.IntArrayEnumerator;
 import io.github.piscescup.linq4j.enumerator.IntEnumerator;
+import io.github.piscescup.linq4j.enumerator.IntRangeEnumerator;
 import io.github.piscescup.util.validation.NullCheck;
+import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
@@ -1910,5 +1912,82 @@ public interface IntEnumerable
     static IntEnumerable ofInts(int... ints) {
         NullCheck.requireNonNull(ints);
         return new IntEnumPipeline.Head(() -> new IntArrayEnumerator(ints));
+    }
+
+    /**
+     * <p>Creates an {@link IntEnumerable} containing a sequence of evenly
+     * spaced primitive {@code int} values.</p>
+     *
+     * <p>The sequence begins with {@code startInclusive} and repeatedly adds
+     * {@code step} until {@code endExclusive} is reached. The
+     * {@code endExclusive} value is never included in the resulting sequence.</p>
+     *
+     * <p>A positive {@code step} produces an ascending sequence, while a
+     * negative {@code step} produces a descending sequence. If the direction
+     * of {@code step} cannot reach the specified end value, an empty enumerable
+     * is returned.</p>
+     *
+     * <p>The values are generated lazily during enumeration and are not stored
+     * in an intermediate array.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * IntEnumerable ascending = Linq.rangeInts(
+     *     1, 10, 2
+     * );
+     *
+     * ascending.forEach(System.out::println);
+     *
+     * // This code produces the following output:
+     * //
+     * // 1
+     * // 3
+     * // 5
+     * // 7
+     * // 9
+     *
+     * IntEnumerable descending = Linq.rangeInts(
+     *     10, 1, -3
+     * );
+     *
+     * descending.forEach(System.out::println);
+     *
+     * // This code produces the following output:
+     * //
+     * // 10
+     * // 7
+     * // 4
+     * }</pre>
+     *
+     * @param startInclusive The first value in the sequence.
+     * @param endExclusive The exclusive end bound of the sequence.
+     * @param step The difference between two consecutive values; must not be
+     *             zero.
+     * @return A new {@link IntEnumerable} representing the specified range,
+     *         or an empty enumerable if the end cannot be reached in the
+     *         direction of {@code step}.
+     * @throws IllegalArgumentException If {@code step} is zero.
+     */
+    @NotNull
+    @Contract("_, _, _ -> new")
+    static IntEnumerable rangeInts(
+        int startInclusive,
+        int endExclusive,
+        int step
+    ) {
+        if (step == 0) {
+            throw new IllegalArgumentException(
+                "The step must not be zero."
+            );
+        }
+
+        if (step > 0 && startInclusive >= endExclusive
+            || step < 0 && startInclusive <= endExclusive) {
+            return IntEnumerable.ofInts();
+        }
+
+        return new IntEnumPipeline.Head(
+            () -> new IntRangeEnumerator(startInclusive, endExclusive, step)
+        );
     }
 }

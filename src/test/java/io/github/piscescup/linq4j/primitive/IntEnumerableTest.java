@@ -188,4 +188,20 @@ class IntEnumerableTest {
         }
         assertEquals("AB", result.toString());
     }
+
+    @Test
+    public void testRange() {
+        assertArrayEquals(
+            new int[]{ 0, 5, 10, 15 },
+            Linq.rangeInts(0, 20, 5)
+                .toArray()
+        );
+
+        assertArrayEquals(
+            new int[]{ 0, 16, 64, 144, 256 },
+            Linq.rangeInts(0, 20, 4)
+                .select( i -> i * i)
+                .toArray()
+        );
+    }
 }

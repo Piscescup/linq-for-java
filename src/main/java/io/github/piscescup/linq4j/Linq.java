@@ -2,8 +2,11 @@ package io.github.piscescup.linq4j;
 
 
 import io.github.piscescup.linq4j.core.*;
+import io.github.piscescup.linq4j.enumerator.DoubleRangeEnumerator;
 import io.github.piscescup.linq4j.enumerator.Enumerator;
+import io.github.piscescup.linq4j.enumerator.LongRangeEnumerator;
 import io.github.piscescup.util.validation.NullCheck;
+import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Collection;
@@ -51,8 +54,108 @@ public final class Linq {
      * @return An {@link IntEnumerable} that enumerates the specified values.
      * @throws NullPointerException If {@code ints} is {@code null}.
      */
+    @NotNull
+    @Contract("_ -> new")
     public static IntEnumerable ofInts(int... ints) {
         return IntEnumerable.ofInts(ints);
+    }
+
+
+    /**
+     * <p>Creates an {@link IntEnumerable} containing a sequence of evenly
+     * spaced primitive {@code int} values.</p>
+     *
+     * <p>The sequence begins with {@code startInclusive} and repeatedly adds
+     * {@code step} until {@code endExclusive} is reached. The
+     * {@code endExclusive} value is never included in the resulting sequence.</p>
+     *
+     * <p>A positive {@code step} produces an ascending sequence, while a
+     * negative {@code step} produces a descending sequence. If the direction
+     * of {@code step} cannot reach the specified end value, an empty enumerable
+     * is returned.</p>
+     *
+     * <p>The values are generated lazily during enumeration and are not stored
+     * in an intermediate array.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * IntEnumerable ascending = Linq.rangeInts(
+     *     1, 10, 2
+     * );
+     *
+     * ascending.forEach(System.out::println);
+     *
+     * // This code produces the following output:
+     * //
+     * // 1
+     * // 3
+     * // 5
+     * // 7
+     * // 9
+     *
+     * IntEnumerable descending = Linq.rangeInts(
+     *     10, 1, -3
+     * );
+     *
+     * descending.forEach(System.out::println);
+     *
+     * // This code produces the following output:
+     * //
+     * // 10
+     * // 7
+     * // 4
+     * }</pre>
+     *
+     * @param startInclusive The first value in the sequence.
+     * @param endExclusive The exclusive end bound of the sequence.
+     * @param step The difference between two consecutive values; must not be
+     *             zero.
+     * @return A new {@link IntEnumerable} representing the specified range,
+     *         or an empty enumerable if the end cannot be reached in the
+     *         direction of {@code step}.
+     * @throws IllegalArgumentException If {@code step} is zero.
+     */
+    @NotNull
+    @Contract("_ , _, _ -> new")
+    public static IntEnumerable rangeInts(int startInclusive, int endExclusive, int step) {
+        return IntEnumerable.rangeInts(startInclusive, endExclusive, step);
+    }
+
+    /**
+     * <p>Creates an {@link IntEnumerable} containing consecutive primitive
+     * {@code int} values within the specified range.</p>
+     *
+     * <p>The sequence begins with {@code startInclusive} and increments by
+     * {@code 1} until {@code endExclusive} is reached. The
+     * {@code endExclusive} value is not included.</p>
+     *
+     * <p>If {@code startInclusive} is greater than or equal to
+     * {@code endExclusive}, an empty enumerable is returned.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * IntEnumerable numbers = Linq.rangeInts(1, 5);
+     *
+     * numbers.forEach(System.out::println);
+     *
+     * // This code produces the following output:
+     * //
+     * // 1
+     * // 2
+     * // 3
+     * // 4
+     * }</pre>
+     *
+     * @param startInclusive The first value in the sequence.
+     * @param endExclusive The exclusive upper bound of the sequence.
+     * @return A new {@link IntEnumerable} representing the specified range.
+     *
+     * @see #rangeInts(int, int, int)
+     */
+    @NotNull
+    @Contract("_, _ -> new")
+    public static IntEnumerable rangeInts(int startInclusive, int endExclusive) {
+        return rangeInts(startInclusive, endExclusive, 1);
     }
 
     /**
@@ -89,8 +192,128 @@ public final class Linq {
      * @throws NullPointerException If {@code doubles} is {@code null}.
      */
     @NotNull
+    @Contract("_ -> new")
     public static DoubleEnumerable ofDoubles(double @NotNull ... doubles) {
         return DoubleEnumerable.ofDoubles(doubles);
+    }
+
+    /**
+     * <p>Creates a {@link DoubleEnumerable} containing a fixed number of
+     * evenly spaced primitive {@code double} values.</p>
+     *
+     * <p>The sequence contains exactly {@code count} values. The value at
+     * zero-based index {@code index} is calculated as follows:</p>
+     *
+     * <pre>{@code
+     * start + index * step
+     * }</pre>
+     *
+     * <p>The sequence length is determined by {@code count} rather than an
+     * end boundary. This avoids relying on potentially unreliable equality
+     * or boundary comparisons between floating-point values.</p>
+     *
+     * <p>Each value is calculated independently from its index during
+     * enumeration, reducing the accumulation of floating-point rounding
+     * errors. However, values such as {@code 0.1} may still not be represented
+     * exactly because of the limitations of IEEE 754 floating-point
+     * arithmetic.</p>
+     *
+     * <p>The values are generated lazily during enumeration and are not stored
+     * in an intermediate array.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * DoubleEnumerable values = Linq.rangeDoubles(
+     *     0.0, 5L, 0.25
+     * );
+     *
+     * values.forEach(System.out::println);
+     *
+     * // This code produces the following output:
+     * //
+     * // 0.0
+     * // 0.25
+     * // 0.5
+     * // 0.75
+     * // 1.0
+     *
+     * DoubleEnumerable descending = Linq.rangeDoubles(
+     *     1.0, 4L, -0.25
+     * );
+     *
+     * descending.forEach(System.out::println);
+     *
+     * // This code produces the following output:
+     * //
+     * // 1.0
+     * // 0.75
+     * // 0.5
+     * // 0.25
+     * }</pre>
+     *
+     * @param start The first value in the sequence.
+     * @param count The number of values to generate; must be non-negative.
+     * @param step The difference between two consecutive values; must be
+     *             finite and non-zero.
+     * @return A new {@link DoubleEnumerable} containing {@code count}
+     *         evenly spaced values.
+     * @throws IllegalArgumentException If {@code start} is not finite,
+     *         {@code count} is negative, or {@code step} is zero or not
+     *         finite.
+     */
+    @NotNull
+    @Contract("_, _, _ -> new")
+    public static DoubleEnumerable rangeDoubles(double start, long count, double step) {
+        return DoubleEnumerable.rangeDoubles(start, count, step);
+    }
+
+
+    /**
+     * <p>Creates a {@link DoubleEnumerable} containing {@code count}
+     * consecutive primitive {@code double} values.</p>
+     *
+     * <p>The sequence begins with {@code start} and increments by {@code 1.0}
+     * for each subsequent value. The value at zero-based index {@code index}
+     * is calculated as follows:</p>
+     *
+     * <pre>{@code
+     * start + index
+     * }</pre>
+     *
+     * <p>If {@code count} is zero, an empty enumerable is returned.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * DoubleEnumerable numbers = Linq.rangeDoubles(
+     *     1.5, 4L
+     * );
+     *
+     * numbers.forEach(System.out::println);
+     *
+     * // This code produces the following output:
+     * //
+     * // 1.5
+     * // 2.5
+     * // 3.5
+     * // 4.5
+     * }</pre>
+     *
+     * @param start The first value in the sequence.
+     * @param count The number of values to generate; must be non-negative.
+     * @return A new {@link DoubleEnumerable} containing {@code count}
+     *         consecutive values.
+     * @throws IllegalArgumentException If {@code start} is not finite or
+     *         {@code count} is negative.
+     *
+     * @see #rangeDoubles(double, long, double)
+     */
+    @NotNull
+    @Contract("_, _ -> new")
+    public static DoubleEnumerable rangeDoubles(
+        double start,
+        long count
+    ) {
+        return rangeDoubles(start, count, 1.0);
     }
 
     /**
@@ -126,8 +349,112 @@ public final class Linq {
      * @throws NullPointerException If {@code longs} is {@code null}.
      */
     @NotNull
+    @Contract("_ -> new")
     public static LongEnumerable ofLongs(long @NotNull ... longs) {
         return LongEnumerable.ofLongs(longs);
+    }
+
+    /**
+     * <p>Creates a {@link LongEnumerable} containing a sequence of evenly
+     * spaced primitive {@code long} values.</p>
+     *
+     * <p>The sequence begins with {@code startInclusive} and repeatedly adds
+     * {@code step} until {@code endExclusive} is reached. The
+     * {@code endExclusive} value is never included in the resulting sequence.</p>
+     *
+     * <p>A positive {@code step} produces an ascending sequence, while a
+     * negative {@code step} produces a descending sequence. If the direction
+     * of {@code step} cannot reach the specified end value, an empty enumerable
+     * is returned.</p>
+     *
+     * <p>The values are generated lazily during enumeration and are not stored
+     * in an intermediate array.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * LongEnumerable ascending = Linq.rangeLongs(
+     *     1L, 10L, 2L
+     * );
+     *
+     * ascending.forEach(System.out::println);
+     *
+     * // This code produces the following output:
+     * //
+     * // 1
+     * // 3
+     * // 5
+     * // 7
+     * // 9
+     *
+     * LongEnumerable descending = Linq.rangeLongs(
+     *     10L, 1L, -3L
+     * );
+     *
+     * descending.forEach(System.out::println);
+     *
+     * // This code produces the following output:
+     * //
+     * // 10
+     * // 7
+     * // 4
+     * }</pre>
+     *
+     * @param startInclusive The first value in the sequence.
+     * @param endExclusive The exclusive end bound of the sequence.
+     * @param step The difference between two consecutive values; must not be
+     *             zero.
+     * @return A new {@link LongEnumerable} representing the specified range,
+     *         or an empty enumerable if the end cannot be reached in the
+     *         direction of {@code step}.
+     * @throws IllegalArgumentException If {@code step} is zero.
+     */
+    @NotNull
+    @Contract("_, _, _ -> new")
+    public static LongEnumerable rangeLongs(long startInclusive, long endExclusive, long step) {
+        if (step == 0L) {
+            throw new IllegalArgumentException(
+                "The step must not be zero."
+            );
+        }
+
+        return LongEnumerable.rangeLongs(startInclusive, endExclusive, step);
+    }
+
+    /**
+     * <p>Creates a {@link LongEnumerable} containing consecutive primitive
+     * {@code long} values within the specified range.</p>
+     *
+     * <p>The sequence begins with {@code startInclusive} and increments by
+     * {@code 1} until {@code endExclusive} is reached. The
+     * {@code endExclusive} value is not included.</p>
+     *
+     * <p>If {@code startInclusive} is greater than or equal to
+     * {@code endExclusive}, an empty enumerable is returned.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * LongEnumerable numbers = Linq.rangeLongs(1L, 5L);
+     *
+     * numbers.forEach(System.out::println);
+     *
+     * // This code produces the following output:
+     * //
+     * // 1
+     * // 2
+     * // 3
+     * // 4
+     * }</pre>
+     *
+     * @param startInclusive The first value in the sequence.
+     * @param endExclusive The exclusive upper bound of the sequence.
+     * @return A new {@link LongEnumerable} representing the specified range.
+     *
+     * @see #rangeLongs(long, long, long)
+     */
+    @NotNull
+    @Contract("_, _ -> new")
+    public static LongEnumerable rangeLongs(long startInclusive, long endExclusive) {
+        return rangeLongs(startInclusive, endExclusive, 1L);
     }
 
     /**

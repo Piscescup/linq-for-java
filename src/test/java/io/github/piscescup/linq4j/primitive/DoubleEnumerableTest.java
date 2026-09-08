@@ -187,4 +187,20 @@ class DoubleEnumerableTest {
         }
         assertEquals("AB", result.toString());
     }
+
+    @Test
+    public void testRange() {
+        assertArrayEquals(
+            new double[]{ 0, 5, 10, 15 },
+            Linq.rangeDoubles(0, 4, 5)
+                .toArray()
+        );
+
+        assertArrayEquals(
+            new double[]{ 0, 16, 64, 144, 256 },
+            Linq.rangeDoubles(0, 5, 4)
+                .select( i -> i * i)
+                .toArray()
+        );
+    }
 }

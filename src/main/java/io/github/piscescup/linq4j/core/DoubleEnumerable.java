@@ -2,7 +2,9 @@ package io.github.piscescup.linq4j.core;
 
 import io.github.piscescup.linq4j.enumerator.DoubleArrayEnumerator;
 import io.github.piscescup.linq4j.enumerator.DoubleEnumerator;
+import io.github.piscescup.linq4j.enumerator.DoubleRangeEnumerator;
 import io.github.piscescup.util.validation.NullCheck;
+import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
@@ -1507,5 +1509,77 @@ public interface DoubleEnumerable
         NullCheck.requireNonNull(doubles);
 
         return new DoubleEnumPipeline.Head(() -> new DoubleArrayEnumerator(doubles));
+    }
+
+    /**
+     * <p>Creates a {@link DoubleEnumerable} containing a fixed number of
+     * evenly spaced primitive {@code double} values.</p>
+     *
+     * <p>The sequence contains exactly {@code count} values. The value at
+     * zero-based index {@code index} is calculated as follows:</p>
+     *
+     * <pre>{@code
+     * start + index * step
+     * }</pre>
+     *
+     * <p>The sequence length is determined by {@code count} rather than an
+     * end boundary. This avoids relying on potentially unreliable equality
+     * or boundary comparisons between floating-point values.</p>
+     *
+     * <p>Each value is calculated independently from its index during
+     * enumeration, reducing the accumulation of floating-point rounding
+     * errors. However, values such as {@code 0.1} may still not be represented
+     * exactly because of the limitations of IEEE 754 floating-point
+     * arithmetic.</p>
+     *
+     * <p>The values are generated lazily during enumeration and are not stored
+     * in an intermediate array.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * DoubleEnumerable values = Linq.rangeDoubles(
+     *     0.0, 5L, 0.25
+     * );
+     *
+     * values.forEach(System.out::println);
+     *
+     * // This code produces the following output:
+     * //
+     * // 0.0
+     * // 0.25
+     * // 0.5
+     * // 0.75
+     * // 1.0
+     *
+     * DoubleEnumerable descending = Linq.rangeDoubles(
+     *     1.0, 4L, -0.25
+     * );
+     *
+     * descending.forEach(System.out::println);
+     *
+     * // This code produces the following output:
+     * //
+     * // 1.0
+     * // 0.75
+     * // 0.5
+     * // 0.25
+     * }</pre>
+     *
+     * @param start The first value in the sequence.
+     * @param count The number of values to generate; must be non-negative.
+     * @param step The difference between two consecutive values; must be
+     *             finite and non-zero.
+     * @return A new {@link DoubleEnumerable} containing {@code count}
+     *         evenly spaced values.
+     * @throws IllegalArgumentException If {@code start} is not finite,
+     *         {@code count} is negative, or {@code step} is zero or not
+     *         finite.
+     */
+    @NotNull
+    @Contract("_, _, _ -> new")
+    static DoubleEnumerable rangeDoubles(double start, long count, double step) {
+        return new DoubleEnumPipeline.Head(
+            () -> new DoubleRangeEnumerator(start, count, step)
+        );
     }
 }

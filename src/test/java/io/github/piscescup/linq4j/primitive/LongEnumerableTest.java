@@ -165,4 +165,20 @@ class LongEnumerableTest {
         }
         assertEquals("AB", result.toString());
     }
+
+    @Test
+    public void testRange() {
+        assertArrayEquals(
+            new long[]{ 0, 5, 10, 15 },
+            Linq.rangeLongs(0L, 20L, 5L)
+                .toArray()
+        );
+
+        assertArrayEquals(
+            new long[]{ 0, 16, 64, 144, 256 },
+            Linq.rangeLongs(0, 20, 4)
+                .select( i -> i * i)
+                .toArray()
+        );
+    }
 }
