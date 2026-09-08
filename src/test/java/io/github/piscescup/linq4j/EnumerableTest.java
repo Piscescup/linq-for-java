@@ -1537,4 +1537,15 @@ class EnumerableTest {
         assertEquals(List.of("c", "b", "a"), new ArrayList<>(reverseUnmodifiable));
         assertThrows(UnsupportedOperationException.class, () -> reverseUnmodifiable.add("d"));
     }
+
+    @Test
+    public void testRepeat() {
+
+        assertEquals(
+            Collections.nCopies(10, "Hello"),
+            Linq.repeat("Hello", 10).toList()
+        );
+
+
+    }
 }

@@ -3,6 +3,8 @@ package io.github.piscescup.linq4j.core;
 import io.github.piscescup.linq4j.enumerator.IntArrayEnumerator;
 import io.github.piscescup.linq4j.enumerator.IntEnumerator;
 import io.github.piscescup.linq4j.enumerator.IntRangeEnumerator;
+import io.github.piscescup.linq4j.enumerator.IntRepeatEnumerator;
+import io.github.piscescup.util.validation.ArgumentCheck;
 import io.github.piscescup.util.validation.NullCheck;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
@@ -1988,6 +1990,47 @@ public interface IntEnumerable
 
         return new IntEnumPipeline.Head(
             () -> new IntRangeEnumerator(startInclusive, endExclusive, step)
+        );
+    }
+
+    /**
+     * <p>Creates an {@link IntEnumerable} that contains the specified primitive
+     * {@code int} value repeated a given number of times.</p>
+     *
+     * <p>The sequence is generated lazily during enumeration and does not
+     * allocate an intermediate array. Values are traversed directly as
+     * primitive {@code int}s without boxing them into {@link Integer}
+     * objects.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * IntEnumerable values = Linq.repeatInts(
+     *     10, 3
+     * );
+     *
+     * values.forEach(System.out::println);
+     *
+     * // This code produces the following output:
+     * //
+     * // 10
+     * // 10
+     * // 10
+     * }</pre>
+     *
+     * @param element The primitive {@code int} value to repeat.
+     * @param count The number of times to repeat {@code element}; must be
+     *              non-negative.
+     * @return A new {@link IntEnumerable} containing {@code element} repeated
+     *         {@code count} times.
+     * @throws IllegalArgumentException If {@code count} is negative.
+     */
+    @NotNull
+    @Contract("_, _ -> new")
+    static IntEnumerable repeatInts(int element, int count) {
+        ArgumentCheck.requiresNonNegative(count);
+
+        return new IntEnumPipeline.Head(
+            () -> new IntRepeatEnumerator(element, count)
         );
     }
 }

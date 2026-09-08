@@ -3,6 +3,8 @@ package io.github.piscescup.linq4j.core;
 import io.github.piscescup.linq4j.enumerator.DoubleArrayEnumerator;
 import io.github.piscescup.linq4j.enumerator.DoubleEnumerator;
 import io.github.piscescup.linq4j.enumerator.DoubleRangeEnumerator;
+import io.github.piscescup.linq4j.enumerator.DoubleRepeatEnumerator;
+import io.github.piscescup.util.validation.ArgumentCheck;
 import io.github.piscescup.util.validation.NullCheck;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
@@ -1580,6 +1582,50 @@ public interface DoubleEnumerable
     static DoubleEnumerable rangeDoubles(double start, long count, double step) {
         return new DoubleEnumPipeline.Head(
             () -> new DoubleRangeEnumerator(start, count, step)
+        );
+    }
+
+    /**
+     * <p>Creates a {@link DoubleEnumerable} that contains the specified
+     * primitive {@code double} value repeated a given number of times.</p>
+     *
+     * <p>The sequence is generated lazily during enumeration and does not
+     * allocate an intermediate array. Values are traversed directly as
+     * primitive {@code double}s without boxing them into {@link Double}
+     * objects.</p>
+     *
+     * <p>All {@code double} values are accepted, including {@code NaN},
+     * positive and negative infinity, and negative zero.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * DoubleEnumerable values = Linq.repeatDoubles(
+     *     0.5, 3
+     * );
+     *
+     * values.forEach(System.out::println);
+     *
+     * // This code produces the following output:
+     * //
+     * // 0.5
+     * // 0.5
+     * // 0.5
+     * }</pre>
+     *
+     * @param element The primitive {@code double} value to repeat.
+     * @param count The number of times to repeat {@code element}; must be
+     *              non-negative.
+     * @return A new {@link DoubleEnumerable} containing {@code element}
+     *         repeated {@code count} times.
+     * @throws IllegalArgumentException If {@code count} is negative.
+     */
+    @NotNull
+    @Contract("_, _ -> new")
+    static DoubleEnumerable repeatDoubles(double element, int count) {
+        ArgumentCheck.requiresNonNegative(count);
+
+        return new DoubleEnumPipeline.Head(
+            () -> new DoubleRepeatEnumerator(element, count)
         );
     }
 }

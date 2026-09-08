@@ -3,6 +3,8 @@ package io.github.piscescup.linq4j.core;
 import io.github.piscescup.linq4j.enumerator.LongArrayEnumerator;
 import io.github.piscescup.linq4j.enumerator.LongEnumerator;
 import io.github.piscescup.linq4j.enumerator.LongRangeEnumerator;
+import io.github.piscescup.linq4j.enumerator.LongRepeatEnumerator;
+import io.github.piscescup.util.validation.ArgumentCheck;
 import io.github.piscescup.util.validation.NullCheck;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
@@ -1636,6 +1638,47 @@ public interface LongEnumerable
 
         return new LongEnumPipeline.Head(
             () -> new LongRangeEnumerator(startInclusive, endExclusive, step)
+        );
+    }
+
+    /**
+     * <p>Creates a {@link LongEnumerable} that contains the specified primitive
+     * {@code long} value repeated a given number of times.</p>
+     *
+     * <p>The sequence is generated lazily during enumeration and does not
+     * allocate an intermediate array. Values are traversed directly as
+     * primitive {@code long}s without boxing them into {@link Long}
+     * objects.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * LongEnumerable values = Linq.repeatLongs(
+     *     100L, 3
+     * );
+     *
+     * values.forEach(System.out::println);
+     *
+     * // This code produces the following output:
+     * //
+     * // 100
+     * // 100
+     * // 100
+     * }</pre>
+     *
+     * @param element The primitive {@code long} value to repeat.
+     * @param count The number of times to repeat {@code element}; must be
+     *              non-negative.
+     * @return A new {@link LongEnumerable} containing {@code element} repeated
+     *         {@code count} times.
+     * @throws IllegalArgumentException If {@code count} is negative.
+     */
+    @NotNull
+    @Contract("_, _ -> new")
+    static LongEnumerable repeatLongs(long element, int count) {
+        ArgumentCheck.requiresNonNegative(count);
+
+        return new LongEnumPipeline.Head(
+            () -> new LongRepeatEnumerator(element, count)
         );
     }
 

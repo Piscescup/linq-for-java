@@ -181,4 +181,12 @@ class LongEnumerableTest {
                 .toArray()
         );
     }
+
+    @Test
+    public void testRepeat() {
+        assertArrayEquals(
+            new long[] {10, 10, 10, 10, 10, 10, 10, 10, 10, 10},
+            Linq.repeatLongs(10, 10).toArray()
+        );
+    }
 }
