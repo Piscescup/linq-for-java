@@ -2,7 +2,9 @@ package io.github.piscescup.linq4j.core;
 
 import io.github.piscescup.linq4j.enumerator.LongArrayEnumerator;
 import io.github.piscescup.linq4j.enumerator.LongEnumerator;
+import io.github.piscescup.linq4j.enumerator.LongRangeEnumerator;
 import io.github.piscescup.util.validation.NullCheck;
+import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
@@ -1568,4 +1570,73 @@ public interface LongEnumerable
 
         return new LongEnumPipeline.Head(() -> new LongArrayEnumerator(longs));
     }
+
+    /**
+     * <p>Creates a {@link LongEnumerable} containing a sequence of evenly
+     * spaced primitive {@code long} values.</p>
+     *
+     * <p>The sequence begins with {@code startInclusive} and repeatedly adds
+     * {@code step} until {@code endExclusive} is reached. The
+     * {@code endExclusive} value is never included in the resulting sequence.</p>
+     *
+     * <p>A positive {@code step} produces an ascending sequence, while a
+     * negative {@code step} produces a descending sequence. If the direction
+     * of {@code step} cannot reach the specified end value, an empty enumerable
+     * is returned.</p>
+     *
+     * <p>The values are generated lazily during enumeration and are not stored
+     * in an intermediate array.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * LongEnumerable ascending = Linq.rangeLongs(
+     *     1L, 10L, 2L
+     * );
+     *
+     * ascending.forEach(System.out::println);
+     *
+     * // This code produces the following output:
+     * //
+     * // 1
+     * // 3
+     * // 5
+     * // 7
+     * // 9
+     *
+     * LongEnumerable descending = Linq.rangeLongs(
+     *     10L, 1L, -3L
+     * );
+     *
+     * descending.forEach(System.out::println);
+     *
+     * // This code produces the following output:
+     * //
+     * // 10
+     * // 7
+     * // 4
+     * }</pre>
+     *
+     * @param startInclusive The first value in the sequence.
+     * @param endExclusive The exclusive end bound of the sequence.
+     * @param step The difference between two consecutive values; must not be
+     *             zero.
+     * @return A new {@link LongEnumerable} representing the specified range,
+     *         or an empty enumerable if the end cannot be reached in the
+     *         direction of {@code step}.
+     * @throws IllegalArgumentException If {@code step} is zero.
+     */
+    @NotNull
+    @Contract("_, _, _ -> new")
+    static LongEnumerable rangeLongs(long startInclusive, long endExclusive, long step) {
+        if (step == 0L) {
+            throw new IllegalArgumentException(
+                "The step must not be zero."
+            );
+        }
+
+        return new LongEnumPipeline.Head(
+            () -> new LongRangeEnumerator(startInclusive, endExclusive, step)
+        );
+    }
+
 }
