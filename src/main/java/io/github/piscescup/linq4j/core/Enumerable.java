@@ -10,12 +10,11 @@ import io.github.piscescup.interfaces.exfunction.BinFunction;
 import io.github.piscescup.interfaces.exfunction.ObjIntPredicate;
 import io.github.piscescup.interfaces.exfunction.ObjIntToObjFunction;
 import io.github.piscescup.linq4j.base.Groupable;
-import io.github.piscescup.linq4j.enumerator.ArrayEnumerator;
-import io.github.piscescup.linq4j.enumerator.CollectionEnumerator;
-import io.github.piscescup.linq4j.enumerator.Enumerator;
-import io.github.piscescup.linq4j.enumerator.IteratorEnumerator;
+import io.github.piscescup.linq4j.enumerator.*;
 import io.github.piscescup.linq4j.exceptions.OverflowEnumerableException;
+import io.github.piscescup.util.validation.ArgumentCheck;
 import io.github.piscescup.util.validation.NullCheck;
+import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -8198,5 +8197,49 @@ public interface Enumerable<T>
     ) {
 
         return new ReferenceEnumPipeline.Head<>(enumeratorSupplier);
+    }
+
+    /**
+     * <p>Creates an {@link Enumerable} that contains the specified element
+     * repeated a given number of times.</p>
+     *
+     * <p>The element is not copied. If {@code element} is a reference type,
+     * every position in the resulting sequence refers to the same object.
+     * The element may be {@code null}.</p>
+     *
+     * <p>The sequence is generated lazily during enumeration and does not
+     * allocate an intermediate array or collection.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<String> values = Linq.repeat(
+     *     "Hello", 3
+     * );
+     *
+     * values.forEach(System.out::println);
+     *
+     * // This code produces the following output:
+     * //
+     * // Hello
+     * // Hello
+     * // Hello
+     * }</pre>
+     *
+     * @param <T> The type of the repeated element.
+     * @param element The element to repeat.
+     * @param count The number of times to repeat {@code element}; must be
+     *              non-negative.
+     * @return A new {@link Enumerable} containing {@code element} repeated
+     *         {@code count} times.
+     * @throws IllegalArgumentException If {@code count} is negative.
+     */
+    @NotNull
+    @Contract("_, _ -> new")
+    public static <T> Enumerable<T> repeat(T element, int count) {
+        ArgumentCheck.requiresNonNegative(count);
+
+        return new ReferenceEnumPipeline.Head<>(
+            () -> new RepeatEnumerator<>(element, count)
+        );
     }
 }

@@ -203,4 +203,12 @@ class DoubleEnumerableTest {
                 .toArray()
         );
     }
+
+    @Test
+    public void testRepeat() {
+        assertArrayEquals(
+            new double[] {10, 10, 10, 10, 10, 10, 10, 10, 10, 10},
+            Linq.repeatDoubles(10, 10).toArray()
+        );
+    }
 }

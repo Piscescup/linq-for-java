@@ -2,9 +2,8 @@ package io.github.piscescup.linq4j;
 
 
 import io.github.piscescup.linq4j.core.*;
-import io.github.piscescup.linq4j.enumerator.DoubleRangeEnumerator;
-import io.github.piscescup.linq4j.enumerator.Enumerator;
-import io.github.piscescup.linq4j.enumerator.LongRangeEnumerator;
+import io.github.piscescup.linq4j.enumerator.*;
+import io.github.piscescup.util.validation.ArgumentCheck;
 import io.github.piscescup.util.validation.NullCheck;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
@@ -156,6 +155,45 @@ public final class Linq {
     @Contract("_, _ -> new")
     public static IntEnumerable rangeInts(int startInclusive, int endExclusive) {
         return rangeInts(startInclusive, endExclusive, 1);
+    }
+
+    /**
+     * <p>Creates an {@link IntEnumerable} that contains the specified primitive
+     * {@code int} value repeated a given number of times.</p>
+     *
+     * <p>The sequence is generated lazily during enumeration and does not
+     * allocate an intermediate array. Values are traversed directly as
+     * primitive {@code int}s without boxing them into {@link Integer}
+     * objects.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * IntEnumerable values = Linq.repeatInts(
+     *     10, 3
+     * );
+     *
+     * values.forEach(System.out::println);
+     *
+     * // This code produces the following output:
+     * //
+     * // 10
+     * // 10
+     * // 10
+     * }</pre>
+     *
+     * @param element The primitive {@code int} value to repeat.
+     * @param count The number of times to repeat {@code element}; must be
+     *              non-negative.
+     * @return A new {@link IntEnumerable} containing {@code element} repeated
+     *         {@code count} times.
+     * @throws IllegalArgumentException If {@code count} is negative.
+     */
+    @NotNull
+    @Contract("_, _ -> new")
+    public static IntEnumerable repeatInts(int element, int count) {
+        ArgumentCheck.requiresNonNegative(count);
+
+        return IntEnumerable.repeatInts(element, count);
     }
 
     /**
@@ -317,6 +355,48 @@ public final class Linq {
     }
 
     /**
+     * <p>Creates a {@link DoubleEnumerable} that contains the specified
+     * primitive {@code double} value repeated a given number of times.</p>
+     *
+     * <p>The sequence is generated lazily during enumeration and does not
+     * allocate an intermediate array. Values are traversed directly as
+     * primitive {@code double}s without boxing them into {@link Double}
+     * objects.</p>
+     *
+     * <p>All {@code double} values are accepted, including {@code NaN},
+     * positive and negative infinity, and negative zero.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * DoubleEnumerable values = Linq.repeatDoubles(
+     *     0.5, 3
+     * );
+     *
+     * values.forEach(System.out::println);
+     *
+     * // This code produces the following output:
+     * //
+     * // 0.5
+     * // 0.5
+     * // 0.5
+     * }</pre>
+     *
+     * @param element The primitive {@code double} value to repeat.
+     * @param count The number of times to repeat {@code element}; must be
+     *              non-negative.
+     * @return A new {@link DoubleEnumerable} containing {@code element}
+     *         repeated {@code count} times.
+     * @throws IllegalArgumentException If {@code count} is negative.
+     */
+    @NotNull
+    @Contract("_, _ -> new")
+    public static DoubleEnumerable repeatDoubles(double element, int count) {
+        ArgumentCheck.requiresNonNegative(count);
+
+        return DoubleEnumerable.repeatDoubles(element, count);
+    }
+
+    /**
      * <p>Creates a {@link LongEnumerable} from the specified primitive
      * {@code long} values.</p>
      *
@@ -418,6 +498,45 @@ public final class Linq {
         }
 
         return LongEnumerable.rangeLongs(startInclusive, endExclusive, step);
+    }
+
+    /**
+     * <p>Creates a {@link LongEnumerable} that contains the specified primitive
+     * {@code long} value repeated a given number of times.</p>
+     *
+     * <p>The sequence is generated lazily during enumeration and does not
+     * allocate an intermediate array. Values are traversed directly as
+     * primitive {@code long}s without boxing them into {@link Long}
+     * objects.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * LongEnumerable values = Linq.repeatLongs(
+     *     100L, 3
+     * );
+     *
+     * values.forEach(System.out::println);
+     *
+     * // This code produces the following output:
+     * //
+     * // 100
+     * // 100
+     * // 100
+     * }</pre>
+     *
+     * @param element The primitive {@code long} value to repeat.
+     * @param count The number of times to repeat {@code element}; must be
+     *              non-negative.
+     * @return A new {@link LongEnumerable} containing {@code element} repeated
+     *         {@code count} times.
+     * @throws IllegalArgumentException If {@code count} is negative.
+     */
+    @NotNull
+    @Contract("_, _ -> new")
+    public static LongEnumerable repeatLongs(long element, int count) {
+        ArgumentCheck.requiresNonNegative(count);
+
+        return LongEnumerable.repeatLongs(element, count);
     }
 
     /**
@@ -608,5 +727,47 @@ public final class Linq {
         NullCheck.requireNonNull(enumeratorSupplier);
 
         return Enumerable.fromEnumerator(enumeratorSupplier);
+    }
+
+    /**
+     * <p>Creates an {@link Enumerable} that contains the specified element
+     * repeated a given number of times.</p>
+     *
+     * <p>The element is not copied. If {@code element} is a reference type,
+     * every position in the resulting sequence refers to the same object.
+     * The element may be {@code null}.</p>
+     *
+     * <p>The sequence is generated lazily during enumeration and does not
+     * allocate an intermediate array or collection.</p>
+     *
+     * <b>Usage:</b>
+     * <pre>{@code
+     * Enumerable<String> values = Linq.repeat(
+     *     "Hello", 3
+     * );
+     *
+     * values.forEach(System.out::println);
+     *
+     * // This code produces the following output:
+     * //
+     * // Hello
+     * // Hello
+     * // Hello
+     * }</pre>
+     *
+     * @param <T> The type of the repeated element.
+     * @param element The element to repeat.
+     * @param count The number of times to repeat {@code element}; must be
+     *              non-negative.
+     * @return A new {@link Enumerable} containing {@code element} repeated
+     *         {@code count} times.
+     * @throws IllegalArgumentException If {@code count} is negative.
+     */
+    @NotNull
+    @Contract("_, _ -> new")
+    public static <T> Enumerable<T> repeat(T element, int count) {
+        ArgumentCheck.requiresNonNegative(count);
+
+        return Enumerable.repeat(element, count);
     }
 }

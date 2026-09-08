@@ -204,4 +204,12 @@ class IntEnumerableTest {
                 .toArray()
         );
     }
+
+    @Test
+    public void testRepeat() {
+        assertArrayEquals(
+            new int[] {10, 10, 10, 10, 10, 10, 10, 10, 10, 10},
+            Linq.repeatInts(10, 10).toArray()
+        );
+    }
 }
